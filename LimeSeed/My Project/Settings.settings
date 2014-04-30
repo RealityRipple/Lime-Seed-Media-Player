@@ -1,0 +1,210 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
+  <Profiles />
+  <Settings>
+    <Setting Name="Location" Type="System.Drawing.Point" Scope="User">
+      <Value Profile="(Default)">0, 0</Value>
+    </Setting>
+    <Setting Name="Size" Type="System.Drawing.Size" Scope="User">
+      <Value Profile="(Default)">640, 480</Value>
+    </Setting>
+    <Setting Name="Gapless" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.11</Value>
+    </Setting>
+    <Setting Name="MustUpgrade" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="SingleInstance" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Device" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="Keyboard_About" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + F1</Value>
+    </Setting>
+    <Setting Name="Keyboard_AddToPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Insert</Value>
+    </Setting>
+    <Setting Name="Keyboard_ClearPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Shift + Delete</Value>
+    </Setting>
+    <Setting Name="Keyboard_Close" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + C</Value>
+    </Setting>
+    <Setting Name="Keyboard_FS" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Shift + Enter</Value>
+    </Setting>
+    <Setting Name="Keyboard_Last" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Home</Value>
+    </Setting>
+    <Setting Name="Keyboard_Mute" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + M</Value>
+    </Setting>
+    <Setting Name="Keyboard_Next" Type="System.String" Scope="User">
+      <Value Profile="(Default)">End</Value>
+    </Setting>
+    <Setting Name="Keyboard_Open" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + O</Value>
+    </Setting>
+    <Setting Name="Keyboard_OpenPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard_PlayPause" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Spacebar</Value>
+    </Setting>
+    <Setting Name="Keyboard_Props" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + P</Value>
+    </Setting>
+    <Setting Name="Keyboard_RemoveFromPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Delete</Value>
+    </Setting>
+    <Setting Name="Keyboard_RenamePL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + F2</Value>
+    </Setting>
+    <Setting Name="Keyboard_RepeatPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard_RepeatTrack" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard_SavePL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard_Settings" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + S</Value>
+    </Setting>
+    <Setting Name="Keyboard_Shuffle" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard_SkipBack" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Left Arrow</Value>
+    </Setting>
+    <Setting Name="Keyboard_SkipFwd" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Right Arrow</Value>
+    </Setting>
+    <Setting Name="Keyboard_Stop" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Escape</Value>
+    </Setting>
+    <Setting Name="Keyboard_VolDown" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Page Down</Value>
+    </Setting>
+    <Setting Name="Keyboard_VolUp" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Page Up</Value>
+    </Setting>
+    <Setting Name="Keyboard_Webpage" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + W</Value>
+    </Setting>
+    <Setting Name="Gamepad_About" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_AddToPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_ClearPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_Close" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_FS" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 1</Value>
+    </Setting>
+    <Setting Name="Gamepad_Last" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 5</Value>
+    </Setting>
+    <Setting Name="Gamepad_Mute" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 3</Value>
+    </Setting>
+    <Setting Name="Gamepad_Next" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 6</Value>
+    </Setting>
+    <Setting Name="Gamepad_Open" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 10</Value>
+    </Setting>
+    <Setting Name="Gamepad_OpenPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_PlayPause" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 2</Value>
+    </Setting>
+    <Setting Name="Gamepad_Props" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_RemoveFromPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_RenamePL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_RepeatPL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_RepeatTrack" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_SavePL" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_Settings" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_Shuffle" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Gamepad_SkipBack" Type="System.String" Scope="User">
+      <Value Profile="(Default)">X Axis Left</Value>
+    </Setting>
+    <Setting Name="Gamepad_SkipFwd" Type="System.String" Scope="User">
+      <Value Profile="(Default)">X Axis Right</Value>
+    </Setting>
+    <Setting Name="Gamepad_Stop" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 4</Value>
+    </Setting>
+    <Setting Name="Gamepad_VolDown" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Y Axis Bottom</Value>
+    </Setting>
+    <Setting Name="Gamepad_VolUp" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Y Axis Top</Value>
+    </Setting>
+    <Setting Name="Gamepad_Webpage" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard_DVDMenu" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Alt + Spacebar</Value>
+    </Setting>
+    <Setting Name="Keyboard_DiscEject" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Down Arrow</Value>
+    </Setting>
+    <Setting Name="Gamepad_DVDMenu" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Button 9</Value>
+    </Setting>
+    <Setting Name="Gamepad_DiscEject" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Visualization" Type="System.String" Scope="User">
+      <Value Profile="(Default)">None</Value>
+    </Setting>
+    <Setting Name="Keyboard" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Gamepad" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="BeatBG" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Visualization_Rate" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">15</Value>
+    </Setting>
+    <Setting Name="DefaultLocale" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="Subtitles" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="Topmost" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
