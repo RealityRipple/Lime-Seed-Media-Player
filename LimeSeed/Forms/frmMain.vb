@@ -4745,7 +4745,11 @@ Public Class frmMain
         If DoSearch Then macArt = New AppleNet(Artist, Album)
         Return Nothing
       End If
-      If My.Computer.FileSystem.FileExists(IO.Path.GetDirectoryName(Path) & "\Folder.jpg") Then Return New ImageWithName(IO.Path.GetDirectoryName(Path) & "\Folder.jpg")
+      Dim jPath As String = IO.Path.GetDirectoryName(Path) & "\Folder.jpg"
+      If My.Computer.FileSystem.FileExists(jPath) Then
+        If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+        Return New ImageWithName(jPath)
+      End If
       If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
         Using ID3v2Tags As New Seed.clsID3v2(Path)
           If ID3v2Tags.HasID3v2Tag Then
@@ -4868,16 +4872,16 @@ Public Class frmMain
       mArt = picture
       mFile = fileName
     End Sub
-    Public ReadOnly Property Art
+    Public ReadOnly Property Art As Drawing.Image
       Get
         Return mArt
       End Get
     End Property
-    Public Property FileName
+    Public Property FileName As String
       Get
         Return mFile
       End Get
-      Set(value)
+      Set(value As String)
         If My.Computer.FileSystem.FileExists(value) Then
           mFile = value
           mArt = PathToImg(value)
@@ -5297,12 +5301,13 @@ Public Class frmMain
         End If
       End If
 
-      If pctAlbumArt.Tag Is Nothing Then
-        For Each ret In (From fRet In e.Rows Where fRet("artistName").ToString.ToLower.Contains(Artist.ToLower) And fRet("collectionName").ToString.ToLower.Contains(Album.ToLower))
-          'For Each ret In (From fRet In e.Rows Where fRet("artistName").Value.toLower.Contains(Artist.ToLower) And fRet.ToLower.Contains("""collectionname"":""" & Album.ToLower & """"))
-          If Not ret("artworkUrl100") Is Nothing Then
-            macArt.ChooseRow(ret)
-            Exit Sub
+      If pctAlbumArt.Tag Is Nothing OrElse (Not CType(pctAlbumArt.Tag, ImageWithName).FileName.ToLower.EndsWith("folder.jpg")) Then
+        For Each ret In e.Rows
+          If StrEquiv(ret("artistName"), Artist) And StrEquiv(ret("collectionName"), Album) Then
+            If Not ret("artworkUrl100") Is Nothing Then
+              macArt.ChooseRow(ret)
+              Exit Sub
+            End If
           End If
         Next
       End If
@@ -5319,6 +5324,7 @@ Public Class frmMain
 
   End Sub
 
+
   Private Sub macArt_Complete(sender As Object, e As AppleNet.CompleteEventArgs) Handles macArt.Complete
     If Me.InvokeRequired Then
       Me.Invoke(New EventHandler(Of AppleNet.CompleteEventArgs)(AddressOf macArt_Complete), sender, e)
@@ -5329,6 +5335,7 @@ Public Class frmMain
       If Not My.Computer.FileSystem.FileExists(sArt) Then
         Try
           FileArt.Art.Save(sArt, Drawing.Imaging.ImageFormat.Jpeg)
+          IO.File.SetAttributes(sArt, IO.FileAttributes.Hidden)
         Catch ex As Exception
           Debug.Print("Unable to save: " & ex.Message)
         End Try
@@ -5339,6 +5346,7 @@ Public Class frmMain
             oldArt.Dispose()
             My.Computer.FileSystem.DeleteFile(sArt)
             FileArt.Art.Save(sArt, Drawing.Imaging.ImageFormat.Jpeg)
+            IO.File.SetAttributes(sArt, IO.FileAttributes.Hidden)
           Catch ex As Exception
             Debug.Print("Unable to save: " & ex.Message)
           End Try

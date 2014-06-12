@@ -2,12 +2,23 @@
   Private WithEvents sckReader As New Net.WebClient
   Public Event NewArt(row As Generic.Dictionary(Of String, Object))
   Public Event Cancelled()
-  'Private ArtList() As Generic.Dictionary(Of String, String)
 
   Public Sub Display(Artist As String, Album As String, Rows() As Generic.Dictionary(Of String, Object))
-    grpArtwork.Text = "Select Album Artwork for " & Artist.Replace("&", "&&") & " - " & Album.Replace("&", "&&")
-    txtSearch.Text = Artist & " " & Album
-    'Array.Copy(Rows, ArtList, Rows.Count)
+    If String.IsNullOrEmpty(Artist) Then
+      If String.IsNullOrEmpty(Album) Then
+        grpArtwork.Text = "Select Artwork for Unknown Album"
+        txtSearch.Text = "Enter Search Terms"
+      Else
+        grpArtwork.Text = "Select Album Artwork for " & Album.Replace("&", "&&")
+        txtSearch.Text = Album
+      End If
+    ElseIf String.IsNullOrEmpty(Album) Then
+      grpArtwork.Text = "Select Artwork for Unknown " & Artist.Replace("&", "&&") & " Album"
+      txtSearch.Text = Artist
+    Else
+      grpArtwork.Text = "Select Album Artwork for " & Artist.Replace("&", "&&") & " - " & Album.Replace("&", "&&")
+      txtSearch.Text = Artist & " " & Album
+    End If
     pnlArtwork.Controls.Clear()
     If Rows.Count > 4 Then
       pnlProgress.Visible = True
@@ -28,7 +39,6 @@
     End If
     pnlArtwork.Focus()
     tmrArtwork.Enabled = True
-
   End Sub
 
   Public Sub AddRow(RowData As Generic.Dictionary(Of String, Object))
@@ -84,8 +94,6 @@
       pnlArtwork.Controls.Add(pnlTmp)
     End If
   End Sub
-
-  'Private Delegate Sub ArtInvoker(ByRef pctTmp As PictureBox)
 
   Private Sub GetArtwork(pctTmp As PictureBox)
     Dim rowURI As Uri = pctTmp.Tag
@@ -159,7 +167,6 @@
         Me.Cursor = Cursors.AppStarting
         Dim tX As New Threading.Thread(New Threading.ParameterizedThreadStart(AddressOf GetArtwork))
         tX.Start(item.Controls(0))
-        'Me.BeginInvoke(New ArtInvoker(AddressOf GetArtwork), item.Controls(0))
         Exit Sub
       End If
     Next
@@ -210,21 +217,6 @@
       pbProgress.Maximum = e.TotalBytesToReceive
       pbProgress.Value = e.BytesReceived
       lblProgress.Text = FormatPercent(e.BytesReceived / e.TotalBytesToReceive, 0, TriState.False, TriState.False, TriState.False)
-      'Dim pnl = (From item As TableLayoutPanel In pnlArtwork.Controls Where item.Name = CType(e.UserState, String).Replace("pct", "pnl")).FirstOrDefault
-      'If pnl Is Nothing Then Exit Sub
-      'Dim pctTmp As PictureBox = pnl.Controls(0)
-      'If pctTmp.Tag IsNot Nothing Then
-      '  Dim imgTmp As Drawing.Image = New Drawing.Bitmap(100, 100)
-      '  Using g As Drawing.Graphics = Drawing.Graphics.FromImage(imgTmp)
-      '    g.Clear(Drawing.Color.White)
-      '    Using limeBrush As New Drawing.Drawing2D.LinearGradientBrush(New Drawing.Rectangle(0, 0, 99, 99), Drawing.Color.White, Drawing.Color.Lime, Drawing.Drawing2D.LinearGradientMode.Vertical)
-      '      g.FillRectangle(limeBrush, New Drawing.Rectangle(0, 0, 99, 99))
-      '    End Using
-      '    g.DrawRectangle(Drawing.Pens.Black, 0, 0, 99, 99)
-      '    g.DrawString("Loading" & vbNewLine & "(" & FormatPercent(e.BytesReceived / e.TotalBytesToReceive, 1) & ")", New Drawing.Font(Drawing.FontFamily.GenericSansSerif, 16), Drawing.Brushes.Black, New Drawing.RectangleF(1, 1, 98, 98), New Drawing.StringFormat With {.Alignment = Drawing.StringAlignment.Center, .LineAlignment = Drawing.StringAlignment.Center})
-      '  End Using
-      '  If pctTmp.Tag IsNot Nothing Then pctTmp.Image = imgTmp
-      'End If
     End If
   End Sub
   Private Sub cmdSearch_Click(sender As System.Object, e As System.EventArgs) Handles cmdSearch.Click
@@ -238,7 +230,6 @@
       wsTmp.Encoding = System.Text.Encoding.UTF8
       sData = wsTmp.DownloadString(New Uri("http://itunes.apple.com/search?term=" & txtSearch.Text.Replace(" "c, "+"c) & "&media=music&entity=album"))
     End Using
-
     Dim Rows() As Generic.Dictionary(Of String, Object)
     Dim j As Object = New Web.Script.Serialization.JavaScriptSerializer().Deserialize(Of Object)(sData)
     Dim rowCount As Integer = j("resultCount")
@@ -249,7 +240,6 @@
       Rows(I) = dItem
       I += 1
     Next
-    'Array.Copy(Rows, ArtList, Rows.Count)
     pnlArtwork.Controls.Clear()
     If Rows.Count > 4 Then
       pnlProgress.Visible = True
@@ -292,10 +282,4 @@
       cmdSearch.PerformClick()
     End If
   End Sub
-
-  Private Sub pnlArtwork_MouseWheel(sender As Object, e As System.Windows.Forms.MouseEventArgs) Handles pnlArtwork.MouseWheel
-    Debug.Print(e.Delta)
-  End Sub
-
-
 End Class

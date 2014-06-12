@@ -30,6 +30,12 @@ Module modFuncts
     Return Long.Parse(Join(ocVals, ""), Globalization.NumberStyles.HexNumber)
   End Function
 
+  Public Function StrEquiv(strA As String, strB As String) As Boolean
+    strA = strA.Trim.Normalize.ToLower
+    strB = strB.Trim.Normalize.ToLower
+    Return (strA.Contains(strB) Or strB.Contains(strA) Or String.Compare(strA, strB, True) = 0)
+  End Function
+
   Public Function BufferHex(lVal As Integer, Optional ByVal lCols As Integer = 2) As String
     Dim sHex As String = Hex(lVal)
     If sHex.Length < lCols Then

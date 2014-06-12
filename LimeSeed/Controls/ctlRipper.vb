@@ -18,7 +18,6 @@
   Public Sub Init()
     noPrompt = True
     cDrive = New CDDrive
-    'cInfo = New CDDBNet
     RefreshDriveList()
     lLastRev = -1
     pctCover.AllowDrop = True
@@ -107,13 +106,11 @@
               Dim Redo As Boolean = False
               Dim J As Integer = 0
               For I As Integer = 1 To cDrive.GetNumTracks
-                'If cDrive.IsAudioTrack(I) Then
                 If dgvTracks.Rows(J).Cells(5).Value <> CalcLength(cDrive.TrackSize(I)) Then
                   Redo = True
                   Exit For
                 End If
                 J += 1
-                'End If
               Next
               If Not Redo Then Exit Sub
             End If
@@ -198,10 +195,8 @@
     Dim StartSum As ULong = 0
     Dim LenSum As Double = 0
     For I As Integer = 1 To cDrive.GetNumTracks
-      'If cDrive.IsAudioTrack(I) Then
       StartSum += sumOfDigits(Math.Floor((cDrive.GetStartSector(I) + 150) / 75))
       LenSum += cDrive.TrackSize(I) / 176400
-      'End If
     Next
     StartSum = StartSum Mod 255
     If StartSum > &HF Then
@@ -219,9 +214,7 @@
     If FullID Then
       sTmp &= " " & cDrive.GetNumTracks
       For I As Integer = 1 To cDrive.GetNumTracks
-        'If cDrive.IsAudioTrack(I) Then
         sTmp &= " " & (cDrive.GetStartSector(I) + 150)
-        'End If
       Next
       sTmp &= " " & (iLenSum + 2)
     End If
@@ -426,12 +419,15 @@
     If Me.InvokeRequired Then
       Me.Invoke(New EventHandler(Of AppleNet.ChoicesEventArgs)(AddressOf cArtwork_Choices), sender, e)
     Else
-      For Each ret In (From fRet In e.Rows Where fRet("artistName").ToString.ToLower.Contains(txtAlbumArtist.Text.ToLower) And fRet("collectionName").ToString.ToLower.Contains(txtAlbumAlbum.Text.ToLower))
-        If Not ret("artworkUrl100") Is Nothing Then
-          cArtwork.ChooseRow(ret)
-          Exit Sub
+      For Each ret In e.Rows
+        If StrEquiv(ret("artistName"), txtAlbumArtist.Text) And StrEquiv(ret("collectionName"), txtAlbumAlbum.Text) Then
+          If Not ret("artworkUrl100") Is Nothing Then
+            cArtwork.ChooseRow(ret)
+            Exit Sub
+          End If
         End If
       Next
+
       If Not noPrompt Then
         Dim artList As New frmArtList
         artList.Display(txtAlbumArtist.Text, txtAlbumAlbum.Text, e.Rows)
@@ -493,8 +489,6 @@
       MsgBox("Revision entry is not set, you may be unable to submit this entry if a version already exists.", MsgBoxStyle.Exclamation, "No Revision Entry Set")
       lLastRev = 0
     End If
-
-
     If MsgBox("Are you sure you wish to submit this album to FreeDB?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, "Submit Album?") = MsgBoxResult.Yes Then
       Dim sCat, sID, sEntry As String
       If String.Compare(txtAlbumGenre.Text, "blues", True) = 0 Or
@@ -563,7 +557,6 @@
         End If
       End If
     End If
-
   End Sub
 
   Private Sub cInfo_ReadOnlyConnection(IsReadOnly As Boolean) Handles cInfo.ReadOnlyConnection
@@ -737,25 +730,28 @@ Friend Class AppleNet
         I += 1
       Next
     End Sub
-    'Public Sub New(sData() As String)
-    '  Rows = sData
-    'End Sub
   End Class
   Public Event Choices(sender As Object, e As ChoicesEventArgs)
   Private cArtist, cAlbum, cArtURL As String, cArtTry As Integer = 0
   Public Sub New(Artist As String, ByVal Album As String)
-    cArtist = Artist
-    cAlbum = Album
+    cArtist = Artist.Trim
+    cAlbum = Album.Trim
     wsApple = New Net.WebClient
     wsApple.Encoding = System.Text.Encoding.UTF8
-    'Debug.Print("http://itunes.apple.com/search?term=" & Album.Replace(" "c, "+"c) & "&media=music&entity=album&artistTerm=" & Artist.Replace(" "c, "+"c))
-    'Debug.Print("search for " & "http://itunes.apple.com/search?term=" & Album.Replace(" "c, "+"c) & "&media=music&entity=album&artistTerm=" & Artist.Replace(" "c, "+"c))
     Dim tX As New Threading.Thread(New Threading.ThreadStart(AddressOf DownloadAsync))
     tX.Start()
   End Sub
 
   Private Sub DownloadAsync()
-    wsApple.DownloadStringAsync(New Uri("http://itunes.apple.com/search?term=" & cAlbum.Replace(" "c, "+"c) & "&media=music&entity=album&artistTerm=" & cArtist.Replace(" "c, "+"c)))
+    Dim appleURI As Uri
+    If String.IsNullOrEmpty(cArtist) Then
+      appleURI = New Uri("http://itunes.apple.com/search?term=" & cAlbum.Replace(" "c, "+"c) & "&media=music&entity=album")
+    ElseIf String.IsNullOrEmpty(cAlbum) Then
+      appleURI = New Uri("http://itunes.apple.com/search?artistTerm=" & cArtist.Replace(" "c, "+"c) & "&media=music&entity=album")
+    Else
+      appleURI = New Uri("http://itunes.apple.com/search?term=" & cAlbum.Replace(" "c, "+"c) & "&media=music&entity=album&artistTerm=" & cArtist.Replace(" "c, "+"c))
+    End If
+    wsApple.DownloadStringAsync(appleURI)
   End Sub
 
   Private Sub wsApple_DownloadDataCompleted(sender As Object, e As System.Net.DownloadDataCompletedEventArgs) Handles wsApple.DownloadDataCompleted
@@ -813,31 +809,6 @@ Friend Class AppleNet
   Private Sub wsApple_DownloadStringCompleted(sender As Object, e As System.Net.DownloadStringCompletedEventArgs) Handles wsApple.DownloadStringCompleted
     If e.Error Is Nothing Then
       RaiseEvent Choices(Me, New ChoicesEventArgs(e.Result))
-
-      'For Each ret In (From fRet In rets Where fRet.Contains("""artistName"":""" & cArtist & """") And fRet.Contains("""collectionName"":""" & cAlbum & """"))
-      '  If ret.Contains("artworkUrl100") Then
-      '    ChooseRow(ret)
-      '    Exit Sub
-      '  End If
-      'Next
-      'For Each ret In (From fRet In rets Where fRet.Contains("""collectionName"":""" & cAlbum & """"))
-      '  If ret.Contains("artworkUrl100") Then
-      '    ChooseRow(ret)
-      '    Exit Sub
-      '  End If
-      'Next
-      'For Each ret In (From fRet In rets Where fRet.Contains("""artistName"":""" & cArtist & """"))
-      '  If ret.Contains("artworkUrl100") Then
-      '    ChooseRow(ret)
-      '    Exit Sub
-      '  End If
-      'Next
-      'If e.Result.Contains("artworkUrl100") Then
-      '  ChooseRow(e.Result)
-      'Else
-      '  RaiseEvent Failed("Unable to find artwork")
-      '  Debug.Print(e.Result)
-      'End If
     Else
       RaiseEvent Failed(Me, New FailEventArgs(e.Error))
     End If
@@ -1152,12 +1123,12 @@ Friend Class CDDBNet
   Private Sub wsSocket_SocketReceived(sender As Object, e As SocketReceivedEventArgs) Handles wsSocket.SocketReceived
     Dim sTmp As String = System.Text.Encoding.GetEncoding(latin_1).GetString(e.Data)
     sTmp = sTmp.Substring(0, sTmp.IndexOf(vbNullChar))
-    Debug.Print(sTmp)
+    'Debug.Print(sTmp)
     HandleData(sTmp)
   End Sub
 
   Private Sub SendData(Message As String)
-    Debug.Print(Message)
+    'Debug.Print(Message)
     Dim bSend() As Byte = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(Message & vbCrLf)
     wsSocket.Send(bSend)
   End Sub
