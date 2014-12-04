@@ -76,6 +76,7 @@
     <Import Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GreenThumbnailProperties.vb" />
     <Compile Include="GreenThumbnailProvider.vb" />
     <Compile Include="COMWrap.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />

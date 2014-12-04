@@ -47,31 +47,36 @@ Public Class ThumbnailProvider
       hBitmap = 0
       bitmapType = WTS_ALPHATYPE.WTSAT_UNKNOWN
     End Try
+    GC.Collect()
   End Sub
 
   Private Function ScaleImage(bFile As Bitmap, cx As UInteger) As Drawing.Bitmap
-    Dim lWidth, lHeight As UInteger
-    If bFile.Width > bFile.Height Then
-      If cx > bFile.Width Then cx = bFile.Width
-      lWidth = cx
-      lHeight = (bFile.Height / bFile.Width) * cx
-    ElseIf bFile.Width < bFile.Height Then
-      If cx > bFile.Height Then cx = bFile.Height
-      lWidth = (bFile.Width / bFile.Height) * cx
-      lHeight = cx
-    Else
-      If cx > bFile.Width Then cx = bFile.Width
-      lWidth = cx
-      lHeight = cx
-    End If
-    Dim bThumb As Bitmap = New Bitmap(lWidth, lHeight, Imaging.PixelFormat.Format32bppArgb)
-    Using g As Graphics = Graphics.FromImage(bThumb)
-      g.InterpolationMode = Drawing2D.InterpolationMode.HighQualityBicubic
-      g.DrawImage(bFile, New Rectangle(0, 0, lWidth, lHeight), 0, 0, bFile.Width, bFile.Height, GraphicsUnit.Pixel)
-      bFile.Dispose()
-      bFile = Nothing
-    End Using
-    Return bThumb.Clone
+    Try
+      Dim lWidth, lHeight As UInteger
+      If bFile.Width > bFile.Height Then
+        If cx > bFile.Width Then cx = bFile.Width
+        lWidth = cx
+        lHeight = (bFile.Height / bFile.Width) * cx
+      ElseIf bFile.Width < bFile.Height Then
+        If cx > bFile.Height Then cx = bFile.Height
+        lWidth = (bFile.Width / bFile.Height) * cx
+        lHeight = cx
+      Else
+        If cx > bFile.Width Then cx = bFile.Width
+        lWidth = cx
+        lHeight = cx
+      End If
+      Dim bThumb As Bitmap = New Bitmap(lWidth, lHeight, Imaging.PixelFormat.Format32bppArgb)
+      Using g As Graphics = Graphics.FromImage(bThumb)
+        g.InterpolationMode = Drawing2D.InterpolationMode.HighQualityBicubic
+        g.DrawImage(bFile, New Rectangle(0, 0, lWidth, lHeight), 0, 0, bFile.Width, bFile.Height, GraphicsUnit.Pixel)
+        bFile.Dispose()
+        bFile = Nothing
+      End Using
+      Return bThumb.Clone
+    Catch ex As Exception
+      Return Nothing
+    End Try
   End Function
 
   Private Function LoadImage(Path As String, Optional cx As UInteger = 0) As Drawing.Bitmap
