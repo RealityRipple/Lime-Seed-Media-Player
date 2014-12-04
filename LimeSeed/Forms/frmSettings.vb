@@ -59,6 +59,10 @@
   Private volDevice As CoreAudioApi.MMDevice
   Private objDraw As Object
   Private methodDraw As System.Reflection.MethodInfo
+  Private Const BCM_SETSHIELD As Integer = &H160C
+  <Runtime.InteropServices.DllImport("user32", CharSet:=Runtime.InteropServices.CharSet.Auto, setlasterror:=True)>
+  Private Shared Function SendMessage(hWnd As IntPtr, msg As UInt32, wParam As UInt32, lParam As UInt32) As UInt32
+  End Function
 
   Private Sub cmdOK_Click(sender As System.Object, e As System.EventArgs) Handles cmdOK.Click
     Me.Close()
@@ -188,7 +192,16 @@
 
     tbsSettings.SelectedIndex = 0
     Me.Size = Me.MinimumSize
+
+    If Not isAdmin() Then SendMessage(cmdAssociate.Handle, BCM_SETSHIELD, 0, &HFFFFFFFFUI)
   End Sub
+
+  Private Function isAdmin() As Boolean
+    Dim id As Security.Principal.WindowsIdentity = Security.Principal.WindowsIdentity.GetCurrent
+    Dim p As New Security.Principal.WindowsPrincipal(id)
+    Return p.IsInRole(Security.Principal.WindowsBuiltInRole.Administrator)
+  End Function
+
 
   Private Sub ChildTags(Node As TreeNode, ByRef List As String)
     If Node.Nodes.Count > 0 Then

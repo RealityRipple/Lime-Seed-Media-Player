@@ -104,6 +104,7 @@ Partial Class frmSettings
     Me.cmbAudioOutput = New System.Windows.Forms.ComboBox()
     Me.lblLocale = New System.Windows.Forms.Label()
     Me.cmbLocale = New System.Windows.Forms.ComboBox()
+    Me.chkSubtitles = New System.Windows.Forms.CheckBox()
     Me.pnlMain = New System.Windows.Forms.TableLayoutPanel()
     Me.tbsSettings = New System.Windows.Forms.TabControl()
     Me.tabOptions = New System.Windows.Forms.TabPage()
@@ -247,7 +248,6 @@ Partial Class frmSettings
     Me.txtRate = New System.Windows.Forms.NumericUpDown()
     Me.lblRateFPS = New System.Windows.Forms.Label()
     Me.tmrVis = New System.Windows.Forms.Timer(Me.components)
-    Me.chkSubtitles = New System.Windows.Forms.CheckBox()
     CType(Me.numGapless, System.ComponentModel.ISupportInitialize).BeginInit()
     Me.pnlOptions.SuspendLayout()
     Me.pnlMain.SuspendLayout()
@@ -572,11 +572,11 @@ Partial Class frmSettings
     '
     Me.cmdAssociate.Anchor = System.Windows.Forms.AnchorStyles.None
     Me.cmdAssociate.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdAssociate.Location = New System.Drawing.Point(23, 207)
+    Me.cmdAssociate.Location = New System.Drawing.Point(16, 206)
     Me.cmdAssociate.Name = "cmdAssociate"
-    Me.cmdAssociate.Size = New System.Drawing.Size(75, 23)
+    Me.cmdAssociate.Size = New System.Drawing.Size(90, 25)
     Me.cmdAssociate.TabIndex = 14
-    Me.cmdAssociate.Text = "Associate"
+    Me.cmdAssociate.Text = " Associate"
     Me.cmdAssociate.UseVisualStyleBackColor = True
     '
     'chkSingleInstance
@@ -647,6 +647,17 @@ Partial Class frmSettings
     Me.cmbLocale.Name = "cmbLocale"
     Me.cmbLocale.Size = New System.Drawing.Size(284, 21)
     Me.cmbLocale.TabIndex = 20
+    '
+    'chkSubtitles
+    '
+    Me.chkSubtitles.Anchor = System.Windows.Forms.AnchorStyles.Right
+    Me.chkSubtitles.AutoSize = True
+    Me.chkSubtitles.Location = New System.Drawing.Point(415, 54)
+    Me.chkSubtitles.Name = "chkSubtitles"
+    Me.chkSubtitles.Size = New System.Drawing.Size(66, 17)
+    Me.chkSubtitles.TabIndex = 21
+    Me.chkSubtitles.Text = "Subtitles"
+    Me.chkSubtitles.UseVisualStyleBackColor = True
     '
     'pnlMain
     '
@@ -2429,17 +2440,6 @@ Partial Class frmSettings
     'tmrVis
     '
     Me.tmrVis.Interval = 64
-    '
-    'chkSubtitles
-    '
-    Me.chkSubtitles.Anchor = System.Windows.Forms.AnchorStyles.Right
-    Me.chkSubtitles.AutoSize = True
-    Me.chkSubtitles.Location = New System.Drawing.Point(415, 54)
-    Me.chkSubtitles.Name = "chkSubtitles"
-    Me.chkSubtitles.Size = New System.Drawing.Size(66, 17)
-    Me.chkSubtitles.TabIndex = 21
-    Me.chkSubtitles.Text = "Subtitles"
-    Me.chkSubtitles.UseVisualStyleBackColor = True
     '
     'frmSettings
     '
