@@ -179,7 +179,7 @@ Partial Class frmFullScreen
     '
     Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
     Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-    Me.BackColor = System.Drawing.Color.Red
+    Me.BackColor = System.Drawing.Color.Black
     Me.ClientSize = New System.Drawing.Size(569, 359)
     Me.ControlBox = False
     Me.Controls.Add(Me.bpgVolume)
