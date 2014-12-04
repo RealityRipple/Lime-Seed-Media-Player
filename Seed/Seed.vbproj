@@ -143,6 +143,16 @@
     <Compile Include="ctlSeed.vb">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Headers\clsID3v1.vb" />
+    <Compile Include="Headers\clsID3v2.vb" />
+    <Compile Include="Headers\clsMIDI.vb" />
+    <Compile Include="Headers\clsMKV.vb" />
+    <Compile Include="Headers\clsMPEG.vb" />
+    <Compile Include="Headers\clsRIFF.vb" />
+    <Compile Include="Headers\clsVBRI.vb" />
+    <Compile Include="Headers\clsVorbis.vb" />
+    <Compile Include="Headers\clsXING.vb" />
+    <Compile Include="Headers\modHeaderFunctions.vb" />
     <Compile Include="modFuncts.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
