@@ -965,6 +965,17 @@
     Return False
   End Function
 
+  Public Function TtoH(inText As String) As String
+    Dim sRet As String = String.Empty
+    For I As Integer = 0 To inText.Length - 1
+      Dim sChunk As String = inText.Substring(I, 1)
+      sChunk = Convert.ToString(AscW(sChunk), 16)
+      If sChunk.Length < 2 Then sChunk = StrDup(2 - sChunk.Length, "0") & sChunk
+      sRet &= sChunk & " "
+    Next
+    Return sRet.Substring(0, sRet.Length - 1)
+  End Function
+
   Public Sub ShowData(File As String)
     sFile = File
     mpPreview = New Seed.ctlSeed
