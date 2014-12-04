@@ -472,11 +472,162 @@
           End If
         Next
       Case Else
-                    If Array.Exists(My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).GetValueNames.ToArray, Function(sVal) String.Compare(sVal, "Treatment", True) = 0) Then My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).DeleteValue("Treatment")
-                    If Array.Exists(My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).GetValueNames.ToArray, Function(sVal) String.Compare(sVal, "TypeOverlay", True) = 0) Then My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).DeleteValue("TypeOverlay")
-                    For I As Integer = 0 To UBound(sExt)
-                      My.Computer.Registry.ClassesRoot.CreateSubKey(sExt(I)).SetValue(String.Empty, sType)
-                    Next I
+        If Array.Exists(My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).GetValueNames.ToArray, Function(sVal) String.Compare(sVal, "Treatment", True) = 0) Then My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).DeleteValue("Treatment")
+        If Array.Exists(My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).GetValueNames.ToArray, Function(sVal) String.Compare(sVal, "TypeOverlay", True) = 0) Then My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).DeleteValue("TypeOverlay")
+        For I As Integer = 0 To UBound(sExt)
+          My.Computer.Registry.ClassesRoot.CreateSubKey(sExt(I)).SetValue(String.Empty, sType)
+        Next I
+    End Select
+    Add_Props(sType, sDescr, sExt)
+  End Sub
+
+  Private Const INPROC As String = "InProcServer32"
+  Private CLSID_THUMBPROP As New Guid("D82F694E-46DA-4B5A-8DA4-FCE35A1F6CE1")
+  Private Sub Add_Props(ByVal sType As String, ByVal sDescr As String, ParamArray sExt() As String)
+    Select Case sType
+      Case "OGG", "OGM", "MKV"
+        If Not My.Computer.Registry.ClassesRoot.OpenSubKey("CLSID").GetSubKeyNames.Contains(CLSID_THUMBPROP.ToString("B").ToUpper) Then My.Computer.Registry.ClassesRoot.OpenSubKey("CLSID", True).CreateSubKey(CLSID_THUMBPROP.ToString("B").ToUpper)
+        If Not My.Computer.Registry.ClassesRoot.GetSubKeyNames.Contains(sType) Then My.Computer.Registry.ClassesRoot.CreateSubKey(sType)
+        Select Case sType
+
+          Case "OGG", "OGM"
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("FullDetails", "Prop:System.Music.TrackNumber;System.Title;System.Music.Artist;System.Music.Album;System.Music.Genre;System.Media.Year;System.Comment;System.Audio.EncodingBitrate;System.Audio.SampleRate;System.Audio.ChannelCount;System.Media.Duration", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("PreviewTitle", "Prop:System.Media.Duration;System.Size", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("PreviewDetails", "Prop:System.Music.Artist;System.Music.AlbumTitle;System.Music.Genre;*System.Media.Duration;System.Rating;System.Media.Year;*System.Size;System.Music.TrackNumber;System.Music.AlbumArtist;System.Title;*System.Audio.EncodingBitrate", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("TileInfo", "Prop:System.Media.Duration;System.Size", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("ExtendedTileInfo", "Prop:System.ItemType;System.Size;System.Music.Artist;System.Media.Duration", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("InfoTip", "Prop:System.ItemType;System.Size;System.Music.Artist;System.Media.Duration", Microsoft.Win32.RegistryValueKind.String)
+          Case "MKV"
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("FullDetails", "Prop:System.Video.StreamName;System.Media.Year;System.Video.FrameWidth;System.Video.FrameHeight;System.Video.FrameRate;System.Audio.SampleRate;System.Audio.ChannelCount;VideoTimeLength;System.Media.Duration", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("PreviewTitle", "Prop:System.Media.Duration;System.Size", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("TileInfo", "Prop:System.Media.Duration;System.Size", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("ExtendedTileInfo", "Prop:System.ItemType;System.Size;System.Video.FrameWidth;System.Video.FrameHeight;System.Media.Duration", Microsoft.Win32.RegistryValueKind.String)
+            My.Computer.Registry.ClassesRoot.OpenSubKey(sType, True).SetValue("InfoTip", "Prop:System.Video.StreamName;System.ItemType;System.Video.FrameWidth;System.Video.FrameHeight;System.Media.Duration", Microsoft.Win32.RegistryValueKind.String)
+        End Select
+        If Not My.Computer.Registry.LocalMachine.
+          GetSubKeyNames.Contains("SOFTWARE") Then
+          My.Computer.Registry.LocalMachine.
+            CreateSubKey("SOFTWARE")
+        End If
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          GetSubKeyNames.Contains("Microsoft") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            CreateSubKey("Microsoft")
+        End If
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          OpenSubKey("Microsoft").
+          GetSubKeyNames.Contains("Windows") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            OpenSubKey("Microsoft", True).
+            CreateSubKey("Windows")
+        End If
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          OpenSubKey("Microsoft").
+          OpenSubKey("Windows").
+          GetSubKeyNames.Contains("CurrentVersion") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            OpenSubKey("Microsoft", True).
+            OpenSubKey("Windows", True).
+            CreateSubKey("CurrentVersion")
+        End If
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          OpenSubKey("Microsoft").
+          OpenSubKey("Windows").
+          OpenSubKey("CurrentVersion").
+          GetSubKeyNames.Contains("PropertySystem") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            OpenSubKey("Microsoft", True).
+            OpenSubKey("Windows", True).
+            OpenSubKey("CurrentVersion", True).
+            CreateSubKey("PropertySystem")
+        End If
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          OpenSubKey("Microsoft").
+          OpenSubKey("Windows").
+          OpenSubKey("CurrentVersion").
+          OpenSubKey("PropertySystem").
+          GetSubKeyNames.Contains("PropertyHandlers") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            OpenSubKey("Microsoft", True).
+            OpenSubKey("Windows", True).
+            OpenSubKey("CurrentVersion", True).
+            OpenSubKey("PropertySystem", True).
+            CreateSubKey("PropertyHandlers")
+        End If
+        For Each ext In sExt
+          If Not My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE").
+            OpenSubKey("Microsoft").
+            OpenSubKey("Windows").
+            OpenSubKey("CurrentVersion").
+            OpenSubKey("PropertySystem").
+            OpenSubKey("PropertyHandlers").
+            GetSubKeyNames.Contains(ext) Then
+            My.Computer.Registry.LocalMachine.
+              OpenSubKey("SOFTWARE", True).
+              OpenSubKey("Microsoft", True).
+              OpenSubKey("Windows", True).
+              OpenSubKey("CurrentVersion", True).
+              OpenSubKey("PropertySystem", True).
+              OpenSubKey("PropertyHandlers", True).
+              CreateSubKey(ext)
+          End If
+          My.Computer.Registry.LocalMachine.
+              OpenSubKey("SOFTWARE", True).
+              OpenSubKey("Microsoft", True).
+              OpenSubKey("Windows", True).
+              OpenSubKey("CurrentVersion", True).
+              OpenSubKey("PropertySystem", True).
+              OpenSubKey("PropertyHandlers", True).
+              OpenSubKey(ext, True).
+              SetValue(String.Empty, CLSID_THUMBPROP.ToString("B").ToUpper, Microsoft.Win32.RegistryValueKind.String)
+        Next
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          OpenSubKey("Microsoft").
+          OpenSubKey("Windows").
+          OpenSubKey("CurrentVersion").
+          GetSubKeyNames.Contains("Shell Extensions") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            OpenSubKey("Microsoft", True).
+            OpenSubKey("Windows", True).
+            OpenSubKey("CurrentVersion", True).
+            CreateSubKey("Shell Extensions")
+        End If
+        If Not My.Computer.Registry.LocalMachine.
+          OpenSubKey("SOFTWARE").
+          OpenSubKey("Microsoft").
+          OpenSubKey("Windows").
+          OpenSubKey("CurrentVersion").
+          OpenSubKey("Shell Extensions").
+          GetSubKeyNames.Contains("Approved") Then
+          My.Computer.Registry.LocalMachine.
+            OpenSubKey("SOFTWARE", True).
+            OpenSubKey("Microsoft", True).
+            OpenSubKey("Windows", True).
+            OpenSubKey("CurrentVersion", True).
+            OpenSubKey("Shell Extensions", True).
+            CreateSubKey("Approved")
+        End If
+        My.Computer.Registry.LocalMachine.
+              OpenSubKey("SOFTWARE", True).
+              OpenSubKey("Microsoft", True).
+              OpenSubKey("Windows", True).
+              OpenSubKey("CurrentVersion", True).
+              OpenSubKey("Shell Extensions", True).
+              OpenSubKey("Approved", True).
+              SetValue(CLSID_THUMBPROP.ToString("B").ToUpper, "GreenThumb.PropertyHandler", Microsoft.Win32.RegistryValueKind.String)
     End Select
   End Sub
 
@@ -633,7 +784,7 @@
     If My.Computer.Registry.ClassesRoot.GetSubKeyNames.Contains(sType) Then My.Computer.Registry.ClassesRoot.DeleteSubKeyTree(sType)
     For I As Integer = 0 To UBound(sExt)
       Select sType.ToLower
-        Case "avi", "divx", "ivf", "mkv", "flv", "spl", "swf", "mpe", "mpg", "mpeg", "m1v", "m2v", "mp2v", "mpv2", "m2ts", "mp4", "m4v", "ogm", "mov", "qt", "dv", "dif", "rm", "rv", "vfw", "wmp", "wm", "wmv"
+        Case "avi", "divx", "ivf", "mkv", "flv", "spl", "swf", "mpe", "mpg", "mpeg", "m1v", "m2v", "mp2v", "mpv2", "m2ts", "mp4", "m4v", "ogg", "ogm", "mov", "qt", "dv", "dif", "rm", "rv", "vfw", "wmp", "wm", "wmv"
           Dim MyCR, MyExt, MySE As Microsoft.Win32.RegistryKey
           MyCR = Nothing
           MyExt = Nothing
