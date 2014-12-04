@@ -305,12 +305,53 @@ Public Class ctlSeed
         PosCtl.put_CurrentPosition(TimeTry)
         Dim bufferSize As Integer
         'ActCtl.Pause()
-        BasicVid.GetCurrentImage(bufferSize, IntPtr.Zero)
+        Dim shr As Integer = BasicVid.GetCurrentImage(bufferSize, IntPtr.Zero)
+        If Not shr = 0 Or bufferSize < 1 Then
+          Dim sFail As String = HRMessage(shr)
+          Dim exr = Marshal.GetExceptionForHR(shr)
+          If sFail = "Specified cast is not valid." Then Return Nothing
+          Debug.Print(exr.Message)
+          Debug.Print("Capture Thumbnail Buffer Failed: " & sFail)
+          Dim errBmp As New Bitmap(256, 192)
+          Using g As Graphics = Graphics.FromImage(errBmp)
+            g.Clear(Color.Black)
+            g.DrawString("Buffer Error:" & vbNewLine & sFail, New Font(FontFamily.GenericSansSerif, 20), Brushes.White, New RectangleF(16, 16, 224, 160))
+          End Using
+          PosCtl.put_CurrentPosition(wasPos)
+          Return errBmp
+        End If
         dibImage = Marshal.AllocHGlobal(bufferSize)
         Dim hr As Integer = BasicVid.GetCurrentImage(bufferSize, dibImage)
         If hr = 0 Then
           Dim struct As New BitmapInfoHeader
           Marshal.PtrToStructure(dibImage, struct)
+          Dim imgSize As Integer = struct.ImageSize
+          If imgSize > bufferSize - 40 Then
+            bufferSize = imgSize + 40
+            dibImage = Marshal.AllocHGlobal(bufferSize)
+            hr = BasicVid.GetCurrentImage(bufferSize, dibImage)
+            If hr = 0 Then
+              Marshal.PtrToStructure(dibImage, struct)
+              imgSize = struct.ImageSize
+              If imgSize > bufferSize - 40 Then
+                imgSize = bufferSize - 40
+              End If
+            Else
+              Marshal.FreeHGlobal(dibImage)
+              dibImage = IntPtr.Zero
+              Dim sFail As String = HRMessage(shr)
+              Dim exr = Marshal.GetExceptionForHR(shr)
+              Debug.Print(exr.Message)
+              Debug.Print("Capture Thumbnail Buffer Failed: " & sFail)
+              Dim errBmp As New Bitmap(256, 192)
+              Using g As Graphics = Graphics.FromImage(errBmp)
+                g.Clear(Color.Black)
+                g.DrawString("Thumb XBuf Error:" & vbNewLine & sFail, New Font(FontFamily.GenericSansSerif, 20), Brushes.White, New RectangleF(16, 16, 224, 160))
+              End Using
+              PosCtl.put_CurrentPosition(wasPos)
+              Return errBmp
+            End If
+          End If
           Dim bpp As Drawing.Imaging.PixelFormat = Imaging.PixelFormat.Format32bppRgb
           Select Case struct.BitCount
             Case 4 : bpp = Imaging.PixelFormat.Format4bppIndexed
@@ -322,12 +363,63 @@ Public Class ctlSeed
             Case 64 : bpp = Imaging.PixelFormat.Format64bppArgb
             Case Else : Debug.Print("Bit Count: " & struct.BitCount)
           End Select
-          Dim bmp As New Drawing.Bitmap(struct.Width, struct.Height, (struct.BitCount / 8) * struct.Width, bpp, New IntPtr(dibImage.ToInt64 + 40))
-          bmp.RotateFlip(Drawing.RotateFlipType.RotateNoneFlipY)
-          Dim newBmp As Drawing.Bitmap = bmp.Clone
-          bmp.Dispose()
+          Dim dataStart As Long = dibImage.ToInt64 + struct.Size
+          Dim bData(imgSize - 1) As Byte
+          For I As Integer = 0 To imgSize - 1
+            Try
+              bData(I) = Marshal.ReadByte(New IntPtr(dataStart + I))
+            Catch ex As Exception
+              Debug.Print("FAILED TO READ BYTE " & I)
+              bData(I) = 0
+            End Try
+          Next
+          Dim BMP As New Bitmap(struct.Width, struct.Height, bpp)
+          Select Case struct.BitCount
+            Case 4, 8, 16, 48, 64
+              Debug.Print("Haven't handled this BPP value: " & struct.BitCount)
+            Case 24
+              Dim x, y As Integer
+              For I As Integer = 0 To bData.Length - 1 Step 3
+                If x >= struct.Width Then
+                  y += 1
+                  x = 0
+                End If
+                If y >= struct.Height Then
+                  Debug.Print("OUT OF RANGE")
+                  Exit For
+                End If
+                Dim pxBlue As Byte = bData(I)
+                Dim pxGreen As Byte = bData(I + 1)
+                Dim pxRed As Byte = bData(I + 2)
+                Dim cVal As Color = Color.FromArgb(pxRed, pxGreen, pxBlue)
+                BMP.SetPixel(x, y, cVal)
+                x += 1
+              Next
+            Case 32
+              Dim x, y As Integer
+              For I As Integer = 0 To bData.Length - 1 Step 4
+                If x >= struct.Width Then
+                  y += 1
+                  x = 0
+                End If
+                If y >= struct.Height Then
+                  Debug.Print("OUT OF RANGE")
+                  Exit For
+                End If
+                Dim pxBlue As Byte = bData(I)
+                Dim pxGreen As Byte = bData(I + 1)
+                Dim pxRed As Byte = bData(I + 2)
+                Dim pxAlpha As Byte = bData(I + 3)
+                Dim cVal As Color = Color.FromArgb(pxAlpha, pxRed, pxGreen, pxBlue)
+                BMP.SetPixel(x, y, cVal)
+                x += 1
+              Next
+          End Select
+          Dim newBmp As Drawing.Bitmap = BMP.Clone
+          BMP.Dispose()
           Marshal.FreeHGlobal(dibImage)
           dibImage = IntPtr.Zero
+          newBmp.RotateFlip(Drawing.RotateFlipType.RotateNoneFlipY)
           Dim bBmp() As Byte = BtBA(newBmp)
           Dim lastA, lastR, lastG, lastB As Int16
           lastB = bBmp(&H36)
@@ -339,7 +431,6 @@ Public Class ctlSeed
             Dim g As Int16 = bBmp(I + 1)
             Dim r As Int16 = bBmp(I + 2)
             Dim a As Int16 = bBmp(I + 3)
-            'Debug.Print("Compare " & BufferHex(a) & BufferHex(r) & BufferHex(g) & BufferHex(b) & " with " & BufferHex(lastA) & BufferHex(lastR) & BufferHex(lastG) & BufferHex(lastB))
             If Math.Abs(b - lastB) > 8 Or Math.Abs(g - lastG) > 8 Or Math.Abs(r - lastR) > 8 Or Math.Abs(a - lastA) > 8 Then
               PosCtl.put_CurrentPosition(wasPos)
               Return newBmp
@@ -367,7 +458,7 @@ Public Class ctlSeed
             Dim newBMP As New Bitmap(256, 192)
             Using g As Graphics = Graphics.FromImage(newBMP)
               g.Clear(Color.Black)
-              g.DrawString(sFail, New Font(FontFamily.GenericSansSerif, 20), Brushes.White, New RectangleF(16, 16, 224, 160))
+              g.DrawString("Thumb Error:" & vbNewLine & sFail, New Font(FontFamily.GenericSansSerif, 20), Brushes.White, New RectangleF(16, 16, 224, 160))
             End Using
             PosCtl.put_CurrentPosition(wasPos)
             Return newBMP
