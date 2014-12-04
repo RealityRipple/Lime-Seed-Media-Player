@@ -1341,8 +1341,10 @@ Public Class frmMain
     Do
       Dim sPath As String = sReader.ReadLine
       Dim sTitle As String = sReader.ReadLine
-      If sPath.Substring(1, 2) <> ":\" And sPath.Substring(0, 7) <> "http://" Then sPath = Path.Substring(0, Path.LastIndexOf("\") + 1) & sPath
-      AddToPlayList(sPath, sTitle, , False)
+      If Not String.IsNullOrEmpty(sPath.Trim) AndAlso Asc(sPath) > 0 Then
+        If sPath.Substring(1, 2) <> ":\" And sPath.Substring(0, 7) <> "http://" Then sPath = Path.Substring(0, Path.LastIndexOf("\") + 1) & sPath
+        AddToPlayList(sPath, sTitle, , False)
+      End If
     Loop Until sReader.EndOfStream
     sReader.Close()
     QueueFullPlayListData()
@@ -2892,6 +2894,7 @@ Public Class frmMain
             cmbChapters.SelectedIndex = 0
             cmbChapters.Tag = chapterCollection
           End If
+          Dim didSubSel As Boolean = False
           If mkvHeader.TrackEntries IsNot Nothing Then
             Dim sVidInfo As String = Nothing
             Dim iEncQ As Integer
@@ -2954,6 +2957,14 @@ Public Class frmMain
                   Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
                   Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbSubtitles.Font).Width + 10
                   If lWidth > SubWidth Then SubWidth = lWidth
+                  If Not didSubSel AndAlso Track.FlagDefault Then
+                    cmbSubtitles.Text = sTrackTitle
+                    didSubSel = True
+                  End If
+                  If Track.FlagForced Then
+                    cmbSubtitles.Text = sTrackTitle
+                    didSubSel = True
+                  End If
               End Select
             Next
             SetProps(iEncQ, iChannels, iqR, vbNewLine & "Video: " & sVidInfo & vbNewLine & "Audio: " & sAudInfo, iChannels, sBitrate)
@@ -2965,221 +2976,31 @@ Public Class frmMain
             Dim lNoSubWidth As Single = nsg.MeasureString("No subtitles", cmbSubtitles.Font).Width + 10
             If lNoSubWidth > SubWidth Then SubWidth = lNoSubWidth
           End If
-            If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
-            HandleAudSub()
-          ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".ogm", True) = 0 Then
-            Using cVorbis As New Seed.clsVorbis(mpPlayer.FileName)
-              If Not String.IsNullOrEmpty(cVorbis.Title) Then sTitleVal = cVorbis.Title
-              Dim iEnc As Integer, sEnc As String
-              If cVorbis.File_MinQuality > 0 And cVorbis.File_MaxQuality > 0 Then
-                If cVorbis.File_Quality > 0 Then
-                  iEnc = 2
-                  sEnc = "Constant Bitrate"
-                Else
-                  iEnc = 3
-                  sEnc = "Limited Variable Bitrate"
-                End If
+          If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
+          If Not didSubSel Then HandleAudSub()
+        ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".ogm", True) = 0 Then
+          Using cVorbis As New Seed.clsVorbis(mpPlayer.FileName)
+            If Not String.IsNullOrEmpty(cVorbis.Title) Then sTitleVal = cVorbis.Title
+            Dim iEnc As Integer, sEnc As String
+            If cVorbis.File_MinQuality > 0 And cVorbis.File_MaxQuality > 0 Then
+              If cVorbis.File_Quality > 0 Then
+                iEnc = 2
+                sEnc = "Constant Bitrate"
               Else
-                If cVorbis.File_Quality > 0 Then
-                  iEnc = 1
-                  sEnc = "Average/Variable Bitrate"
-                Else
-                  iEnc = -1
-                  sEnc = Nothing
-                End If
+                iEnc = 3
+                sEnc = "Limited Variable Bitrate"
               End If
-              Dim sChannel As String = cVorbis.File_Channels
-              Select Case cVorbis.File_Channels
-                Case 1 : sChannel = "Mono"
-                Case 2 : sChannel = "Stereo"
-                Case 3 : sChannel = "2.1 Stereo"
-                Case 4 : sChannel = "Quadraphonic"
-                Case 5 : sChannel = "Surround"
-                Case 6 : sChannel = "5.1 Surround"
-                Case 7 : sChannel = "6.1 Surround"
-                Case 8 : sChannel = "7.1 Surround"
-              End Select
-              Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-              Dim iqR As Integer = -1
-              Select Case iQ
-                Case Is < 1024 * 1024 : iqR = 0
-                Case Is < 1024 * 1024 * 1.5 : iqR = 1
-                Case Is < 1024 * 1024 * 2 : iqR = 2
-                Case Is < 1024 * 1024 * 2.5 : iqR = 3
-                Case Is < 1024 * 1024 * 3 : iqR = 4
-                Case Is < 1024 * 1024 * 4 : iqR = 5
-                Case Is < 1024 * 1024 * 6 : iqR = 6
-                Case Is < 1024 * 1024 * 8 : iqR = 7
-                Case Is < 1024 * 1024 * 10 : iqR = 8
-                Case Is >= 1024 * 1024 * 10 : iqR = 9
-              End Select
-              SetProps(iEnc, cVorbis.File_Channels, iqR, sEnc, sChannel, KRater(iQ, "bps"))
-            End Using
-            Dim ffChaps = ffAPI.ChaptersList
-            SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
-            If ffChaps.Count > 0 Then
-              Dim chapterCollection As New Collection
-              ChapterWidth = 0
-              For Each chapter In ffChaps
-                Dim sChapterText As String = chapter.Value
-                cmbChapters.Items.Add(sChapterText)
-                mnuChapterTrack.DropDownItems.Add(sChapterText)
-                Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-                Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-                If lWidth > ChapterWidth Then ChapterWidth = lWidth
-                chapterCollection.Add({chapter.Key, sChapterText})
-              Next
-              cmbChapters.SelectedIndex = 0
-              cmbChapters.Tag = chapterCollection
-            End If
-            If ffAPI.AudioStreams.Count > 0 Then
-              AudWidth = 0
-              For Each stream In ffAPI.AudioStreams
-                Dim sStreamText As String = stream.Value.name
-                cmbAudTrack.Items.Add(sStreamText)
-                mnuAudioTrack.DropDownItems.Add(sStreamText)
-                Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
-                Dim lWidth As Single = g.MeasureString(sStreamText, cmbAudTrack.Font).Width + 10
-                If lWidth > ChapterWidth Then AudWidth = lWidth
-              Next
-            End If
-            If ffAPI.SubtitleStreams.Count > 0 Then
-              SubWidth = 0
-              For Each stream In ffAPI.SubtitleStreams
-                Dim sStreamText As String = stream.Value.name
-                cmbSubtitles.Items.Add(sStreamText)
-                mnuSubtitleTrack.DropDownItems.Add(sStreamText)
-                Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
-                Dim lWidth As Single = g.MeasureString(sStreamText, cmbSubtitles.Font).Width + 10
-                If lWidth > ChapterWidth Then SubWidth = lWidth
-              Next
-              'If cmbSubtitles.Visible Then
-              '  cmbSubtitles.Items.Add("No subtitles")
-              '  mnuSubtitleTrack.DropDownItems.Add("No subtitles")
-              'End If
-              'Dim nsg As Drawing.Graphics = cmbSubtitles.CreateGraphics
-              'Dim lNoSubWidth As Single = nsg.MeasureString("No subtitles", cmbSubtitles.Font).Width + 10
-              'If lNoSubWidth > SubWidth Then SubWidth = lNoSubWidth
-            End If
-            cmbVidTrack.Items.Add("Default Video Track. Unable to load at this time.")
-            mnuVideoTrack.DropDownItems.Add("Default")
-            If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
-            HandleAudSub()
-            SetVideoResolution(-1, -1)
-          ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".avi", True) = 0 Then
-            Using cRiff As New Seed.clsRIFF(mpPlayer.FileName)
-              Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-              Dim enc, chan, rate As Integer
-              Dim sEnc, sChan, sRate As String
-              enc = 4
-              chan = -1
-              rate = 0
-              sEnc = "AVI"
-              sChan = Nothing
-              sRate = KRater(iQ, "bps")
-              If cRiff.IsValid Then
-                chan = cRiff.AVIAudioData(0).Format.nChannels
-                Select Case chan
-                  Case 1 : sChan = "Mono"
-                  Case 2 : sChan = "Stereo"
-                  Case 3 : sChan = "2.1 Stereo"
-                  Case 4 : sChan = "Quadraphonic"
-                  Case 5 : sChan = "Surround"
-                  Case 6 : sChan = "5.1 Surround"
-                  Case 7 : sChan = "6.1 Surround"
-                  Case 8 : sChan = "7.1 Surround"
-                  Case Else : sChan = chan & " Channels"
-                End Select
-                Dim ve As String = "Unknown Encoder"
-                Dim ae As String = "Unknown Encoder"
-                Dim vr As String = "Unknown FPS"
-                Dim ar As String = "Unknown Hz"
-                ve = AVIVideoCodecs(cRiff.AVIVideoData(0).bmiHeader.biCompression)
-                ae = WAVAudioCodecs(cRiff.AVIAudioData(0).Format.wFormatTag)
-                ar = KRater(cRiff.AVIAudioData(0).Format.nSamplesPerSec, "Hz")
-                For I As Integer = 0 To cRiff.AVIStreamCount - 1
-                  If cRiff.AVIStreamData(I).fccType = "vids" Then
-                    If String.IsNullOrEmpty(ve) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ve = cRiff.AVIStreamData(I).fccHandler
-                    If cRiff.AVIStreamData(I).dwScale > 0 Then vr = Math.Round(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, 3) & " fps " & IIf(cRiff.AVIMainData.dwFlags And Seed.clsRIFF.AVIMAINHEADER_FLAGS.AVIF_ISINTERLEAVED, "Interleaved", "Progressive")
-                  ElseIf cRiff.AVIStreamData(I).fccType = "auds" Then
-                    If String.IsNullOrEmpty(ae) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ae = cRiff.AVIStreamData(I).fccHandler
-                    If ae = "0 Hz" AndAlso cRiff.AVIStreamData(I).dwScale > 0 Then ar = KRater(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, "Hz")
-                  End If
-                Next
-                sEnc = vbNewLine & " Video (" & ve & "): " & vr & vbNewLine & " Audio (" & ae & "): " & ar
-                SetVideoResolution(cRiff.AVIMainData.dwWidth, cRiff.AVIMainData.dwHeight)
-                Select Case cRiff.AVIVideoData(0).bmiHeader.biBitCount
-                  Case 0 'specified or implied
-                    rate = 0
-                  Case 1 'Monochrome
-                    rate = 1
-                  Case 4 '16 Color
-                    rate = 3
-                  Case 8 '256 Color
-                    rate = 5
-                  Case 16 '16-bit color
-                    rate = 7
-                  Case 24 '24-bit color
-                    rate = 8
-                  Case 32 '32-bit color
-                    rate = 9
-                  Case Else
-                    rate = 4
-                End Select
+            Else
+              If cVorbis.File_Quality > 0 Then
+                iEnc = 1
+                sEnc = "Average/Variable Bitrate"
+              Else
+                iEnc = -1
+                sEnc = Nothing
               End If
-              SetProps(enc, chan, rate, sEnc, sChan, sRate)
-            End Using
-          ElseIf LoadFFDShow() Then
-            Dim ffChaps = ffAPI.ChaptersList
-            SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
-            If ffChaps.Count > 0 Then
-              Dim chapterCollection As New Collection
-              ChapterWidth = 0
-              For Each chapter In ffChaps
-                Dim sChapterText As String = chapter.Value
-                cmbChapters.Items.Add(sChapterText)
-                mnuChapterTrack.DropDownItems.Add(sChapterText)
-                Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-                Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-                If lWidth > ChapterWidth Then ChapterWidth = lWidth
-                chapterCollection.Add({chapter.Key, sChapterText})
-              Next
-              cmbChapters.SelectedIndex = 0
-              cmbChapters.Tag = chapterCollection
             End If
-            If ffAPI.AudioStreams.Count > 0 Then
-              AudWidth = 0
-              For Each stream In ffAPI.AudioStreams
-                Dim sStreamText As String = stream.Value.name
-                cmbAudTrack.Items.Add(sStreamText)
-                mnuAudioTrack.DropDownItems.Add(sStreamText)
-                Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
-                Dim lWidth As Single = g.MeasureString(sStreamText, cmbAudTrack.Font).Width + 10
-                If lWidth > ChapterWidth Then AudWidth = lWidth
-              Next
-            End If
-            If ffAPI.SubtitleStreams.Count > 0 Then
-              SubWidth = 0
-              For Each stream In ffAPI.SubtitleStreams
-                Dim sStreamText As String = stream.Value.name
-                cmbSubtitles.Items.Add(sStreamText)
-                mnuSubtitleTrack.DropDownItems.Add(sStreamText)
-                Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
-                Dim lWidth As Single = g.MeasureString(sStreamText, cmbSubtitles.Font).Width + 10
-                If lWidth > ChapterWidth Then SubWidth = lWidth
-              Next
-            End If
-            cmbVidTrack.Items.Add("Default Video Track. Unable to load at this time.")
-            mnuVideoTrack.DropDownItems.Add("Default")
-            If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
-            HandleAudSub()
-            SetVideoResolution(-1, -1)
-            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-            Dim Channels As Integer = ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_OSDtype_nchannels)
-            Dim sChannel As String = Channels & " channels"
-            Select Case Channels
-              Case -1 : sChannel = String.Empty
-              Case 0 : sChannel = "Unknown Speaker Setup" : Channels = 2
+            Dim sChannel As String = cVorbis.File_Channels
+            Select Case cVorbis.File_Channels
               Case 1 : sChannel = "Mono"
               Case 2 : sChannel = "Stereo"
               Case 3 : sChannel = "2.1 Stereo"
@@ -3188,51 +3009,256 @@ Public Class frmMain
               Case 6 : sChannel = "5.1 Surround"
               Case 7 : sChannel = "6.1 Surround"
               Case 8 : sChannel = "7.1 Surround"
-              Case Else : sChannel = Channels & " channels"
             End Select
-            SetProps(4, Channels, 0, ffAPI.getFrameRate & " fps " & ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_enc_interlacing), sChannel, KRater(iQ, "bps"))
-
-          Else
-            SetCombos(False, False, False, False)
-            SetVideoResolution(-1, -1)
             Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-            SetProps(-1, 2, 0, , "Unknown Speaker Setup", KRater(iQ, "bps"))
+            Dim iqR As Integer = -1
+            Select Case iQ
+              Case Is < 1024 * 1024 : iqR = 0
+              Case Is < 1024 * 1024 * 1.5 : iqR = 1
+              Case Is < 1024 * 1024 * 2 : iqR = 2
+              Case Is < 1024 * 1024 * 2.5 : iqR = 3
+              Case Is < 1024 * 1024 * 3 : iqR = 4
+              Case Is < 1024 * 1024 * 4 : iqR = 5
+              Case Is < 1024 * 1024 * 6 : iqR = 6
+              Case Is < 1024 * 1024 * 8 : iqR = 7
+              Case Is < 1024 * 1024 * 10 : iqR = 8
+              Case Is >= 1024 * 1024 * 10 : iqR = 9
+            End Select
+            SetProps(iEnc, cVorbis.File_Channels, iqR, sEnc, sChannel, KRater(iQ, "bps"))
+          End Using
+          Dim ffChaps = ffAPI.ChaptersList
+          SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
+          If ffChaps.Count > 0 Then
+            Dim chapterCollection As New Collection
+            ChapterWidth = 0
+            For Each chapter In ffChaps
+              Dim sChapterText As String = chapter.Value
+              cmbChapters.Items.Add(sChapterText)
+              mnuChapterTrack.DropDownItems.Add(sChapterText)
+              Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
+              Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
+              If lWidth > ChapterWidth Then ChapterWidth = lWidth
+              chapterCollection.Add({chapter.Key, sChapterText})
+            Next
+            cmbChapters.SelectedIndex = 0
+            cmbChapters.Tag = chapterCollection
           End If
-          If FirstInit Then
-            If frmFS.Visible Then
-              mpPlayer.FullScreenObj = frmFS.pctVideo
-              mpPlayer.FullScreen = True
-              'If cTask IsNot Nothing Then cTask.CreatePreview(frmFS.pctVideo)
-              VidThumb = False
+          If ffAPI.AudioStreams.Count > 0 Then
+            AudWidth = 0
+            For Each stream In ffAPI.AudioStreams
+              Dim sStreamText As String = stream.Value.name
+              cmbAudTrack.Items.Add(sStreamText)
+              mnuAudioTrack.DropDownItems.Add(sStreamText)
+              Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
+              Dim lWidth As Single = g.MeasureString(sStreamText, cmbAudTrack.Font).Width + 10
+              If lWidth > ChapterWidth Then AudWidth = lWidth
+            Next
+          End If
+          If ffAPI.SubtitleStreams.Count > 0 Then
+            SubWidth = 0
+            For Each stream In ffAPI.SubtitleStreams
+              Dim sStreamText As String = stream.Value.name
+              cmbSubtitles.Items.Add(sStreamText)
+              mnuSubtitleTrack.DropDownItems.Add(sStreamText)
+              Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
+              Dim lWidth As Single = g.MeasureString(sStreamText, cmbSubtitles.Font).Width + 10
+              If lWidth > ChapterWidth Then SubWidth = lWidth
+            Next
+            'If cmbSubtitles.Visible Then
+            '  cmbSubtitles.Items.Add("No subtitles")
+            '  mnuSubtitleTrack.DropDownItems.Add("No subtitles")
+            'End If
+            'Dim nsg As Drawing.Graphics = cmbSubtitles.CreateGraphics
+            'Dim lNoSubWidth As Single = nsg.MeasureString("No subtitles", cmbSubtitles.Font).Width + 10
+            'If lNoSubWidth > SubWidth Then SubWidth = lNoSubWidth
+          End If
+          cmbVidTrack.Items.Add("Default Video Track. Unable to load at this time.")
+          mnuVideoTrack.DropDownItems.Add("Default")
+          If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
+          HandleAudSub()
+          SetVideoResolution(-1, -1)
+        ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".avi", True) = 0 Then
+          Using cRiff As New Seed.clsRIFF(mpPlayer.FileName)
+            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+            Dim enc, chan, rate As Integer
+            Dim sEnc, sChan, sRate As String
+            enc = 4
+            chan = -1
+            rate = 0
+            sEnc = "AVI"
+            sChan = Nothing
+            sRate = KRater(iQ, "bps")
+            If cRiff.IsValid Then
+              chan = cRiff.AVIAudioData(0).Format.nChannels
+              Select Case chan
+                Case 1 : sChan = "Mono"
+                Case 2 : sChan = "Stereo"
+                Case 3 : sChan = "2.1 Stereo"
+                Case 4 : sChan = "Quadraphonic"
+                Case 5 : sChan = "Surround"
+                Case 6 : sChan = "5.1 Surround"
+                Case 7 : sChan = "6.1 Surround"
+                Case 8 : sChan = "7.1 Surround"
+                Case Else : sChan = chan & " Channels"
+              End Select
+              Dim ve As String = "Unknown Encoder"
+              Dim ae As String = "Unknown Encoder"
+              Dim vr As String = "Unknown FPS"
+              Dim ar As String = "Unknown Hz"
+              ve = AVIVideoCodecs(cRiff.AVIVideoData(0).bmiHeader.biCompression)
+              ae = WAVAudioCodecs(cRiff.AVIAudioData(0).Format.wFormatTag)
+              ar = KRater(cRiff.AVIAudioData(0).Format.nSamplesPerSec, "Hz")
+              Dim vidTracks As New List(Of Seed.clsRIFF.AVISTREAMHEADER)
+              Dim audTracks As New List(Of Seed.clsRIFF.AVISTREAMHEADER)
+              For I As Integer = 0 To cRiff.AVIStreamCount - 1
+                If cRiff.AVIStreamData(I).fccType = "vids" Then
+                  vidTracks.Add(cRiff.AVIStreamData(I))
+                  If String.IsNullOrEmpty(ve) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ve = cRiff.AVIStreamData(I).fccHandler
+                  If cRiff.AVIStreamData(I).dwScale > 0 Then vr = Math.Round(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, 3) & " fps " & IIf(cRiff.AVIMainData.dwFlags And Seed.clsRIFF.AVIMAINHEADER_FLAGS.AVIF_ISINTERLEAVED, "Interleaved", "Progressive")
+                ElseIf cRiff.AVIStreamData(I).fccType = "auds" Then
+                  audTracks.Add(cRiff.AVIStreamData(I))
+                  If String.IsNullOrEmpty(ae) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ae = cRiff.AVIStreamData(I).fccHandler
+                  If ae = "0 Hz" AndAlso cRiff.AVIStreamData(I).dwScale > 0 Then ar = KRater(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, "Hz")
+                End If
+              Next
+              sEnc = vbNewLine & " Video (" & ve & "): " & vr & vbNewLine & " Audio (" & ae & "): " & ar
+              SetVideoResolution(cRiff.AVIMainData.dwWidth, cRiff.AVIMainData.dwHeight)
+              Select Case cRiff.AVIVideoData(0).bmiHeader.biBitCount
+                Case 0 'specified or implied
+                  rate = 0
+                Case 1 'Monochrome
+                  rate = 1
+                Case 4 '16 Color
+                  rate = 3
+                Case 8 '256 Color
+                  rate = 5
+                Case 16 '16-bit color
+                  rate = 7
+                Case 24 '24-bit color
+                  rate = 8
+                Case 32 '32-bit color
+                  rate = 9
+                Case Else
+                  rate = 4
+              End Select
+              SetCombos(vidTracks.Count > 1, audTracks.Count > 1, False, False)
+              For v As Integer = 0 To vidTracks.Count - 1
+                Dim sV As String = "Video Track " & v + 1 & " (" & vidTracks(v).fccHandler & ")"
+                If cRiff.AVIINFOData IsNot Nothing Then If cRiff.AVIINFOData.ContainsKey("IVS" & v + 1) Then sV &= " [" & cRiff.AVIINFOData("IVS" & v + 1) & "]"
+                cmbVidTrack.Items.Add(sV)
+              Next
+              For a As Integer = 0 To audTracks.Count - 1
+                Dim sA As String = "Audio Track " & a + 1
+                If cRiff.AVIINFOData IsNot Nothing Then If cRiff.AVIINFOData.ContainsKey("IAS" & a + 1) Then sA &= " [" & cRiff.AVIINFOData("IAS" & a + 1) & "]"
+                cmbAudTrack.Items.Add(sA)
+              Next
+            End If
+            SetProps(enc, chan, rate, sEnc, sChan, sRate)
+          End Using
+        ElseIf LoadFFDShow() Then
+          Dim ffChaps = ffAPI.ChaptersList
+          SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
+          If ffChaps.Count > 0 Then
+            Dim chapterCollection As New Collection
+            ChapterWidth = 0
+            For Each chapter In ffChaps
+              Dim sChapterText As String = chapter.Value
+              cmbChapters.Items.Add(sChapterText)
+              mnuChapterTrack.DropDownItems.Add(sChapterText)
+              Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
+              Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
+              If lWidth > ChapterWidth Then ChapterWidth = lWidth
+              chapterCollection.Add({chapter.Key, sChapterText})
+            Next
+            cmbChapters.SelectedIndex = 0
+            cmbChapters.Tag = chapterCollection
+          End If
+          If ffAPI.AudioStreams.Count > 0 Then
+            AudWidth = 0
+            For Each stream In ffAPI.AudioStreams
+              Dim sStreamText As String = stream.Value.name
+              cmbAudTrack.Items.Add(sStreamText)
+              mnuAudioTrack.DropDownItems.Add(sStreamText)
+              Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
+              Dim lWidth As Single = g.MeasureString(sStreamText, cmbAudTrack.Font).Width + 10
+              If lWidth > ChapterWidth Then AudWidth = lWidth
+            Next
+          End If
+          If ffAPI.SubtitleStreams.Count > 0 Then
+            SubWidth = 0
+            For Each stream In ffAPI.SubtitleStreams
+              Dim sStreamText As String = stream.Value.name
+              cmbSubtitles.Items.Add(sStreamText)
+              mnuSubtitleTrack.DropDownItems.Add(sStreamText)
+              Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
+              Dim lWidth As Single = g.MeasureString(sStreamText, cmbSubtitles.Font).Width + 10
+              If lWidth > ChapterWidth Then SubWidth = lWidth
+            Next
+          End If
+          cmbVidTrack.Items.Add("Default Video Track. Unable to load at this time.")
+          mnuVideoTrack.DropDownItems.Add("Default")
+          If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
+          HandleAudSub()
+          SetVideoResolution(-1, -1)
+          Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+          Dim Channels As Integer = ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_OSDtype_nchannels)
+          Dim sChannel As String = Channels & " channels"
+          Select Case Channels
+            Case -1 : sChannel = String.Empty
+            Case 0 : sChannel = "Unknown Speaker Setup" : Channels = 2
+            Case 1 : sChannel = "Mono"
+            Case 2 : sChannel = "Stereo"
+            Case 3 : sChannel = "2.1 Stereo"
+            Case 4 : sChannel = "Quadraphonic"
+            Case 5 : sChannel = "Surround"
+            Case 6 : sChannel = "5.1 Surround"
+            Case 7 : sChannel = "6.1 Surround"
+            Case 8 : sChannel = "7.1 Surround"
+            Case Else : sChannel = Channels & " channels"
+          End Select
+          SetProps(4, Channels, 0, ffAPI.getFrameRate & " fps " & ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_enc_interlacing), sChannel, KRater(iQ, "bps"))
+
+        Else
+          SetCombos(False, False, False, False)
+          SetVideoResolution(-1, -1)
+          Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+          SetProps(-1, 2, 0, , "Unknown Speaker Setup", KRater(iQ, "bps"))
+        End If
+        If FirstInit Then
+          If frmFS.Visible Then
+            mpPlayer.FullScreenObj = frmFS.pctVideo
+            mpPlayer.FullScreen = True
+            'If cTask IsNot Nothing Then cTask.CreatePreview(frmFS.pctVideo)
+            VidThumb = False
+          Else
+            If cTask IsNot Nothing Then
+              'tmrUpdate_Tick(New Object, New EventArgs)
+              'cTask.CreatePreview(mpPlayer)
+              VidThumb = True
             Else
-              If cTask IsNot Nothing Then
-                'tmrUpdate_Tick(New Object, New EventArgs)
-                'cTask.CreatePreview(mpPlayer)
-                VidThumb = True
-              Else
-                VidThumb = False
-              End If
-            End If
-            'cTask.Title = FileTitle
-            'cTask.Icon = Me.Icon
-            If mnuRatioAutomatic.Checked Then mnuRatioAutomatic_Click(mnuRatioAutomatic, New EventArgs)
-            If mnuRatioStandard.Checked Then mnuRatioStandard_Click(mnuRatioStandard, New EventArgs)
-            If mnuRatioWide.Checked Then mnuRatioWide_Click(mnuRatioWide, New EventArgs)
-            If mnuScaleHalf.Checked Then mnuScaleHalf_Click(mnuScaleHalf, New EventArgs)
-            If mnuScaleNorm.Checked Then mnuScaleNorm_Click(mnuScaleNorm, New EventArgs)
-            If mnuScaleTwice.Checked Then mnuScaleTwice_Click(mnuScaleTwice, New EventArgs)
-            If Not bDVD Then
-              If mpPlayer.Repeat Then
-                cmdLoop.Image = My.Resources.button_loop_on
-              Else
-                cmdLoop.Image = My.Resources.button_loop_off
-              End If
-              cmdLoop.Tag = Nothing
-              LabelShortcuts()
+              VidThumb = False
             End If
           End If
-          pctAlbumArt.Image = Nothing
-          If frmFS IsNot Nothing Then frmFS.pctVideo.Image = Nothing
+          'cTask.Title = FileTitle
+          'cTask.Icon = Me.Icon
+          If mnuRatioAutomatic.Checked Then mnuRatioAutomatic_Click(mnuRatioAutomatic, New EventArgs)
+          If mnuRatioStandard.Checked Then mnuRatioStandard_Click(mnuRatioStandard, New EventArgs)
+          If mnuRatioWide.Checked Then mnuRatioWide_Click(mnuRatioWide, New EventArgs)
+          If mnuScaleHalf.Checked Then mnuScaleHalf_Click(mnuScaleHalf, New EventArgs)
+          If mnuScaleNorm.Checked Then mnuScaleNorm_Click(mnuScaleNorm, New EventArgs)
+          If mnuScaleTwice.Checked Then mnuScaleTwice_Click(mnuScaleTwice, New EventArgs)
+          If Not bDVD Then
+            If mpPlayer.Repeat Then
+              cmdLoop.Image = My.Resources.button_loop_on
+            Else
+              cmdLoop.Image = My.Resources.button_loop_off
+            End If
+            cmdLoop.Tag = Nothing
+            LabelShortcuts()
+          End If
+        End If
+        pctAlbumArt.Image = Nothing
+        If frmFS IsNot Nothing Then frmFS.pctVideo.Image = Nothing
       Else
         'AUDIO
         EnableScreenSaver(True)
@@ -5461,6 +5487,4 @@ Public Class frmMain
       Me.Close()
     End If
   End Sub
-
-
 End Class
