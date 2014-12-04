@@ -1,4 +1,5 @@
 ﻿Imports System.Runtime.InteropServices
+Imports System.IO
 
 Module modFuncts
   Public Const LATIN_1 As Integer = 28591
@@ -471,8 +472,8 @@ Module modFuncts
               End If
             End If
 
-            End If
           End If
+        End If
       End Using
     End If
   End Sub
@@ -579,11 +580,15 @@ Module modFuncts
   End Sub
 
   Public Function SafeName(FileName As String) As String
-    Return FileName.Replace("?", "{QUESTION}").Replace(":", "{COLON}").Replace("*", "{ASTERISK}").Replace("""", "{QUOTE}").Replace(">", "{GREATER}").Replace("<", "{LESS}").Replace("|", "{PIPE}").Replace("\", "{BACKSLASH}").Replace("/", "{SLASH}")
+    Dim sSafe As String = FileName.Replace("?", "{QUESTION}").Replace(":", "{COLON}").Replace("*", "{ASTERISK}").Replace("""", "{QUOTE}").Replace(">", "{GREATER}").Replace("<", "{LESS}").Replace("|", "{PIPE}").Replace("\", "{BACKSLASH}").Replace("/", "{SLASH}").Replace("...", "{ELLIPSIS}")
+    Do While sSafe.EndsWith(".")
+      sSafe = sSafe.Substring(0, sSafe.Length - 1)
+    Loop
+    Return sSafe
   End Function
 
   Public Function CoolName(SafeFileName As String) As String
-    Return SafeFileName.Replace("{QUESTION}", "ʔ").Replace("{COLON}", ChrW(&HA789)).Replace("{ASTERISK}", "•").Replace("{QUOTE}", "″").Replace("{GREATER}", "˃").Replace("{LESS}", "˂").Replace("{PIPE}", "¦").Replace("{BACKSLASH}", "〵").Replace("{SLASH}", " ⁄")
+    Return SafeFileName.Replace("{QUESTION}", "ʔ").Replace("{COLON}", ChrW(&HA789)).Replace("{ASTERISK}", "•").Replace("{QUOTE}", "″").Replace("{GREATER}", "˃").Replace("{LESS}", "˂").Replace("{PIPE}", "¦").Replace("{BACKSLASH}", "〵").Replace("{SLASH}", " ⁄").Replace("{ELLIPSIS}", "…")
   End Function
 
   Public Sub SetCursor(Visible As Boolean)
@@ -1272,7 +1277,7 @@ Module modFuncts
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_STVX : Return "ST CMOS Imager Data (Extended CODEC Data Format)"
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_STVY : Return "ST CMOS Imager Data (Extended CODEC Data Format with Correction Data)"
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_SV10 : Return "Sorenson Video R1"
-
+      Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_XVID : Return "XviD MPEG-4"
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_VIXL : Return "Miro Video XL Motion JPEG"
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_WHAM : Return "Microsoft Video 1 (WHAM)"
       Case Else
@@ -1309,6 +1314,43 @@ Module modFuncts
       Case "ITCH" : Return "Technician"
       Case Else : Return Key
     End Select
+  End Function
+
+  ''' <summary>
+  ''' Attempts to see if a file is in use, waiting up to five seconds for it to be freed.
+  ''' </summary>
+  ''' <param name="Filename">The exact path to the file which needs to be checked.</param>
+  ''' <param name="access">Write permissions required for checking.</param>
+  ''' <returns>True on available, false on in use.</returns>
+  ''' <remarks></remarks>
+  Public Function InUseChecker(Filename As String, access As IO.FileAccess) As Boolean
+    If Not My.Computer.FileSystem.FileExists(Filename) Then Return True
+    Dim iStart As Integer = Environment.TickCount
+    Do
+      Try
+        Select Case access
+          Case FileAccess.Read
+            'only check for ability to read
+            Using fs As FileStream = IO.File.Open(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete)
+              If fs.CanRead Then
+                Return True
+                Exit Do
+              End If
+            End Using
+          Case FileAccess.Write, FileAccess.ReadWrite
+            'check for ability to write
+            Using fs As FileStream = IO.File.Open(Filename, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite Or FileShare.Delete)
+              If fs.CanWrite Then
+                Return True
+                Exit Do
+              End If
+            End Using
+        End Select
+      Catch ex As Exception
+      End Try
+      Application.DoEvents()
+    Loop While Environment.TickCount - iStart < 5000
+    Return False
   End Function
 End Module
 
@@ -1841,7 +1883,7 @@ Public Class Sound
     Dim rc As Integer, pmem As IntPtr
 
     mxl.StructSize = Marshal.SizeOf(mxl)
-    mxl.componenttype = componentType
+    mxl.ComponentType = componentType
 
     ' Obtain a line corresponding to the component type
     rc = mixerGetLineInfo(hmixer, mxl, MIXER_GETLINEINFOF_COMPONENTTYPE)
