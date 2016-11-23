@@ -13,14 +13,14 @@
     Public ToC() As String     'Redim ToC(ToCCount) as String; ToC(X) = String$(BPTable, 0)
   End Structure
   Private vHeader As VBRIHeader
-  Public Sub New(bFrame() As Byte, Optional ByVal Start As Integer = 0)
+  Public Sub New(bFrame As Byte(), Optional ByVal Start As Integer = 0)
     Dim I As Integer
     Dim lPos As Long
     lPos = 4 + 32
     vHeader.HeaderID = GetString(bFrame, lPos, 4) ' Mid$(sFrame, lPos, 4)
     If vHeader.HeaderID <> "VBRI" Then
       vHeader.HeaderID = vbNullString
-      Exit Sub
+      Return
     End If
     lPos += 4
     vHeader.Version = GetWORD(bFrame, lPos)

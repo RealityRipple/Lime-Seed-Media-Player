@@ -34,9 +34,13 @@ Public Class frmMain
   Private volDevice As CoreAudioApi.MMDevice
   Private volControl As New Sound
 
+  Private audDeviceName As String
+
+  Private SpecificChapterList As Collection
   Private objDraw As Object
   Private methodDraw As System.Reflection.MethodInfo
   Private NoGlassText As Boolean = True
+  Private DefaultedPLTitle As Boolean
   <System.Security.SuppressUnmanagedCodeSecurity()>
   Friend Class NativeMethods
     Public Const WM_SYSCOMMAND As Integer = &H112
@@ -163,52 +167,6 @@ Public Class frmMain
   End Sub
 
   Private Sub cmdFullScreen_Click(sender As System.Object, e As System.EventArgs) Handles cmdFullScreen.Click
-    'If FastPC() And Not bDVD And clsGlass.IsCompositionEnabled Then
-    '  Dim tmrFade As New Timer
-    '  tmrFade.Interval = 25
-    '  If frmFS.Visible Then
-    '    frmFS.Opacity = 1
-    '    Me.Opacity = 1
-    '    AddHandler tmrFade.Tick, Sub()
-    '                               frmFS.Opacity -= 0.1
-    '                               If frmFS.Opacity <= 0.2 And mpPlayer.FullScreen Then
-    '                                 mpPlayer.FullScreen = False
-    '                                 mpPlayer.FullScreenObj = Nothing
-    '                                 frmFS.pctVideo.Image = Nothing
-    '                               End If
-    '                               If frmFS.Opacity = 0 Then
-    '                                 tmrFade.Stop()
-    '                                 frmFS.Hide()
-    '                                 Me.Opacity = 1
-    '                                 If cTask IsNot Nothing Then
-    '                                   cTask.CreatePreview(mpPlayer)
-    '                                   VidThumb = True
-    '                                 Else
-    '                                   VidThumb = False
-    '                                 End If
-    '                                 SetCursor(True)
-    '                               End If
-    '                             End Sub
-    '  Else
-    '    frmFS.Opacity = 0
-    '    Me.Opacity = 1
-    '    frmFS.Show(Me)
-    '    AddHandler tmrFade.Tick, Sub()
-    '                               frmFS.Opacity += 0.1
-    '                               If frmFS.Opacity >= 0.8 And Not mpPlayer.FullScreen Then
-    '                                 mpPlayer.FullScreenObj = frmFS.pctVideo
-    '                                 mpPlayer.FullScreen = True
-    '                                 If cTask IsNot Nothing Then cTask.CreatePreview(pnlMain)
-    '                                 VidThumb = False
-    '                               End If
-    '                               If frmFS.Opacity = 1 Then
-    '                                 Me.Opacity = 0
-    '                                 tmrFade.Stop()
-    '                               End If
-    '                             End Sub
-    '  End If
-    '  tmrFade.Start()
-    'Else
     If frmFS.Visible Then
       mpPlayer.FullScreen = False
       mpPlayer.FullScreenObj = Nothing
@@ -221,19 +179,25 @@ Public Class frmMain
         VidThumb = False
       End If
       SetCursor(True)
+
+      If ffAPI IsNot Nothing Then
+        If vWidth = VidSize.Width And vHeight = VidSize.Height Then
+          ffAPI.DoResize = False
+        Else
+          If vWidth Mod 2 = 1 Then vWidth += 1
+          If vHeight Mod 2 = 1 Then vHeight += 1
+          ffAPI.DoResize = False
+          ffAPI.ResizeModeFreeResize = True
+          ffAPI.ResizeHorizontal = vWidth
+          ffAPI.ResizeVertical = vHeight
+          ffAPI.DoResize = True
+          ffAPI.ResizeKeepAspectRatio = mnuRatioForce.Checked ' False
+        End If
+      End If
     Else
       If cTask IsNot Nothing Then
         If mpPlayer.HasVid Then
-          'If mpPlayer.VideoWidth <= 950 Then
-          '  Dim bmpThumb = mpPlayer.GetFileThumbnail(mpPlayer.FileName, False, False)
-          '  If bmpThumb IsNot Nothing Then
-          '    cTask.CreatePreview(bmpThumb)
-          '  Else
-          '    cTask.CreatePreview(My.Resources.Logo)
-          '  End If
-          'Else
           cTask.CreatePreview(My.Resources.Logo)
-          'End If
         End If
       End If
       frmFS.Show(Me)
@@ -241,8 +205,33 @@ Public Class frmMain
       mpPlayer.FullScreen = True
       Me.Opacity = 0
       VidThumb = False
+
+      If ffAPI IsNot Nothing Then
+        Dim useW As Integer = frmFS.Width
+        Dim useH As Integer = frmFS.Height
+
+        If (useW / useH) < (vWidth / vHeight) Then
+          useH = (vHeight / vWidth) * useW
+        ElseIf (useW / useH) > (vWidth / vHeight) Then
+          useW = (vWidth / vHeight) * useH
+
+        End If
+
+        If useW = VidSize.Width And useH = VidSize.Height Then
+          ffAPI.DoResize = False
+        Else
+          If useW Mod 2 = 1 Then useW += 1
+          If useH Mod 2 = 1 Then useH += 1
+          ffAPI.DoResize = False
+          ffAPI.ResizeModeFreeResize = True
+          ffAPI.ResizeHorizontal = useW
+          ffAPI.ResizeVertical = useH
+
+          ffAPI.DoResize = True
+          ffAPI.ResizeKeepAspectRatio = mnuRatioForce.Checked ' False
+        End If
+      End If
     End If
-    'End If
   End Sub
 
   Private Sub cmdLoop_Click(sender As System.Object, e As System.EventArgs) Handles cmdLoop.Click
@@ -302,11 +291,12 @@ Public Class frmMain
     If bDVD Then
       If cmbChapters.Tag Is Nothing Then mpPlayer.SetDVDCurrentChapter(cmbChapters.SelectedIndex + 1)
     Else
-      If cmbChapters.Tag IsNot Nothing Then
-        Dim ChapterCollection As Collection = CType(cmbChapters.Tag, Collection)
-        If ChapterCollection.Count > 0 Then
-          For Each Chapter In ChapterCollection
-            If StrComp(Chapter(1), cmbChapters.Text, CompareMethod.Text) = 0 Then
+      If cmbChapters.Tag Is Nothing Then
+        If SpecificChapterList.Count > 0 Then
+          For Each Chapter In SpecificChapterList
+            Dim sChap As String = Chapter(1)
+            'If Not Chapter(2) = "und" And Not sChap.ToLower.Contains(Chapter(2).ToLower) Then sChap &= " [" & Chapter(2) & "]"
+            If StrComp(sChap, cmbChapters.Text, CompareMethod.Text) = 0 Then
               mpPlayer.Position = Chapter(0)
               Exit For
             End If
@@ -330,25 +320,84 @@ Public Class frmMain
     Else
       If LoadFFDShow() Then
         ffAPI.AudioStream = IIf(cmbVidTrack.Items.Count > 1, cmbVidTrack.Items.Count + 1, 1) + cmbAudTrack.SelectedIndex
+        cmbAudTrack.SelectedIndex = ffAPI.AudioStream - IIf(cmbVidTrack.Items.Count > 1, cmbVidTrack.Items.Count + 1, 1)
+        If cmbSubtitles.Items.Count > ffAPI.AudioStream - IIf(cmbVidTrack.Items.Count > 1, cmbVidTrack.Items.Count + 1, 1) Then cmbSubtitles.SelectedIndex = ffAPI.AudioStream - IIf(cmbVidTrack.Items.Count > 1, cmbVidTrack.Items.Count + 1, 1)
       End If
       If String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".mkv", True) = 0 Then
         Dim mkvHeader As New Seed.clsMKVHeaders(mpPlayer.FileName)
-        For Each Track In mkvHeader.TrackEntries
-          Dim sTrackTitle As String
-          If String.IsNullOrEmpty(Track.TrackName) Then
-            sTrackTitle = Track.Language
+        If mkvHeader.TrackEntries IsNot Nothing Then
+          Dim sVidInfo As String = Nothing
+          Dim iEncQ As Integer
+          Dim sCodec As String = Nothing
+          Dim iqR As Integer = -1
+          Dim iChannels As Integer
+          Dim sAudInfo As String = Nothing
+          Dim sBitrate As String = Nothing
+          Dim dDuration As Double = 0.0
+          If mkvHeader.SegmentInfo.Duration > 0 Then
+            dDuration = mkvHeader.SegmentInfo.Duration / 1000
           Else
-            sTrackTitle = Track.TrackName & " [" & Track.Language & "]"
+            dDuration = mpPlayer.Duration
           End If
-          Select Case Track.TrackType
-            Case &H2
-              If cmbAudTrack.Text = (sTrackTitle) Then
-                Dim iEncQ As Integer, sCodec As String = Nothing
-                MKVAudioCodecs(Track.CodecID, iEncQ, sCodec)
-                SetProps(iEncQ, Track.Audio.Channels, -2, sCodec, Track.Audio.Channels)
-              End If
-          End Select
-        Next
+          Dim trackCounts(&HFF) As Integer
+          For Each Track In mkvHeader.TrackEntries
+            trackCounts(Track.TrackType) += 1
+            Dim sTrackTitle As String
+            If String.IsNullOrEmpty(Track.TrackName) Then
+              sTrackTitle = "#" & trackCounts(Track.TrackType) & ": Untitled"
+            Else
+              sTrackTitle = "#" & trackCounts(Track.TrackType) & ": " & Track.TrackName
+            End If
+            If Not (String.IsNullOrEmpty(Track.Language) OrElse Track.Language = "und") And Not sTrackTitle.ToLower.Contains(Track.Language.ToLower) Then sTrackTitle &= " [" & Track.Language & "]"
+            Select Case Track.TrackType
+              Case &H1
+                sVidInfo = MKVVideoCodecs(Track.CodecID)
+                If Track.DefaultDuration > 0 Then sVidInfo &= " (" & Math.Round(1 / (Track.DefaultDuration / 1000000000), 3) & " fps " & IIf(Track.Video.FlagInterlaced, "interlaced", "progressive") & ")"
+              Case &H2
+                If cmbAudTrack.Text = sTrackTitle Then
+                  Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
+                  Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbAudTrack.Font).Width + 10
+                  If lWidth > AudWidth Then AudWidth = lWidth
+                  Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / dDuration
+                  Select Case iQ
+                    Case Is < 1024 * 1024 : iqR = 0
+                    Case Is < 1024 * 1024 * 1.5 : iqR = 1
+                    Case Is < 1024 * 1024 * 2 : iqR = 2
+                    Case Is < 1024 * 1024 * 2.5 : iqR = 3
+                    Case Is < 1024 * 1024 * 3 : iqR = 4
+                    Case Is < 1024 * 1024 * 4 : iqR = 5
+                    Case Is < 1024 * 1024 * 6 : iqR = 6
+                    Case Is < 1024 * 1024 * 8 : iqR = 7
+                    Case Is < 1024 * 1024 * 10 : iqR = 8
+                    Case Is >= 1024 * 1024 * 10 : iqR = 9
+                  End Select
+                  MKVAudioCodecs(Track.CodecID, iEncQ, sCodec)
+                  iChannels = Track.Audio.Channels
+                  sAudInfo = sCodec & " (" & KRater(Track.Audio.SamplingFrequency, "Hz") & ")"
+                  sBitrate = KRater(iQ, "bps")
+                End If
+            End Select
+          Next
+          SetProps(iEncQ, iChannels, iqR, vbNewLine & "Video: " & sVidInfo & vbNewLine & "Audio: " & sAudInfo, iChannels, sBitrate)
+
+          'For Each Track In mkvHeader.TrackEntries
+          '  Dim sTrackTitle As String
+          '  If String.IsNullOrEmpty(Track.TrackName) Then
+          '    sTrackTitle = Track.Language
+          '  Else
+          '    sTrackTitle = Track.TrackName & " [" & Track.Language & "]"
+          '  End If
+          '  Select Case Track.TrackType
+          '    Case &H2
+          '      If cmbAudTrack.Text = (sTrackTitle) Then
+          '        Dim iEncQ As Integer, sCodec As String = Nothing
+          '        MKVAudioCodecs(Track.CodecID, iEncQ, sCodec)
+          '        SetProps(iEncQ, Track.Audio.Channels, -2, sCodec, Track.Audio.Channels)
+          '      End If
+          '  End Select
+          'Next
+        End If
+
         mkvHeader = Nothing
       End If
     End If
@@ -366,6 +415,7 @@ Public Class frmMain
     Else
       If LoadFFDShow() Then
         ffAPI.SubtitleStream = IIf(cmbVidTrack.Items.Count > 1, cmbVidTrack.Items.Count + 1, 1) + IIf(cmbAudTrack.Items.Count > 1, cmbAudTrack.Items.Count, 1) + cmbSubtitles.SelectedIndex
+        If ffAPI.SubtitleStream > -1 Then cmbSubtitles.SelectedIndex = ffAPI.SubtitleStream - (IIf(cmbVidTrack.Items.Count > 1, cmbVidTrack.Items.Count + 1, 1) + IIf(cmbAudTrack.Items.Count > 1, cmbAudTrack.Items.Count, 1))
       End If
     End If
   End Sub
@@ -412,9 +462,10 @@ Public Class frmMain
 #Region "Menus"
 #Region "File"
   Private Sub mnuOpenFile_Click(sender As System.Object, e As System.EventArgs) Handles mnuOpenFile.Click
-    If frmOpen.Visible Then Exit Sub
+    If frmOpen.Visible Then Return
     If frmOpen.ShowDialog(IIf(frmFS.Visible, frmFS, Me)) = Windows.Forms.DialogResult.OK Then
       txtPlayListTitle.Tag = UNKNOWN_ALBUM
+      DefaultedPLTitle = True
       Dim Results() As String = frmOpen.sResult
       Dim openInvoker As New OpenEventInvoker(AddressOf OpenEvent)
       openInvoker.BeginInvoke(Results, Nothing, Nothing)
@@ -443,6 +494,7 @@ Public Class frmMain
           Else
             If dgvPlayList.Rows.Count = 0 Then
               txtPlayListTitle.Tag = IO.Path.GetFileName(sResults(0))
+              DefaultedPLTitle = True
               AddDirToPlayListAndMaybePlay(sResults(0))
             Else
               AddDirToPlayList(sResults(0))
@@ -450,7 +502,7 @@ Public Class frmMain
           End If
         Else
           Select Case IO.Path.GetExtension(sResults(0)).ToLower
-            Case ".llpl", ".m3u", ".pls"
+            Case ".llpl", ".m3u", ".m3u8", ".pls"
               cmdShufflePL.Tag = False
               cmdShufflePL.Image = My.Resources.pl_button_order
               dgvPlayList.Rows.Clear()
@@ -491,6 +543,7 @@ Public Class frmMain
       mpPlayer.SetNoQueue()
       mpPlayer.FileName = String.Empty
     End If
+    If ffAPI IsNot Nothing Then ffAPI.DoResize = False
     FirstInit = True
     InitialData()
   End Sub
@@ -498,7 +551,17 @@ Public Class frmMain
   Private Sub mnuProperties_Click(sender As System.Object, e As System.EventArgs) Handles mnuProperties.Click
     If bCD Then
       MsgBox("CDs do not have properties.", MsgBoxStyle.Information, "No Properties")
+    ElseIf mpPlayer.IsStreaming Then
+      MsgBox("Streams do not have properties.", MsgBoxStyle.Information, "No Properties")
     Else
+      For Each frm As Form In Application.OpenForms
+        If frm.GetType Is GetType(frmProps) Then
+          If CType(frm, frmProps).sFile = mpPlayer.FileName Then
+            frm.Focus()
+            Return
+          End If
+        End If
+      Next
       Dim frmProperties As New frmProps With {.Tag = Me}
       frmProperties.ShowData(mpPlayer.FileName)
     End If
@@ -522,25 +585,29 @@ Public Class frmMain
         Dim devItem As New ToolStripRadioButtonMenuItem(sItem) ' = mnuOutDev.DropDownItems.Add(sItem)
         mnuOutDev.DropDownItems.Add(devItem)
         devItem.Tag = item.Name.Substring(13)
-        devItem.Checked = (item.Name.Substring(13) = My.Settings.Device)
+        devItem.Checked = (item.Name.Substring(13) = audDeviceName)
         AddHandler devItem.Click, AddressOf mnuOutItem_Click
         'devItem.ShortcutKeyDisplayString = "F" & fItem
         devItem.ShortcutKeys = 111 + fItem
         fItem += 1
       End If
     Next
-    mnuOutDefault.Checked = String.IsNullOrEmpty(My.Settings.Device)
+    mnuOutDefault.Checked = String.IsNullOrEmpty(audDeviceName)
   End Sub
 
   Private Sub mnuOutDefault_Click(sender As System.Object, e As System.EventArgs) Handles mnuOutDefault.Click
-    My.Settings.Device = String.Empty
-    mpPlayer.AudioDevice = My.Settings.Device
+    audDeviceName = Nothing
+    My.Settings.Device = audDeviceName
+    mpPlayer.AudioDevice = audDeviceName
+    SetBeatDevice()
   End Sub
 
   Private Sub mnuOutItem_Click(sender As System.Object, e As System.EventArgs)
     Dim mSend As ToolStripRadioButtonMenuItem = sender
-    My.Settings.Device = mSend.Tag
-    mpPlayer.AudioDevice = My.Settings.Device
+    audDeviceName = mSend.Tag
+    mpPlayer.AudioDevice = audDeviceName
+    My.Settings.Device = audDeviceName
+    SetBeatDevice()
   End Sub
 
   Private Sub mnuSettings_Click(sender As System.Object, e As System.EventArgs) Handles mnuSettings.Click
@@ -548,14 +615,26 @@ Public Class frmMain
       My.Settings.Gapless = frmSettings.numGapless.Value / 1000
       My.Settings.SingleInstance = frmSettings.chkSingleInstance.Checked
       If frmSettings.cmbAudioOutput.SelectedIndex = 0 Then
-        My.Settings.Device = String.Empty
+        audDeviceName = String.Empty
       Else
-        My.Settings.Device = frmSettings.cmbAudioOutput.Text
+        audDeviceName = frmSettings.cmbAudioOutput.Text
       End If
+      SetBeatDevice()
       My.Settings.DefaultLocale = frmSettings.cmbLocale.Text
       My.Settings.Subtitles = frmSettings.chkSubtitles.Checked
+      My.Settings.Captions = frmSettings.chkCaptions.Checked
+      My.Settings.Device = audDeviceName
       mpPlayer.QueueTime = My.Settings.Gapless
-      mpPlayer.AudioDevice = My.Settings.Device
+      mpPlayer.AudioDevice = audDeviceName
+
+      My.Settings.ID3_Modify = frmSettings.chkTags.Checked
+      My.Settings.ID3_Art = frmSettings.chkArt.Checked
+      My.Settings.ID3_Clean = frmSettings.chkCleanup.Checked
+      If frmSettings.chkID3v2.Checked Then
+        My.Settings.ID3_Ver = frmSettings.cmbID3v2.SelectedIndex + 2
+      Else
+        My.Settings.ID3_Ver = 0
+      End If
 
       My.Settings.Visualization = frmSettings.lstVis.Text
       My.Settings.Visualization_Rate = frmSettings.txtRate.Value
@@ -655,6 +734,14 @@ Public Class frmMain
 
   Private Sub mnuPLProps_Click(sender As System.Object, e As System.EventArgs) Handles mnuPLProps.Click
     Dim RowIndex As Integer = mnuPL.Tag
+    For Each frm As Form In Application.OpenForms
+      If frm.GetType Is GetType(frmProps) Then
+        If CType(frm, frmProps).sFile = dgvPlayList.Rows(RowIndex).Tag(0) Then
+          frm.Focus()
+          Return
+        End If
+      End If
+    Next
     Dim frmProperties As New frmProps With {.Tag = Me}
     frmProperties.ShowData(dgvPlayList.Rows(RowIndex).Tag(0))
   End Sub
@@ -820,6 +907,9 @@ Public Class frmMain
       pctAlbumArt.Tag = FileArt
       FileArt = GetArt(mpPlayer.FileName, True, True)
     End If
+    If FileArt Is Nothing OrElse FileArt.FileName = "UNKNOWNALBUM" Then
+      FileArt = New ImageWithName(My.Resources.loadingartlarge, "LOADING")
+    End If
   End Sub
 
   Private Sub mnuArtVisShow_Click(sender As System.Object, e As System.EventArgs) Handles mnuArtVisShow.Click
@@ -906,6 +996,7 @@ Public Class frmMain
   Private Sub txtPlayListTitle_LostFocus(sender As Object, e As System.EventArgs) Handles txtPlayListTitle.LostFocus
     If Not txtPlayListTitle.ReadOnly Then
       txtPlayListTitle.Tag = txtPlayListTitle.Text
+      DefaultedPLTitle = False
       txtPlayListTitle.BackColor = Drawing.SystemColors.Control
       txtPlayListTitle.BorderStyle = BorderStyle.None
       txtPlayListTitle.ReadOnly = True
@@ -996,12 +1087,12 @@ Public Class frmMain
       sourceRowIndex = -1
       ThreadedQueue()
     Else
-      DragDropEvent(sender, e)
+      DragDropEvent(sender, e, True)
     End If
   End Sub
 
   Private Sub dgvPlayList_DragEnter(sender As Object, e As System.Windows.Forms.DragEventArgs) Handles dgvPlayList.DragEnter
-    DragEnterEvent(sender, e)
+    DragEnterEvent(sender, e, True)
   End Sub
 
   Private Sub dgvPlayList_DragOver(sender As Object, e As System.Windows.Forms.DragEventArgs) Handles dgvPlayList.DragOver
@@ -1048,7 +1139,7 @@ Public Class frmMain
         e.Effect = DragDropEffects.None
       End If
     Else
-      DragOverEvent(sender, e)
+      DragOverEvent(sender, e, True)
     End If
   End Sub
 
@@ -1063,6 +1154,7 @@ Public Class frmMain
     For I As Integer = 0 To CellCount - 1
       fromData(I) = dgvPlayList.Rows(iFrom).Cells(I).Value
       fromTT(I) = dgvPlayList.Rows(iFrom).Cells(I).ToolTipText
+      fromStyle(I) = dgvPlayList.Rows(iFrom).Cells(I).Style
     Next I
     fromData(CellCount) = dgvPlayList.Rows(iFrom).Tag
     If Math.Abs(iFrom - iTo) = 1 Then
@@ -1118,7 +1210,7 @@ Public Class frmMain
           dgvPlayList.Rows(SelItem - 1).Cells(0).Style.ForeColor = Drawing.SystemColors.GrayText
           OpenFile(dgvPlayList.Rows(SelItem - 1).Tag(0), True)
           ThreadedInitialQueue()
-          Exit Sub
+          Return
         End If
       End If
     End If
@@ -1135,7 +1227,7 @@ Public Class frmMain
           dgvPlayList.Rows(SelItem + 1).Cells(0).Style.ForeColor = Drawing.SystemColors.GrayText
           OpenFile(dgvPlayList.Rows(SelItem + 1).Tag(0), True)
           ThreadedInitialQueue()
-          Exit Sub
+          Return
         End If
       End If
     End If
@@ -1246,7 +1338,7 @@ Public Class frmMain
       Dim sFiles() As String = FileNames
       For Each item In sFiles
         Select Case IO.Path.GetExtension(item).ToLower
-          Case ".llpl", ".m3u", ".pls" : OpenPlayList(item)
+          Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(item)
           Case Else : AddToPlayList(item, , , False)
         End Select
       Next
@@ -1270,6 +1362,7 @@ Public Class frmMain
     cmdShufflePL.Image = My.Resources.pl_button_order
     dgvPlayList.Rows.Clear()
     txtPlayListTitle.Tag = UNKNOWN_ALBUM
+    DefaultedPLTitle = True
   End Sub
 
   Private Sub cmdOpenPL_Click(sender As System.Object, e As System.EventArgs) Handles cmdOpenPL.Click
@@ -1277,7 +1370,7 @@ Public Class frmMain
   End Sub
 
   Private Sub cmdSavePL_Click(sender As System.Object, e As System.EventArgs) Handles cmdSavePL.Click
-    Dim cdlBrowse As New SaveFileDialog With {.Filter = "Lime Light PlayList (*.llpl)|*.llpl|MP3 PlayList (*.m3u)|*.m3u|PlayList File (*.pls)|*.pls|All Files|*.*", .FileName = txtPlayListTitle.Tag}
+    Dim cdlBrowse As New SaveFileDialog With {.Filter = "Lime Light PlayList|*.llpl|MP3 PlayList|*.m3u|UTF-8 Encoded MP3 PlayList|*.m3u8|PlayList File|*.pls|Any File Type|*.*", .FileName = txtPlayListTitle.Tag}
     If cdlBrowse.ShowDialog() = Windows.Forms.DialogResult.OK Then SavePlayList(cdlBrowse.FileName)
   End Sub
 #End Region
@@ -1286,9 +1379,11 @@ Public Class frmMain
 #Region "Open"
   Public Sub OpenPlayList(Path As String, Optional ByVal AutoPlay As Boolean = False)
     txtPlayListTitle.Tag = UNKNOWN_ALBUM
+    DefaultedPLTitle = True
     Select Case IO.Path.GetExtension(Path).ToLower
       Case ".llpl" : OpenBinaryPL(Path)
-      Case ".m3u" : OpenM3U(Path)
+      Case ".m3u" : OpenM3U(Path, False)
+      Case ".m3u8" : OpenM3U(Path, True)
       Case ".pls" : OpenPLS(Path)
       Case Else
         MsgBox("Unknown file extension: " & IO.Path.GetExtension(Path).Substring(1).ToUpper & "!" & vbNewLine & "Attempting standard text, line delimited read.", MsgBoxStyle.Critical, "Unknown PlayList Extension")
@@ -1307,6 +1402,7 @@ Public Class frmMain
       Dim tmpLen As Short = bReader.ReadInt16
       Dim plTitle As String = System.Text.Encoding.GetEncoding(LATIN_1).GetString(bReader.ReadBytes(tmpLen))
       txtPlayListTitle.Tag = plTitle
+      DefaultedPLTitle = False
       Dim tmpItems As Integer = bReader.ReadInt32
       For I As Integer = 1 To tmpItems
         tmpLen = bReader.ReadInt16
@@ -1322,6 +1418,7 @@ Public Class frmMain
       Dim plTitle As String = bReader.ReadString
       Dim tmpItems As UInt64 = bReader.ReadUInt64
       txtPlayListTitle.Tag = plTitle
+      DefaultedPLTitle = False
       For I As UInt64 = 1 To tmpItems
         Dim sPath As String = bReader.ReadString
         Dim sTitle As String = bReader.ReadString
@@ -1350,9 +1447,15 @@ Public Class frmMain
     QueueFullPlayListData()
   End Sub
 
-  Private Sub OpenM3U(Path As String)
+  Private Sub OpenM3U(Path As String, UTF8 As Boolean)
+    Dim encoding As System.Text.Encoding
+    If UTF8 Then
+      encoding = System.Text.Encoding.UTF8
+    Else
+      encoding = System.Text.Encoding.GetEncoding(LATIN_1)
+    End If
     Try
-      Dim sReader As IO.StreamReader = My.Computer.FileSystem.OpenTextFileReader(Path)
+      Dim sReader As IO.StreamReader = My.Computer.FileSystem.OpenTextFileReader(Path, encoding)
       If sReader.ReadLine = "#EXTM3U" Then
         Do
           Dim sINFO As String = sReader.ReadLine
@@ -1408,14 +1511,15 @@ Public Class frmMain
   Public Sub SavePlayList(Path As String)
     Select Case IO.Path.GetExtension(Path).ToLower
       Case ".llpl" : SaveBinaryPL(Path)
-      Case ".m3u" : SaveM3U(Path)
+      Case ".m3u" : SaveM3U(Path, False)
+      Case ".m3u8" : SaveM3U(Path, True)
       Case ".pls" : SavePLS(Path)
       Case Else : SaveTextPL(Path)
     End Select
   End Sub
 
   Private Sub SaveBinaryPL(Path As String)
-    Dim bWriter As New IO.BinaryWriter(New IO.FileStream(Path, IO.FileMode.OpenOrCreate))
+    Dim bWriter As New IO.BinaryWriter(New IO.FileStream(Path, IO.FileMode.Create))
     bWriter.Write(CByte(2))
     bWriter.Write(CStr(txtPlayListTitle.Tag))
     bWriter.Write(CULng(dgvPlayList.RowCount))
@@ -1435,8 +1539,14 @@ Public Class frmMain
     sWriter.Close()
   End Sub
 
-  Private Sub SaveM3U(Path As String)
-    Dim sWriter As IO.StreamWriter = New IO.StreamWriter(Path, False)
+  Private Sub SaveM3U(Path As String, UTF8 As Boolean)
+    Dim encoding As System.Text.Encoding
+    If UTF8 Then
+      encoding = System.Text.Encoding.UTF8
+    Else
+      encoding = System.Text.Encoding.GetEncoding(LATIN_1)
+    End If
+    Dim sWriter As IO.StreamWriter = New IO.StreamWriter(Path, False, encoding)
     sWriter.WriteLine("#EXTM3U")
     For Each row As DataGridViewRow In dgvPlayList.Rows
       sWriter.WriteLine("#EXTINF:" & RevertTimeVal(row.Tag(5)) & "," & CStr(row.Tag(1)))
@@ -1465,7 +1575,7 @@ Public Class frmMain
   Friend instanceID As Integer = 0
 
   Private Sub SaveTempPL()
-    If dgvPlayList.RowCount > 0 Then
+    If dgvPlayList.RowCount > 0 AndAlso Not mpPlayer.IsStreaming Then
       Select Case mpPlayer.State
         Case Seed.ctlSeed.MediaState.mPlaying, Seed.ctlSeed.MediaState.mPaused
           SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
@@ -1598,7 +1708,7 @@ Public Class frmMain
         End If
         iStart = tmpID + 1
         iItems -= 1
-        If iItems < 1 Then Exit Sub
+        If iItems < 1 Then Return
       End If
       Dim sPromt As String = "There are " & iItems & " other PlayLists saved as well." & vbNewLine & "Would you like to open new players for them?"
       If iItems = 1 Then sPromt = "There is another PlayList saved as well." & vbNewLine & "Would you like to open a new player for it?"
@@ -1666,12 +1776,20 @@ Public Class frmMain
 
 #Region "Populate"
   Private Sub QueueFullPlayListData()
+    Dim tX As New Threading.Thread(New Threading.ThreadStart(AddressOf AsyncQueueFullPlayListData))
+    tX.Start()
+  End Sub
+  Private Sub AsyncQueueFullPlayListData()
+    If Me.InvokeRequired Then
+      Me.Invoke(New MethodInvoker(AddressOf AsyncQueueFullPlayListData))
+      Return
+    End If
     For Each dgvx As DataGridViewRow In dgvPlayList.Rows
-      If dgvx.Tag(5) = "--:--" Then
+      If dgvx.Tag(5) = "--:--" Or dgvx.Tag(2) = UNKNOWN_ARTIST Then
         If FastPC() Then
-          Dim poolRun As New CallBack(AddressOf pool_Run)
-          poolRun.BeginInvoke(dgvx.Tag, Nothing, Nothing)
-          'Threading.ThreadPool.QueueUserWorkItem(New Threading.WaitCallback(AddressOf pool_Run), dgvx.Tag)
+          Dim tX As New Threading.Thread(New Threading.ParameterizedThreadStart(AddressOf pool_Run))
+          tX.Start(dgvx.Tag)
+          Application.DoEvents()
         Else
           pool_Run(dgvx.Tag)
           Application.DoEvents()
@@ -1679,13 +1797,17 @@ Public Class frmMain
       End If
     Next
   End Sub
-
+  Private Delegate Sub pool_DoneInvoker(result As Object)
   Private Sub pool_Done(result As Object)
+    If Me.InvokeRequired Then
+      Me.Invoke(New pool_DoneInvoker(AddressOf pool_Done), result)
+      Return
+    End If
     SyncLock dgvPlayList
       Dim dgvItems = Array.FindAll(dgvPlayList.Rows.Cast(Of DataGridViewRow).ToArray, Function(item As DataGridViewRow) String.Compare(item.Tag(0), result(0), True) = 0)
       For I As Integer = 0 To dgvItems.Count - 1
         Dim dgvX As DataGridViewRow = dgvItems(I)
-        If dgvX Is Nothing Then Exit Sub
+        If dgvX Is Nothing Then Return
         If result(1) = "DELETE" Then
           If dgvX IsNot Nothing Then dgvPlayList.Rows.Remove(dgvX)
         Else
@@ -1720,13 +1842,21 @@ Public Class frmMain
     Dim Genre As String = String.Empty
     Dim Duration As String = String.Empty
     Dim noDur As Boolean = False
-    If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
+    If Path.ToLower.StartsWith("http://") Then
+      Title = state(1)
+      Duration = "00:00"
+      noDur = True
+    ElseIf IO.Path.GetExtension(Path).ToLower = ".mp3" Then
       Using ID3v2Tags As New Seed.clsID3v2(Path)
         If ID3v2Tags.HasID3v2Tag Then
-          If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TP1")) Then Artist = ID3v2Tags.FindFrame("TP1")
-          If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TT2")) Then Title = ID3v2Tags.FindFrame("TT2")
-          If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TAL")) Then Album = ID3v2Tags.FindFrame("TAL")
-          If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TCO")) Then Genre = ID3v2Tags.FindFrame("TCO")
+          If ID3v2Tags.FindFrame("TP2") Then
+            Artist = ID3v2Tags.FindFrameMatchString("TP2")
+          ElseIf ID3v2Tags.FindFrame("TP1") Then
+            Artist = ID3v2Tags.FindFrameMatchString("TP1")
+          End If
+          If ID3v2Tags.FindFrame("TT2") Then Title = ID3v2Tags.FindFrameMatchString("TT2")
+          If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
+          If ID3v2Tags.FindFrame("TCO") Then Genre = ID3v2Tags.FindFrameMatchString("TCO")
         End If
       End Using
       Using ID3v1Tags As New Seed.clsID3v1(Path)
@@ -1769,7 +1899,7 @@ Public Class frmMain
     ElseIf IO.Path.GetExtension(Path).ToLower = ".jpg" Or IO.Path.GetExtension(Path).ToLower = ".jpeg" Or IO.Path.GetExtension(Path).ToLower = ".bmp" Or IO.Path.GetExtension(Path).ToLower = ".gif" Or IO.Path.GetExtension(Path).ToLower = ".png" Or IO.Path.GetExtension(Path).ToLower = ".db" Or IO.Path.GetExtension(Path).ToLower = ".ini" Then
       Dim delObj As Object = {Path, "DELETE"}
       Me.BeginInvoke(New CallBack(AddressOf pool_Done), delObj)
-      Exit Sub
+      Return
     End If
     If String.IsNullOrEmpty(Title) Then Title = IO.Path.GetFileNameWithoutExtension(Path)
     If String.IsNullOrEmpty(Artist) Then Artist = UNKNOWN_ARTIST
@@ -1784,7 +1914,7 @@ Public Class frmMain
           If dDur <= 0 Then
             Dim delObj As Object = {Path, "DELETE"}
             Me.BeginInvoke(New CallBack(AddressOf pool_Done), delObj)
-            Exit Sub
+            Return
           End If
           Duration = ConvertTimeVal(dDur)
         End Using
@@ -1828,7 +1958,7 @@ Public Class frmMain
       If AutoQueue Then
         Do Until dgvPlayList.Rows.Item(dgvPlayList.RowCount - 1).Tag(5) <> "--:--"
           Application.DoEvents()
-          If dgvPlayList.Rows.Count = 0 Then Exit Sub
+          If dgvPlayList.Rows.Count = 0 Then Return
         Loop
       End If
       If dgvPlayList.Rows.Count > 0 Then
@@ -1932,12 +2062,8 @@ Public Class frmMain
     End If
     frmText.Close()
     If Me.WindowState <> FormWindowState.Normal Then Me.WindowState = FormWindowState.Normal
-    If Me.Width = mpPlayer.VideoWidth + (Me.Width - mpPlayer.Width) And Me.Height = mpPlayer.VideoHeight + (Me.Height - mpPlayer.Height) Then
-      My.Settings.Size = New Drawing.Size(300, MAIN_HEIGHT)
-    Else
-      My.Settings.Size = Me.Size
-    End If
     If mpPlayer.State <> Seed.ctlSeed.MediaState.mClosed Then mpPlayer.FileName = String.Empty
+    If mpPlayer IsNot Nothing Then mpPlayer.Dispose()
     My.Settings.Location = Me.Location
     My.Settings.Save()
   End Sub
@@ -2065,10 +2191,10 @@ Public Class frmMain
           Me.Size = New Drawing.Size(600, 450)
           Me.Top += (lastSize.Height - Me.Height)
           KeepInTheScreen()
-          Exit Sub
+          Return
         End If
         If mnuArtShow.Checked Then
-          If FileArt IsNot Nothing Then
+          If FileArt IsNot Nothing AndAlso FileArt.Art IsNot Nothing Then
             lastSize = Me.Size
             Me.Width = Me.MinimumSize.Width
             Dim lSize As Drawing.Size
@@ -2077,14 +2203,14 @@ Public Class frmMain
             SetWindowSize(lSize.Width, lSize.Height, Me.Width - pctAlbumArt.Width, Me.Height - pctAlbumArt.Height)
             'Me.Top += (lastSize.Height - Me.Height)
             KeepInTheScreen()
-            Exit Sub
+            Return
           End If
         End If
         If methodDraw IsNot Nothing Then
-          Me.Size = New Drawing.Size(550, 400)
+          Me.Size = New Drawing.Size(Me.MinimumSize.Width, Me.MinimumSize.Height + tbsView.GetTabRect(0).Height + My.Resources.Logo.Height + 8)
           Me.Top += (lastSize.Height - Me.Height)
           KeepInTheScreen()
-          Exit Sub
+          Return
         End If
         Me.Size = New Drawing.Size(Me.MinimumSize.Width, Me.MinimumSize.Height + tbsView.GetTabRect(0).Height + 4)
         Me.Top += (lastSize.Height - Me.Height)
@@ -2182,7 +2308,7 @@ Public Class frmMain
             dgvPlayList.Rows(SelItem + 1).Cells(0).Style.ForeColor = Drawing.SystemColors.GrayText
             OpenFile(dgvPlayList.Rows(SelItem + 1).Tag(0), True)
             ThreadedInitial()
-            Exit Sub
+            Return
           Else
             Dim iLoop As Integer = cmdLoopPL.Tag
             Select Case iLoop
@@ -2205,6 +2331,10 @@ Public Class frmMain
     Select Case finalAct
       Case 1
         Application.DoEvents()
+        If cmdShufflePL.Tag = True Then
+          cmdShufflePL.Tag = False
+          cmdShufflePL_Click(Me, New EventArgs)
+        End If
         StartPlayList()
       Case 2
         ClearPlayList()
@@ -2273,9 +2403,9 @@ Public Class frmMain
   End Sub
 #End Region
 
-  Private Sub CursorText(Message As String)
+  Private Sub CursorText(Message As String, Icon As DragDropEffects)
     If Not frmText.Visible Then frmText.Show(Me)
-    frmText.SetText(Message)
+    frmText.SetText(Message, Icon)
     Me.Focus()
   End Sub
 
@@ -2517,9 +2647,11 @@ Public Class frmMain
     'Debug.Print("Resoultion initialized as: " & width & "x" & height)
     VidSize.Width = width
     VidSize.Height = height
+    CorrectedSize = VidSize
     SetVideoSize(width, height)
   End Sub
 
+  Private vWidth, vHeight As Integer
   Private Sub SetVideoSize(width As Integer, height As Integer)
     If ffAPI IsNot Nothing Then
       If width = VidSize.Width And height = VidSize.Height Then
@@ -2536,6 +2668,8 @@ Public Class frmMain
       End If
     End If
     'Debug.Print("Resoultion set to: " & Width & "x" & Height)
+    vWidth = width
+    vHeight = height
     mpPlayer.VideoWidth = width
     mpPlayer.VideoHeight = height
     SetWindowSize(width, height, (Me.Width - mpPlayer.Width), (Me.Height - mpPlayer.Height))
@@ -2558,6 +2692,8 @@ Public Class frmMain
       End If
     End If
     'Debug.Print("Resoultion set to: " & Width & "x" & Height)
+    vWidth = width * Scale
+    vHeight = height * Scale
     mpPlayer.VideoWidth = width * Scale
     mpPlayer.VideoHeight = height * Scale
     SetWindowSize(width * Scale, height * Scale, (Me.Width - mpPlayer.Width), (Me.Height - mpPlayer.Height))
@@ -2659,359 +2795,501 @@ Public Class frmMain
 
   Private Sub InitialData()
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New MethodInvoker(AddressOf InitialData))
+      Me.Invoke(New MethodInvoker(AddressOf InitialData))
+      Return
+    End If
+    Dim sTitleVal As String = IO.Path.GetFileNameWithoutExtension(mpPlayer.FileName)
+    Dim sArtistVal As String = UNKNOWN_ARTIST
+    If FirstInit Then
+      VidSize = Drawing.Size.Empty
+      volControl.SetSound(False)
+      volControl.SetVolume(100)
+    End If
+    mnuCloseFile.Enabled = True
+    mnuProperties.Enabled = True
+    If bCD Then
+      LoadData_CD(sTitleVal, sArtistVal)
+    ElseIf String.IsNullOrEmpty(mpPlayer.FileName) Then
+      LoadData_Void(sTitleVal, sArtistVal)
+    ElseIf mpPlayer.HasVid Or bDVD Then
+      LoadData_Video(sTitleVal, sArtistVal)
     Else
-      Dim sTitleVal As String = IO.Path.GetFileNameWithoutExtension(mpPlayer.FileName)
-      Dim sArtistVal As String = UNKNOWN_ARTIST
-      If FirstInit Then
-        VidSize = Drawing.Size.Empty
-        volControl.SetSound(False)
-        volControl.SetVolume(100)
-      End If
-      If bCD Then
-        EnableScreenSaver(True)
-        SetTabs(True, False)
-        If GetSelectedPlayListItem() >= 0 Then
-          Dim dTag = dgvPlayList.Rows(GetSelectedPlayListItem).Tag
-          If dTag IsNot Nothing Then
-            If String.IsNullOrEmpty(dTag(2)) Or dTag(2) = UNKNOWN_ARTIST Then
-              If String.IsNullOrEmpty(dTag(1)) Then
-                sTitleVal = "Track " & cCD.CurrentTrack
-              Else
-                sTitleVal = dTag(1)
-              End If
-            Else
-              If String.IsNullOrEmpty(dTag(1)) Then
-                sTitleVal = "Track " & cCD.CurrentTrack
-                sArtistVal = dTag(2)
-              Else
-                sTitleVal = dTag(1)
-                sArtistVal = dTag(2)
-              End If
-            End If
-          Else
+      LoadData_Audio(sTitleVal, sArtistVal)
+    End If
+    LabelShortcuts()
+    SetTitleArtist(sTitleVal, sArtistVal)
+    FirstInit = False
+  End Sub
+
+  Private Sub LoadData_Void(ByRef sTitleVal As String, ByRef sArtistVal As String)
+    sTitleVal = String.Empty
+    sArtistVal = String.Empty
+    FileArt = Nothing
+    SetCombos(False, False, False, False)
+    SetProps(-1, -1, -1)
+    VidThumb = False
+    If ffAPI IsNot Nothing Then ffAPI.DoResize = False
+    EnableScreenSaver(True)
+    cmdLoop.Enabled = False
+    cmdLoop.Image = My.Resources.button_loop_off
+    pctAlbumArt.Image = Nothing
+    If frmFS IsNot Nothing Then frmFS.pctVideo.Image = Nothing
+    mnuCloseFile.Enabled = False
+    mnuProperties.Enabled = False
+  End Sub
+
+  Private Sub LoadData_CD(ByRef sTitleVal As String, ByRef sArtistVal As String)
+    EnableScreenSaver(True)
+    SetTabs(True, False)
+    If GetSelectedPlayListItem() >= 0 Then
+      Dim dTag = dgvPlayList.Rows(GetSelectedPlayListItem).Tag
+      If dTag IsNot Nothing Then
+        If String.IsNullOrEmpty(dTag(2)) Or dTag(2) = UNKNOWN_ARTIST Then
+          If String.IsNullOrEmpty(dTag(1)) Then
             sTitleVal = "Track " & cCD.CurrentTrack
+          Else
+            sTitleVal = dTag(1)
           End If
         Else
-          sTitleVal = "Track " & cCD.CurrentTrack
-        End If
-        If sTitleVal = IO.Path.GetFileNameWithoutExtension(mpPlayer.FileName) Then sTitleVal = "Track " & cCD.CurrentTrack
-        'If FileArt IsNot Nothing And Me.WindowState = FormWindowState.Normal And tbsView.SelectedTab Is tabArt Then tbsView_SelectedIndexChanged(New Object, New EventArgs)
-        SetProps(4, 2, -1, "CD Audio", "Stereo")
-        SetCombos(False, False, False, False)
-        VidThumb = False
-        cmdLoop.Enabled = True
-        cmdLoop.Image = My.Resources.button_eject
-        LabelShortcuts()
-      ElseIf String.IsNullOrEmpty(mpPlayer.FileName) Then
-        'EMPTY
-        sTitleVal = String.Empty
-        sArtistVal = String.Empty
-        FileArt = Nothing
-        SetCombos(False, False, False, False)
-        SetProps(-1, -1, -1)
-        VidThumb = False
-        If ffAPI IsNot Nothing Then ffAPI.DoResize = False
-        EnableScreenSaver(True)
-        cmdLoop.Enabled = False
-        cmdLoop.Image = My.Resources.button_loop_off
-        LabelShortcuts()
-        pctAlbumArt.Image = Nothing
-        If frmFS IsNot Nothing Then frmFS.pctVideo.Image = Nothing
-      ElseIf mpPlayer.HasVid Or bDVD Then
-        'sArtistVal = "Video"
-        'VIDEO
-        If FirstInit Then
-          EnableScreenSaver(False)
-          SetTabs(False, True)
-          tbsView.SelectedTab = tabVideo
-          FileArt = Nothing
-          If LoadFFDShow() Then
-            ffAPI.DoResize = False
-            Application.DoEvents()
-            'Debug.Print("Do Resize: " & ffAPI.DoResize)
-            'Debug.Print("Dimensions: " & ffAPI.ResizeHorizontal & "x" & ffAPI.ResizeVertical)
-            'Debug.Print("Keep Aspect: " & ffAPI.ResizeKeepAspectRatio)
-            'Debug.Print("Fit to screen: " & ffAPI.ResizeModeFitToScreen)
-            'Debug.Print("Free Resize: " & ffAPI.ResizeModeFreeResize)
-          End If
-        End If
-        'FileTitle = IO.Path.GetFileNameWithoutExtension(mpPlayer.FileName)
-        If bDVD Then
-          sTitleVal = My.Computer.FileSystem.GetDriveInfo(mpPlayer.FileName.Substring(0, 3)).VolumeLabel
-          If FirstInit Then
-            cmdLoop.Enabled = True
-            cmdLoop.Image = My.Resources.button_eject
-            LabelShortcuts()
-          End If
-          If Not cmbAudTrack.DroppedDown And Not cmbChapters.DroppedDown And Not cmbSubtitles.DroppedDown And Not cmbVidTrack.DroppedDown And Not frmFS.Visible Then
-            SetCombos(mpPlayer.GetDVDTitles > 1, mpPlayer.GetDVDAvailableAudioStreams > 1, mpPlayer.GetDVDChapters(mpPlayer.GetDVDCurrentTitle) > 1, mpPlayer.GetDVDAvailableSubStreams > 1)
-            cmbAudTrack.Tag = True
-            cmbChapters.Tag = True
-            cmbSubtitles.Tag = True
-            cmbVidTrack.Tag = True
-            If mpPlayer.GetDVDAvailableAudioStreams > 1 Then
-              For I As Integer = 0 To mpPlayer.GetDVDAvailableAudioStreams - 1
-                Dim audData = mpPlayer.GetDVDAudioInfo(I)
-                cmbAudTrack.Items.Add(audData.bNumberOfChannels & " channel " & audData.AudioFormat.ToString & " [" & audData.Language & "]")
-                mnuAudioTrack.DropDownItems.Add(audData.bNumberOfChannels & " channel " & audData.AudioFormat.ToString & " [" & audData.Language & "]")
-              Next
-              If mpPlayer.GetDVDCurrentAudioStream < cmbAudTrack.Items.Count Then cmbAudTrack.SelectedIndex = mpPlayer.GetDVDCurrentAudioStream
-            End If
-
-            If mpPlayer.GetDVDAvailableSubStreams > 1 Then
-              cmbSubtitles.Items.Add("No subtitles")
-              mnuSubtitleTrack.DropDownItems.Add("No subtitles")
-              For I As Integer = 0 To mpPlayer.GetDVDAvailableSubStreams - 1
-                Dim subData = mpPlayer.GetDVDSubAttributes(I)
-                cmbSubtitles.Items.Add("Subtitle " & I & ": " & subData.Language)
-                mnuSubtitleTrack.DropDownItems.Add("Subtitle " & I & ": " & subData.Language)
-              Next
-              If mpPlayer.GetDVDCurrentSubStream + 1 < cmbSubtitles.Items.Count Then cmbSubtitles.SelectedIndex = mpPlayer.GetDVDCurrentSubStream + 1
-            End If
-
-            If mpPlayer.GetDVDTitles() > 1 Then
-              For I As Integer = 1 To mpPlayer.GetDVDTitles
-                Dim titleData = mpPlayer.GetDVDTitleAttributes(I)
-                cmbVidTrack.Items.Add("Title " & I & ": " & titleData.VideoAttributes.sourceResolutionX & "x" & titleData.VideoAttributes.sourceResolutionY & " " & titleData.AudioAttributes(0).AudioFormat.ToString & " " & titleData.AudioAttributes(0).bNumberOfChannels & "ch")
-                mnuVideoTrack.DropDownItems.Add("Title " & I & ": " & titleData.VideoAttributes.sourceResolutionX & "x" & titleData.VideoAttributes.sourceResolutionY & " " & titleData.AudioAttributes(0).AudioFormat.ToString & " " & titleData.AudioAttributes(0).bNumberOfChannels & "ch")
-              Next
-              If mpPlayer.GetDVDCurrentTitle <= cmbVidTrack.Items.Count Then cmbVidTrack.SelectedIndex = mpPlayer.GetDVDCurrentTitle - 1
-            End If
-
-            If mpPlayer.GetDVDChapters(mpPlayer.GetDVDCurrentTitle) > 1 Then
-              For I As Integer = 1 To mpPlayer.GetDVDChapters(mpPlayer.GetDVDCurrentTitle)
-                cmbChapters.Items.Add("Chapter " & I)
-                mnuChapterTrack.DropDownItems.Add("Chapter " & I)
-              Next
-              If mpPlayer.GetDVDCurrentChapter <= cmbChapters.Items.Count Then cmbChapters.SelectedIndex = mpPlayer.GetDVDCurrentChapter - 1
-            End If
-            cmbAudTrack.Tag = Nothing
-            cmbChapters.Tag = Nothing
-            cmbSubtitles.Tag = Nothing
-            cmbVidTrack.Tag = Nothing
-          End If
-          Dim AudInfo = mpPlayer.GetDVDAudioInfo(mpPlayer.GetDVDCurrentAudioStream)
-          Dim sAudFmt As String = "None"
-          Select Case AudInfo.AudioFormat
-            Case DirectShowLib.Dvd.DvdAudioFormat.AC3 : sAudFmt = "AC3"
-            Case DirectShowLib.Dvd.DvdAudioFormat.DTS : sAudFmt = "DTS"
-            Case DirectShowLib.Dvd.DvdAudioFormat.LPCM : sAudFmt = "LPCM"
-            Case DirectShowLib.Dvd.DvdAudioFormat.MPEG1 : sAudFmt = "MPEG-1"
-            Case DirectShowLib.Dvd.DvdAudioFormat.MPEG1_DRC : sAudFmt = "MPEG-1 DRC"
-            Case DirectShowLib.Dvd.DvdAudioFormat.MPEG2 : sAudFmt = "MPEG-2"
-            Case DirectShowLib.Dvd.DvdAudioFormat.MPEG2_DRC : sAudFmt = "MPEG-2 DRC"
-            Case DirectShowLib.Dvd.DvdAudioFormat.SDDS : sAudFmt = "SDDS"
-            Case DirectShowLib.Dvd.DvdAudioFormat.Other : sAudFmt = "Unknown"
-          End Select
-          sAudFmt &= " (" & KRater(AudInfo.dwFrequency, "Hz") & ")"
-          Dim bChannels As Byte = AudInfo.bNumberOfChannels
-          Dim sChannel As String
-          Select Case bChannels
-            Case 1 : sChannel = "Mono"
-            Case 2 : sChannel = "Stereo"
-            Case 3 : sChannel = "2.1 Stereo"
-            Case 4 : sChannel = "Quadraphonic"
-            Case 5 : sChannel = "Surround"
-            Case 6 : sChannel = "5.1 Surround"
-            Case 7 : sChannel = "6.1 Surround"
-            Case 8 : sChannel = "7.1 Surround"
-            Case Else : sChannel = bChannels & " channels"
-          End Select
-          Dim vidInfo = mpPlayer.GetDVDVideoInfo
-          Dim sVidFormat As String = "None"
-          Select Case vidInfo.compression
-            Case DirectShowLib.Dvd.DvdVideoCompression.Mpeg1 : sVidFormat = "MPEG-1"
-            Case DirectShowLib.Dvd.DvdVideoCompression.Mpeg2 : sVidFormat = "MPEG-2"
-            Case DirectShowLib.Dvd.DvdVideoCompression.Other : sVidFormat = "Unknown"
-          End Select
-          sVidFormat &= " (" & vidInfo.frameRate & "fps)"
-          If FirstInit Then SetVideoResolution(vidInfo.sourceResolutionX, vidInfo.sourceResolutionY)
-          SetProps(4, bChannels, 9, vbNewLine & "Video: " & sVidFormat & vbNewLine & "Audio: " & sAudFmt, sChannel, "DVD Video")
-        ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".mkv", True) = 0 Then
-          Dim mkvHeader As New Seed.clsMKVHeaders(mpPlayer.FileName)
-          If Not String.IsNullOrEmpty(mkvHeader.SegmentInfo.Title) Then sTitleVal = mkvHeader.SegmentInfo.Title
-          Dim mkvSize As Drawing.Size, mkvCrop As Drawing.Rectangle
-          GetMKVDisplaySize(mkvHeader, mkvSize, mkvCrop)
-
-
-          If mkvSize <> Drawing.Size.Empty Then
-            Dim CroppedRes As Drawing.Rectangle = New Drawing.Rectangle(Drawing.Point.Empty, mkvSize)
-            If mkvCrop <> Drawing.Rectangle.Empty Then
-              CroppedRes = New Drawing.Rectangle(mkvCrop.Left, mkvCrop.Top, mkvSize.Width - (mkvCrop.Left + mkvCrop.Width), mkvSize.Height - (mkvCrop.Top + mkvCrop.Height))
-              mpPlayer.CropVideo(CroppedRes.Left, CroppedRes.Top, CroppedRes.Width, CroppedRes.Height)
-            End If
-
-            Dim mkvPixelSize, mkvDisplaySize As Drawing.Size
-            GetMKVPDSizes(mkvHeader, mkvPixelSize, mkvDisplaySize)
-            VidSize = mkvPixelSize
-            CorrectedSize = CroppedRes.Size
-            SetVideoSize(CroppedRes.Width, CroppedRes.Height)
+          If String.IsNullOrEmpty(dTag(1)) Then
+            sTitleVal = "Track " & cCD.CurrentTrack
+            sArtistVal = dTag(2)
           Else
-            SetVideoResolution(-1, -1)
-            If mkvCrop <> Drawing.Rectangle.Empty Then
-              Dim CroppedRes As New Drawing.Rectangle(mkvCrop.Left, mkvCrop.Top, VidSize.Width - (mkvCrop.Left + mkvCrop.Width), VidSize.Height - (mkvCrop.Top + mkvCrop.Height))
-              mpPlayer.CropVideo(CroppedRes.Left, CroppedRes.Top, CroppedRes.Width, CroppedRes.Height)
-            End If
-
-
+            sTitleVal = dTag(1)
+            sArtistVal = dTag(2)
           End If
-          Dim chapterCollection As New Collection
-          Dim RunningTime As ULong = 0
-          SetCombos((From Tracks In mkvHeader.TrackEntries Where Tracks.TrackType = 1).ToArray.Length > 1, (From Tracks In mkvHeader.TrackEntries Where Tracks.TrackType = 2).ToArray.Length > 1, mkvHeader.ChapterInfo.Editions IsNot Nothing, (From Tracks In mkvHeader.TrackEntries Where Tracks.TrackType = &H11).ToArray.Length > 0)
-          If mkvHeader.ChapterInfo.Editions IsNot Nothing Then
-            ChapterWidth = 0
-            FindAdditionalMKVChapters(mpPlayer.FileName, 0, cmbChapters, mnuChapterTrack, ChapterWidth, chapterCollection, RunningTime)
-            If RunningTime > 0 Then
-              mpPlayer.Position = RunningTime
+        End If
+      Else
+        sTitleVal = "Track " & cCD.CurrentTrack
+      End If
+    Else
+      sTitleVal = "Track " & cCD.CurrentTrack
+    End If
+    If sTitleVal = IO.Path.GetFileNameWithoutExtension(mpPlayer.FileName) Then sTitleVal = "Track " & cCD.CurrentTrack
+    SetProps(4, 2, -1, "CD Audio", "Stereo")
+    SetCombos(False, False, False, False)
+    VidThumb = False
+    cmdLoop.Enabled = True
+    cmdLoop.Image = My.Resources.button_eject
+  End Sub
+
+  Private Sub LoadData_Video(ByRef sTitleVal As String, ByRef sArtistVal As String)
+    If FirstInit Then
+      EnableScreenSaver(False)
+      SetTabs(False, True)
+      tbsView.SelectedTab = tabVideo
+      FileArt = Nothing
+      If LoadFFDShow() Then
+        ffAPI.DoResize = False
+        Application.DoEvents()
+      End If
+    End If
+    'FileTitle = IO.Path.GetFileNameWithoutExtension(mpPlayer.FileName)
+    Dim selVid As Integer = -1
+    Dim VidTrackList As New Dictionary(Of String, String)
+    Dim selAud As Integer = -1
+    Dim AudTrackList As New Dictionary(Of String, String)
+    Dim selSub As Integer = -1
+    Dim SubTrackList As New Dictionary(Of String, String)
+    Dim selChapter As Integer = -1
+    Dim ChapterList As New List(Of String)
+    If bDVD Then
+      LoadData_Video_DVD(sTitleVal, sArtistVal, VidTrackList, selVid, AudTrackList, selAud, SubTrackList, selSub, ChapterList, selChapter)
+    ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".mkv", True) = 0 Then
+      LoadData_Video_MKV(sTitleVal, sArtistVal, VidTrackList, selVid, AudTrackList, selAud, SubTrackList, selSub, ChapterList, selChapter)
+    ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".ogm", True) = 0 Then
+      LoadData_Video_OGM(sTitleVal, sArtistVal, VidTrackList, selVid, AudTrackList, selAud, SubTrackList, selSub, ChapterList, selChapter)
+    ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".avi", True) = 0 Then
+      LoadData_Video_AVI(sTitleVal, sArtistVal, VidTrackList, selVid, AudTrackList, selAud, SubTrackList, selSub, ChapterList, selChapter)
+    ElseIf LoadFFDShow() Then
+      LoadData_Video_FFDShow(sTitleVal, sArtistVal, VidTrackList, selVid, AudTrackList, selAud, SubTrackList, selSub, ChapterList, selChapter)
+    Else
+      SetCombos(False, False, False, False)
+      SetVideoResolution(-1, -1)
+      Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+      SetProps(-1, 2, 0, , "Unknown Speaker Setup", KRater(iQ, "bps"))
+    End If
+    cmbVidTrack.DroppedDown = False
+    cmbAudTrack.DroppedDown = False
+    cmbSubtitles.DroppedDown = False
+    cmbChapters.DroppedDown = False
+    If Not frmFS.Visible Then
+      SetCombos(VidTrackList.Count > 1, AudTrackList.Count > 1, ChapterList.Count > 1, SubTrackList.Count > 1)
+      cmbAudTrack.Tag = True
+      cmbChapters.Tag = True
+      cmbSubtitles.Tag = True
+      cmbVidTrack.Tag = True
+
+      If VidTrackList.Count > 1 Then
+        For Each vidTrack In VidTrackList
+          Dim sTrackTitle As String = vidTrack.Key
+          If Not CompareLanguages(vidTrack.Value, "und") And Not sTrackTitle.ToLower.Contains(vidTrack.Value.ToLower) Then sTrackTitle &= " [" & vidTrack.Value & "]"
+          cmbVidTrack.Items.Add(sTrackTitle)
+          mnuVideoTrack.DropDownItems.Add(sTrackTitle)
+          Dim g As Drawing.Graphics = cmbVidTrack.CreateGraphics
+          Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbVidTrack.Font).Width + 10
+          If lWidth > VidWidth Then VidWidth = lWidth
+        Next
+        If selVid = -1 Then selVid = 0
+        If selVid < cmbVidTrack.Items.Count Then cmbVidTrack.SelectedIndex = selVid
+      End If
+
+      Dim audLang As String = "und"
+      If AudTrackList.Count > 1 Then
+        For Each audTrack In AudTrackList
+          Dim sTrackTitle As String = audTrack.Key
+          If Not CompareLanguages(audTrack.Value, "und") And Not sTrackTitle.ToLower.Contains(audTrack.Value.ToLower) Then sTrackTitle &= " [" & audTrack.Value & "]"
+          cmbAudTrack.Items.Add(sTrackTitle)
+          mnuAudioTrack.DropDownItems.Add(sTrackTitle)
+          Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
+          Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbAudTrack.Font).Width + 10
+          If lWidth > AudWidth Then AudWidth = lWidth
+        Next
+        If Not String.IsNullOrEmpty(My.Settings.DefaultLocale) Then
+          For I As Integer = 0 To AudTrackList.Count - 1
+            If CompareLanguages(My.Settings.DefaultLocale, AudTrackList.Values(I)) Then
+              selAud = I
+              Exit For
             End If
-            For Each Edition In mkvHeader.ChapterInfo.Editions
-              If Not Edition.FlagHidden Then
-                For Each Atom In Edition.Atoms
-                  If Not Atom.FlagHidden Then
-                    Dim sChapterText As String
-                    If Atom.Display(0).Language Is Nothing Then
-                      sChapterText = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
-                    Else
-                      sChapterText = Atom.Display(0).Title & " [" & Join(Atom.Display(0).Language, ", ") & "]: " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
-                    End If
-                    cmbChapters.Items.Add(sChapterText)
-                    mnuChapterTrack.DropDownItems.Add(sChapterText)
-                    Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-                    Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-                    If lWidth > ChapterWidth Then ChapterWidth = lWidth
-                    chapterCollection.Add({CDbl(RunningTime + Atom.TimeStart / 1000000000), sChapterText})
+          Next
+        End If
+        If selAud = -1 Then selAud = 0
+        If selAud < cmbAudTrack.Items.Count Then
+          cmbAudTrack.SelectedIndex = selAud
+          audLang = cmbAudTrack.SelectedItem
+        End If
+      End If
+
+      If SubTrackList.Count > 1 Then
+        For Each subTrack In SubTrackList
+          Dim sTrackTitle As String = subTrack.Key
+          If Not CompareLanguages(subTrack.Value, "und") And Not sTrackTitle.ToLower.Contains(subTrack.Value.ToLower) Then sTrackTitle &= " [" & subTrack.Value & "]"
+          cmbSubtitles.Items.Add(sTrackTitle)
+          mnuSubtitleTrack.DropDownItems.Add(sTrackTitle)
+          Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
+          Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbSubtitles.Font).Width + 10
+          If lWidth > SubWidth Then SubWidth = lWidth
+        Next
+        If CompareLanguages(audLang, "und") Then
+          If My.Settings.Captions Or My.Settings.Subtitles Then
+            If selSub = -1 Then
+              If Not String.IsNullOrEmpty(My.Settings.DefaultLocale) Then
+                For I As Integer = 0 To SubTrackList.Count - 1
+                  If CompareLanguages(My.Settings.DefaultLocale, SubTrackList.Values(I)) Then
+                    selSub = I
+                    Exit For
                   End If
                 Next
               End If
+            End If
+          Else
+            For I As Integer = 0 To SubTrackList.Count - 1
+              If SubTrackList.Keys(I) = "No subtitles" Then
+                selSub = I
+                Exit For
+              End If
             Next
-            If mkvHeader.SegmentInfo.Duration > 0 Then
-              RunningTime += (mkvHeader.SegmentInfo.Duration / 1000)
-            Else
-              RunningTime += mpPlayer.Duration
-            End If
-            FindAdditionalMKVChapters(mpPlayer.FileName, 1, cmbChapters, mnuChapterTrack, ChapterWidth, chapterCollection, RunningTime)
-            cmbChapters.SelectedIndex = 0
-            cmbChapters.Tag = chapterCollection
           End If
-          Dim didSubSel As Boolean = False
-          If mkvHeader.TrackEntries IsNot Nothing Then
-            Dim sVidInfo As String = Nothing
-            Dim iEncQ As Integer
-            Dim sCodec As String = Nothing
-            Dim iqR As Integer = -1
-            Dim iChannels As Integer
-            Dim sAudInfo As String = Nothing
-            Dim sBitrate As String = Nothing
-            Dim dDuration As Double = 0.0
-            If mkvHeader.SegmentInfo.Duration > 0 Then
-              dDuration = mkvHeader.SegmentInfo.Duration / 1000
-            Else
-              dDuration = mpPlayer.Duration
+        ElseIf CompareLanguages(audLang, My.Settings.DefaultLocale) Then
+          If My.Settings.Captions Then
+            If selSub = -1 Then
+              For I As Integer = 0 To SubTrackList.Count - 1
+                If CompareLanguages(audLang, SubTrackList.Values(I)) Then
+                  selSub = I
+                  Exit For
+                End If
+              Next
             End If
-            For Each Track In mkvHeader.TrackEntries
-              Dim sTrackTitle As String
-              If String.IsNullOrEmpty(Track.TrackName) Then
-                sTrackTitle = Track.Language
-              Else
-                sTrackTitle = Track.TrackName & " [" & Track.Language & "]"
+          Else
+            For I As Integer = 0 To SubTrackList.Count - 1
+              If SubTrackList.Keys(I) = "No subtitles" Then
+                selSub = I
+                Exit For
               End If
-              Select Case Track.TrackType
-                Case &H1
-                  If Not String.IsNullOrEmpty(Track.TrackName) AndAlso String.IsNullOrEmpty(sTitleVal) Then sTitleVal = Track.TrackName
-                  cmbVidTrack.Items.Add(sTrackTitle)
-                  mnuVideoTrack.DropDownItems.Add(sTrackTitle)
-                  Dim g As Drawing.Graphics = cmbVidTrack.CreateGraphics
-                  Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbVidTrack.Font).Width + 10
-                  If lWidth > VidWidth Then VidWidth = lWidth
-
-                  sVidInfo = MKVVideoCodecs(Track.CodecID)
-                  If Track.DefaultDuration > 0 Then sVidInfo &= " (" & Math.Round(1 / (Track.DefaultDuration / 1000000000), 3) & " fps " & IIf(Track.Video.FlagInterlaced, "interlaced", "progressive") & ")"
-                Case &H2
-                  cmbAudTrack.Items.Add(sTrackTitle)
-                  mnuAudioTrack.DropDownItems.Add(sTrackTitle)
-                  Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
-                  Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbAudTrack.Font).Width + 10
-                  If lWidth > AudWidth Then AudWidth = lWidth
-
-                  Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / dDuration
-                  Select Case iQ
-                    Case Is < 1024 * 1024 : iqR = 0
-                    Case Is < 1024 * 1024 * 1.5 : iqR = 1
-                    Case Is < 1024 * 1024 * 2 : iqR = 2
-                    Case Is < 1024 * 1024 * 2.5 : iqR = 3
-                    Case Is < 1024 * 1024 * 3 : iqR = 4
-                    Case Is < 1024 * 1024 * 4 : iqR = 5
-                    Case Is < 1024 * 1024 * 6 : iqR = 6
-                    Case Is < 1024 * 1024 * 8 : iqR = 7
-                    Case Is < 1024 * 1024 * 10 : iqR = 8
-                    Case Is >= 1024 * 1024 * 10 : iqR = 9
-                  End Select
-                  MKVAudioCodecs(Track.CodecID, iEncQ, sCodec)
-                  iChannels = Track.Audio.Channels
-                  sAudInfo = sCodec & " (" & KRater(Track.Audio.SamplingFrequency, "Hz") & ")"
-                  sBitrate = KRater(iQ, "bps")
-                Case &H11
-                  cmbSubtitles.Items.Add(sTrackTitle)
-                  mnuSubtitleTrack.DropDownItems.Add(sTrackTitle)
-                  Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
-                  Dim lWidth As Single = g.MeasureString(sTrackTitle, cmbSubtitles.Font).Width + 10
-                  If lWidth > SubWidth Then SubWidth = lWidth
-                  If Not didSubSel AndAlso Track.FlagDefault Then
-                    cmbSubtitles.Text = sTrackTitle
-                    didSubSel = True
-                  End If
-                  If Track.FlagForced Then
-                    cmbSubtitles.Text = sTrackTitle
-                    didSubSel = True
-                  End If
-              End Select
             Next
-            SetProps(iEncQ, iChannels, iqR, vbNewLine & "Video: " & sVidInfo & vbNewLine & "Audio: " & sAudInfo, iChannels, sBitrate)
-            If cmbSubtitles.Visible Then
-              cmbSubtitles.Items.Add("No subtitles")
-              mnuSubtitleTrack.DropDownItems.Add("No subtitles")
-            End If
-            Dim nsg As Drawing.Graphics = cmbSubtitles.CreateGraphics
-            Dim lNoSubWidth As Single = nsg.MeasureString("No subtitles", cmbSubtitles.Font).Width + 10
-            If lNoSubWidth > SubWidth Then SubWidth = lNoSubWidth
           End If
-          If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
-          If Not didSubSel Then HandleAudSub()
-        ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".ogm", True) = 0 Then
-          Using cVorbis As New Seed.clsVorbis(mpPlayer.FileName)
-            If Not String.IsNullOrEmpty(cVorbis.Title) Then sTitleVal = cVorbis.Title
-            Dim iEnc As Integer, sEnc As String
-            If cVorbis.File_MinQuality > 0 And cVorbis.File_MaxQuality > 0 Then
-              If cVorbis.File_Quality > 0 Then
-                iEnc = 2
-                sEnc = "Constant Bitrate"
-              Else
-                iEnc = 3
-                sEnc = "Limited Variable Bitrate"
-              End If
-            Else
-              If cVorbis.File_Quality > 0 Then
-                iEnc = 1
-                sEnc = "Average/Variable Bitrate"
-              Else
-                iEnc = -1
-                sEnc = Nothing
+        Else
+          If My.Settings.Captions Then
+            If selSub = -1 Then
+              For I As Integer = 0 To SubTrackList.Count - 1
+                If CompareLanguages(audLang, SubTrackList.Values(I)) Then
+                  selSub = I
+                  Exit For
+                End If
+              Next
+              If selSub = -1 Then
+                For I As Integer = 0 To SubTrackList.Count - 1
+                  If CompareLanguages(My.Settings.DefaultLocale, SubTrackList.Values(I)) Then
+                    selSub = I
+                    Exit For
+                  End If
+                Next
               End If
             End If
-            Dim sChannel As String = cVorbis.File_Channels
-            Select Case cVorbis.File_Channels
-              Case 1 : sChannel = "Mono"
-              Case 2 : sChannel = "Stereo"
-              Case 3 : sChannel = "2.1 Stereo"
-              Case 4 : sChannel = "Quadraphonic"
-              Case 5 : sChannel = "Surround"
-              Case 6 : sChannel = "5.1 Surround"
-              Case 7 : sChannel = "6.1 Surround"
-              Case 8 : sChannel = "7.1 Surround"
-            End Select
-            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-            Dim iqR As Integer = -1
+          ElseIf My.Settings.Subtitles Then
+            If selSub = -1 Then
+              If Not CompareLanguages(audLang, My.Settings.DefaultLocale) Then
+                For I As Integer = 0 To SubTrackList.Count - 1
+                  If CompareLanguages(My.Settings.DefaultLocale, SubTrackList.Values(I)) Then
+                    selSub = I
+                    Exit For
+                  End If
+                Next
+                If selSub = -1 Then
+                  For I As Integer = 0 To SubTrackList.Count - 1
+                    If CompareLanguages(audLang, SubTrackList.Values(I)) Then
+                      selSub = I
+                      Exit For
+                    End If
+                  Next
+                End If
+              End If
+            End If
+          Else
+            For I As Integer = 0 To SubTrackList.Count - 1
+              If SubTrackList.Keys(I) = "No subtitles" Then
+                selSub = I
+                Exit For
+              End If
+            Next
+          End If
+        End If
+        If selSub = -1 Then
+          For I As Integer = 0 To SubTrackList.Count - 1
+            If SubTrackList.Keys(I) = "No subtitles" Then
+              selSub = I
+              Exit For
+            End If
+          Next
+        End If
+        If selSub < cmbSubtitles.Items.Count Then cmbSubtitles.SelectedIndex = selSub
+      End If
+
+      If ChapterList.Count > 1 Then
+        For Each chapter In ChapterList
+          cmbChapters.Items.Add(chapter)
+          mnuChapterTrack.DropDownItems.Add(chapter)
+          Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
+          Dim lWidth As Single = g.MeasureString(chapter, cmbChapters.Font).Width + 10
+          If lWidth > ChapterWidth Then ChapterWidth = lWidth
+        Next
+        If selChapter = -1 Then selChapter = 0
+        If selChapter < cmbChapters.Items.Count Then cmbChapters.SelectedIndex = selChapter
+      End If
+
+      cmbAudTrack.Tag = Nothing
+      cmbChapters.Tag = Nothing
+      cmbSubtitles.Tag = Nothing
+      cmbVidTrack.Tag = Nothing
+    End If
+
+
+
+    If FirstInit Then
+      If frmFS.Visible Then
+        mpPlayer.FullScreenObj = frmFS.pctVideo
+        mpPlayer.FullScreen = True
+        'If cTask IsNot Nothing Then cTask.CreatePreview(frmFS.pctVideo)
+        VidThumb = False
+      Else
+        If cTask IsNot Nothing Then
+          'tmrUpdate_Tick(New Object, New EventArgs)
+          'cTask.CreatePreview(mpPlayer)
+          VidThumb = True
+        Else
+          VidThumb = False
+        End If
+      End If
+      'cTask.Title = FileTitle
+      'cTask.Icon = Me.Icon
+      If mnuRatioAutomatic.Checked Then mnuRatioAutomatic_Click(mnuRatioAutomatic, New EventArgs)
+      If mnuRatioStandard.Checked Then mnuRatioStandard_Click(mnuRatioStandard, New EventArgs)
+      If mnuRatioWide.Checked Then mnuRatioWide_Click(mnuRatioWide, New EventArgs)
+      If mnuScaleHalf.Checked Then mnuScaleHalf_Click(mnuScaleHalf, New EventArgs)
+      If mnuScaleNorm.Checked Then mnuScaleNorm_Click(mnuScaleNorm, New EventArgs)
+      If mnuScaleTwice.Checked Then mnuScaleTwice_Click(mnuScaleTwice, New EventArgs)
+      If Not bDVD Then
+        If mpPlayer.Repeat Then
+          cmdLoop.Image = My.Resources.button_loop_on
+        Else
+          cmdLoop.Image = My.Resources.button_loop_off
+        End If
+        cmdLoop.Tag = Nothing
+      End If
+    End If
+    pctAlbumArt.Image = Nothing
+    If frmFS IsNot Nothing Then frmFS.pctVideo.Image = Nothing
+  End Sub
+
+  Private Sub LoadData_Video_DVD(ByRef sTitleVal As String, ByRef sArtistVal As String, ByRef VidTrackList As Dictionary(Of String, String), ByRef selVid As Integer, ByRef AudTrackList As Dictionary(Of String, String), ByRef selAud As Integer, ByRef SubTrackList As Dictionary(Of String, String), ByRef selSub As Integer, ByRef ChapterList As List(Of String), ByRef selChapter As Integer)
+    sTitleVal = My.Computer.FileSystem.GetDriveInfo(mpPlayer.FileName.Substring(0, 3)).VolumeLabel
+    If FirstInit Then
+      cmdLoop.Enabled = True
+      cmdLoop.Image = My.Resources.button_eject
+    End If
+    If mpPlayer.GetDVDTitles() > 1 Then
+      For I As Integer = 1 To mpPlayer.GetDVDTitles
+        Dim titleData = mpPlayer.GetDVDTitleAttributes(I)
+        If titleData.ulNumberOfAudioStreams = 0 Then
+          VidTrackList.Add("Title " & I & ": " & titleData.VideoAttributes.sourceResolutionX & "x" & titleData.VideoAttributes.sourceResolutionY & " (No Audio)", "und")
+        ElseIf titleData.ulNumberOfAudioStreams = 1 Then
+          VidTrackList.Add("Title " & I & ": " & titleData.VideoAttributes.sourceResolutionX & "x" & titleData.VideoAttributes.sourceResolutionY & " (" & titleData.AudioAttributes(0).AudioFormat.ToString & " " & titleData.AudioAttributes(0).bNumberOfChannels & "ch)", titleData.AudioAttributes(0).Language)
+        Else
+          VidTrackList.Add("Title " & I & ": " & titleData.VideoAttributes.sourceResolutionX & "x" & titleData.VideoAttributes.sourceResolutionY & " (" & titleData.ulNumberOfAudioStreams & " audio tracks)", "und")
+        End If
+      Next
+      selVid = mpPlayer.GetDVDCurrentTitle - 1
+    End If
+    If mpPlayer.GetDVDAvailableAudioStreams > 0 Then
+      For I As Integer = 0 To mpPlayer.GetDVDAvailableAudioStreams - 1
+        Dim audData = mpPlayer.GetDVDAudioInfo(I)
+        AudTrackList.Add(audData.bNumberOfChannels & " channel " & audData.dwFrequency & "Hz " & audData.AudioFormat.ToString, audData.Language)
+      Next
+      selAud = mpPlayer.GetDVDCurrentAudioStream
+    End If
+    If mpPlayer.GetDVDAvailableSubStreams > 0 Then
+      SubTrackList.Add("No subtitles", "und")
+      For I As Integer = 0 To mpPlayer.GetDVDAvailableSubStreams - 1
+        Dim subData = mpPlayer.GetDVDSubAttributes(I)
+        SubTrackList.Add("Subtitle " & (I + 1) & ": " & subData.LanguageExtension.ToString, subData.Language)
+      Next
+      selSub = mpPlayer.GetDVDCurrentSubStream + 1
+    End If
+
+
+    Dim AudInfo = mpPlayer.GetDVDAudioInfo(mpPlayer.GetDVDCurrentAudioStream)
+    Dim sAudFmt As String = "None"
+    Select Case AudInfo.AudioFormat
+      Case DirectShowLib.Dvd.DvdAudioFormat.AC3 : sAudFmt = "AC3"
+      Case DirectShowLib.Dvd.DvdAudioFormat.DTS : sAudFmt = "DTS"
+      Case DirectShowLib.Dvd.DvdAudioFormat.LPCM : sAudFmt = "LPCM"
+      Case DirectShowLib.Dvd.DvdAudioFormat.MPEG1 : sAudFmt = "MPEG-1"
+      Case DirectShowLib.Dvd.DvdAudioFormat.MPEG1_DRC : sAudFmt = "MPEG-1 DRC"
+      Case DirectShowLib.Dvd.DvdAudioFormat.MPEG2 : sAudFmt = "MPEG-2"
+      Case DirectShowLib.Dvd.DvdAudioFormat.MPEG2_DRC : sAudFmt = "MPEG-2 DRC"
+      Case DirectShowLib.Dvd.DvdAudioFormat.SDDS : sAudFmt = "SDDS"
+      Case DirectShowLib.Dvd.DvdAudioFormat.Other : sAudFmt = "Unknown"
+    End Select
+    sAudFmt &= " (" & KRater(AudInfo.dwFrequency, "Hz") & ")"
+    Dim bChannels As Byte = AudInfo.bNumberOfChannels
+    Dim sChannel As String
+    Select Case bChannels
+      Case 1 : sChannel = "Mono"
+      Case 2 : sChannel = "Stereo"
+      Case 3 : sChannel = "2.1 Stereo"
+      Case 4 : sChannel = "Quadraphonic"
+      Case 5 : sChannel = "Surround"
+      Case 6 : sChannel = "5.1 Surround"
+      Case 7 : sChannel = "6.1 Surround"
+      Case 8 : sChannel = "7.1 Surround"
+      Case Else : sChannel = bChannels & " channels"
+    End Select
+    Dim vidInfo = mpPlayer.GetDVDVideoInfo
+    Dim sVidFormat As String = "None"
+    Select Case vidInfo.compression
+      Case DirectShowLib.Dvd.DvdVideoCompression.Mpeg1 : sVidFormat = "MPEG-1"
+      Case DirectShowLib.Dvd.DvdVideoCompression.Mpeg2 : sVidFormat = "MPEG-2"
+      Case DirectShowLib.Dvd.DvdVideoCompression.Other : sVidFormat = "Unknown"
+    End Select
+    sVidFormat &= " (" & vidInfo.frameRate & "fps)"
+    If FirstInit Then SetVideoResolution(vidInfo.sourceResolutionX, vidInfo.sourceResolutionY)
+    SetProps(4, bChannels, 9, vbNewLine & "Video: " & sVidFormat & vbNewLine & "Audio: " & sAudFmt, sChannel, "DVD Video")
+  End Sub
+
+  Private Sub LoadData_Video_MKV(ByRef sTitleVal As String, ByRef sArtistVal As String, ByRef VidTrackList As Dictionary(Of String, String), ByRef selVid As Integer, ByRef AudTrackList As Dictionary(Of String, String), ByRef selAud As Integer, ByRef SubTrackList As Dictionary(Of String, String), ByRef selSub As Integer, ByRef ChapterList As List(Of String), ByRef selChapter As Integer)
+    Dim mkvHeader As New Seed.clsMKVHeaders(mpPlayer.FileName)
+    If Not String.IsNullOrEmpty(mkvHeader.SegmentInfo.Title) Then sTitleVal = mkvHeader.SegmentInfo.Title
+    Dim mkvSize As Drawing.Size, mkvCrop As Drawing.Rectangle
+    GetMKVDisplaySize(mkvHeader, mkvSize, mkvCrop)
+    If mkvSize <> Drawing.Size.Empty Then
+      Dim CroppedRes As Drawing.Rectangle = New Drawing.Rectangle(Drawing.Point.Empty, mkvSize)
+      If mkvCrop <> Drawing.Rectangle.Empty Then
+        CroppedRes = New Drawing.Rectangle(mkvCrop.Left, mkvCrop.Top, mkvSize.Width - (mkvCrop.Left + mkvCrop.Width), mkvSize.Height - (mkvCrop.Top + mkvCrop.Height))
+        mpPlayer.CropVideo(CroppedRes.Left, CroppedRes.Top, CroppedRes.Width, CroppedRes.Height)
+      End If
+      Dim mkvPixelSize, mkvDisplaySize As Drawing.Size
+      GetMKVPDSizes(mkvHeader, mkvPixelSize, mkvDisplaySize)
+      VidSize = mkvPixelSize
+      CorrectedSize = CroppedRes.Size
+      SetVideoSize(CroppedRes.Width, CroppedRes.Height)
+    Else
+      SetVideoResolution(-1, -1)
+      If mkvCrop <> Drawing.Rectangle.Empty Then
+        Dim CroppedRes As New Drawing.Rectangle(mkvCrop.Left, mkvCrop.Top, VidSize.Width - (mkvCrop.Left + mkvCrop.Width), VidSize.Height - (mkvCrop.Top + mkvCrop.Height))
+        mpPlayer.CropVideo(CroppedRes.Left, CroppedRes.Top, CroppedRes.Width, CroppedRes.Height)
+      End If
+    End If
+    Dim chapterCollection As New Collection
+    Dim RunningTime As ULong = 0
+    If mkvHeader.ChapterInfo.Editions IsNot Nothing Then
+      ChapterWidth = 0
+      FindAdditionalMKVChapters(mpPlayer.FileName, 0, chapterCollection, RunningTime)
+      If RunningTime > 0 Then
+        mpPlayer.Position = RunningTime
+      End If
+      For Each Edition In mkvHeader.ChapterInfo.Editions
+        If Not Edition.FlagHidden Then
+          For Each Atom In Edition.Atoms
+            If Not Atom.FlagHidden Then
+              Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000)
+              Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+              Dim sChapterLang As String
+              If Atom.Display(0).Language Is Nothing OrElse Atom.Display(0).Language.Count = 0 Then
+                sChapterLang = "und"
+              ElseIf Atom.Display(0).Language.Count = 1 Then
+                sChapterLang = Atom.Display(0).Language(0)
+              Else
+                sChapterLang = Join(Atom.Display(0).Language, ", ")
+              End If
+              chapterCollection.Add({dChapterStart, sChapterText, sChapterLang})
+            End If
+          Next
+        End If
+      Next
+      If mkvHeader.SegmentInfo.Duration > 0 Then
+        RunningTime += (mkvHeader.SegmentInfo.Duration / 1000)
+      Else
+        RunningTime += mpPlayer.Duration
+      End If
+      FindAdditionalMKVChapters(mpPlayer.FileName, 1, chapterCollection, RunningTime)
+      SpecificChapterList = chapterCollection
+      For Each chapterData In chapterCollection
+        ChapterList.Add(chapterData(1))
+      Next
+    End If
+    If mkvHeader.TrackEntries IsNot Nothing Then
+      Dim sVidInfo As String = Nothing
+      Dim iEncQ As Integer
+      Dim sCodec As String = Nothing
+      Dim iqR As Integer = -1
+      Dim iChannels As Integer
+      Dim sAudInfo As String = Nothing
+      Dim sBitrate As String = Nothing
+      Dim dDuration As Double = 0.0
+      If mkvHeader.SegmentInfo.Duration > 0 Then
+        dDuration = mkvHeader.SegmentInfo.Duration / 1000
+      Else
+        dDuration = mpPlayer.Duration
+      End If
+      Dim trackCounts(&HFF) As Integer
+      For Each Track In mkvHeader.TrackEntries
+        trackCounts(Track.TrackType) += 1
+        Dim sTrackTitle As String
+        If String.IsNullOrEmpty(Track.TrackName) Then
+          sTrackTitle = "#" & trackCounts(Track.TrackType) & ": Untitled"
+        Else
+          sTrackTitle = "#" & trackCounts(Track.TrackType) & ": " & Track.TrackName
+        End If
+        If String.IsNullOrEmpty(Track.Language) Then Track.Language = "und"
+        Select Case Track.TrackType
+          Case &H1
+            If Not String.IsNullOrEmpty(Track.TrackName) AndAlso String.IsNullOrEmpty(sTitleVal) Then sTitleVal = Track.TrackName
+            VidTrackList.Add(sTrackTitle, Track.Language)
+            sVidInfo = MKVVideoCodecs(Track.CodecID)
+            If Track.DefaultDuration > 0 Then sVidInfo &= " (" & Math.Round(1 / (Track.DefaultDuration / 1000000000), 3) & " fps " & IIf(Track.Video.FlagInterlaced, "interlaced", "progressive") & ")"
+          Case &H2
+            AudTrackList.Add(sTrackTitle, Track.Language)
+            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / dDuration
             Select Case iQ
               Case Is < 1024 * 1024 : iqR = 0
               Case Is < 1024 * 1024 * 1.5 : iqR = 1
@@ -3024,677 +3302,590 @@ Public Class frmMain
               Case Is < 1024 * 1024 * 10 : iqR = 8
               Case Is >= 1024 * 1024 * 10 : iqR = 9
             End Select
-            SetProps(iEnc, cVorbis.File_Channels, iqR, sEnc, sChannel, KRater(iQ, "bps"))
-          End Using
-          Dim ffChaps = ffAPI.ChaptersList
-          SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
-          If ffChaps.Count > 0 Then
-            Dim chapterCollection As New Collection
-            ChapterWidth = 0
-            For Each chapter In ffChaps
-              Dim sChapterText As String = chapter.Value
-              cmbChapters.Items.Add(sChapterText)
-              mnuChapterTrack.DropDownItems.Add(sChapterText)
-              Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-              Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-              If lWidth > ChapterWidth Then ChapterWidth = lWidth
-              chapterCollection.Add({chapter.Key, sChapterText})
-            Next
-            cmbChapters.SelectedIndex = 0
-            cmbChapters.Tag = chapterCollection
-          End If
-          If ffAPI.AudioStreams.Count > 0 Then
-            AudWidth = 0
-            For Each stream In ffAPI.AudioStreams
-              Dim sStreamText As String = stream.Value.name
-              cmbAudTrack.Items.Add(sStreamText)
-              mnuAudioTrack.DropDownItems.Add(sStreamText)
-              Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
-              Dim lWidth As Single = g.MeasureString(sStreamText, cmbAudTrack.Font).Width + 10
-              If lWidth > ChapterWidth Then AudWidth = lWidth
-            Next
-          End If
-          If ffAPI.SubtitleStreams.Count > 0 Then
-            SubWidth = 0
-            For Each stream In ffAPI.SubtitleStreams
-              Dim sStreamText As String = stream.Value.name
-              cmbSubtitles.Items.Add(sStreamText)
-              mnuSubtitleTrack.DropDownItems.Add(sStreamText)
-              Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
-              Dim lWidth As Single = g.MeasureString(sStreamText, cmbSubtitles.Font).Width + 10
-              If lWidth > ChapterWidth Then SubWidth = lWidth
-            Next
-            'If cmbSubtitles.Visible Then
-            '  cmbSubtitles.Items.Add("No subtitles")
-            '  mnuSubtitleTrack.DropDownItems.Add("No subtitles")
-            'End If
-            'Dim nsg As Drawing.Graphics = cmbSubtitles.CreateGraphics
-            'Dim lNoSubWidth As Single = nsg.MeasureString("No subtitles", cmbSubtitles.Font).Width + 10
-            'If lNoSubWidth > SubWidth Then SubWidth = lNoSubWidth
-          End If
-          cmbVidTrack.Items.Add("Default Video Track. Unable to load at this time.")
-          mnuVideoTrack.DropDownItems.Add("Default")
-          If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
-          HandleAudSub()
-          SetVideoResolution(-1, -1)
-        ElseIf String.Compare(IO.Path.GetExtension(mpPlayer.FileName), ".avi", True) = 0 Then
-          Using cRiff As New Seed.clsRIFF(mpPlayer.FileName)
-            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-            Dim enc, chan, rate As Integer
-            Dim sEnc, sChan, sRate As String
-            enc = 4
-            chan = -1
-            rate = 0
-            sEnc = "AVI"
-            sChan = Nothing
-            sRate = KRater(iQ, "bps")
-            If cRiff.IsValid Then
-              chan = cRiff.AVIAudioData(0).Format.nChannels
-              Select Case chan
-                Case 1 : sChan = "Mono"
-                Case 2 : sChan = "Stereo"
-                Case 3 : sChan = "2.1 Stereo"
-                Case 4 : sChan = "Quadraphonic"
-                Case 5 : sChan = "Surround"
-                Case 6 : sChan = "5.1 Surround"
-                Case 7 : sChan = "6.1 Surround"
-                Case 8 : sChan = "7.1 Surround"
-                Case Else : sChan = chan & " Channels"
-              End Select
-              Dim ve As String = "Unknown Encoder"
-              Dim ae As String = "Unknown Encoder"
-              Dim vr As String = "Unknown FPS"
-              Dim ar As String = "Unknown Hz"
-              ve = AVIVideoCodecs(cRiff.AVIVideoData(0).bmiHeader.biCompression)
-              ae = WAVAudioCodecs(cRiff.AVIAudioData(0).Format.wFormatTag)
-              ar = KRater(cRiff.AVIAudioData(0).Format.nSamplesPerSec, "Hz")
-              Dim vidTracks As New List(Of Seed.clsRIFF.AVISTREAMHEADER)
-              Dim audTracks As New List(Of Seed.clsRIFF.AVISTREAMHEADER)
-              For I As Integer = 0 To cRiff.AVIStreamCount - 1
-                If cRiff.AVIStreamData(I).fccType = "vids" Then
-                  vidTracks.Add(cRiff.AVIStreamData(I))
-                  If String.IsNullOrEmpty(ve) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ve = cRiff.AVIStreamData(I).fccHandler
-                  If cRiff.AVIStreamData(I).dwScale > 0 Then vr = Math.Round(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, 3) & " fps " & IIf(cRiff.AVIMainData.dwFlags And Seed.clsRIFF.AVIMAINHEADER_FLAGS.AVIF_ISINTERLEAVED, "Interleaved", "Progressive")
-                ElseIf cRiff.AVIStreamData(I).fccType = "auds" Then
-                  audTracks.Add(cRiff.AVIStreamData(I))
-                  If String.IsNullOrEmpty(ae) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ae = cRiff.AVIStreamData(I).fccHandler
-                  If ae = "0 Hz" AndAlso cRiff.AVIStreamData(I).dwScale > 0 Then ar = KRater(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, "Hz")
-                End If
-              Next
-              sEnc = vbNewLine & " Video (" & ve & "): " & vr & vbNewLine & " Audio (" & ae & "): " & ar
-              SetVideoResolution(cRiff.AVIMainData.dwWidth, cRiff.AVIMainData.dwHeight)
-              Select Case cRiff.AVIVideoData(0).bmiHeader.biBitCount
-                Case 0 'specified or implied
-                  rate = 0
-                Case 1 'Monochrome
-                  rate = 1
-                Case 4 '16 Color
-                  rate = 3
-                Case 8 '256 Color
-                  rate = 5
-                Case 16 '16-bit color
-                  rate = 7
-                Case 24 '24-bit color
-                  rate = 8
-                Case 32 '32-bit color
-                  rate = 9
-                Case Else
-                  rate = 4
-              End Select
-              SetCombos(vidTracks.Count > 1, audTracks.Count > 1, False, False)
-              For v As Integer = 0 To vidTracks.Count - 1
-                Dim sV As String = "Video Track " & v + 1 & " (" & vidTracks(v).fccHandler & ")"
-                If cRiff.AVIINFOData IsNot Nothing Then If cRiff.AVIINFOData.ContainsKey("IVS" & v + 1) Then sV &= " [" & cRiff.AVIINFOData("IVS" & v + 1) & "]"
-                cmbVidTrack.Items.Add(sV)
-              Next
-              For a As Integer = 0 To audTracks.Count - 1
-                Dim sA As String = "Audio Track " & a + 1
-                If cRiff.AVIINFOData IsNot Nothing Then If cRiff.AVIINFOData.ContainsKey("IAS" & a + 1) Then sA &= " [" & cRiff.AVIINFOData("IAS" & a + 1) & "]"
-                cmbAudTrack.Items.Add(sA)
-              Next
-            End If
-            SetProps(enc, chan, rate, sEnc, sChan, sRate)
-          End Using
-        ElseIf LoadFFDShow() Then
-          Dim ffChaps = ffAPI.ChaptersList
-          SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
-          If ffChaps.Count > 0 Then
-            Dim chapterCollection As New Collection
-            ChapterWidth = 0
-            For Each chapter In ffChaps
-              Dim sChapterText As String = chapter.Value
-              cmbChapters.Items.Add(sChapterText)
-              mnuChapterTrack.DropDownItems.Add(sChapterText)
-              Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-              Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-              If lWidth > ChapterWidth Then ChapterWidth = lWidth
-              chapterCollection.Add({chapter.Key, sChapterText})
-            Next
-            cmbChapters.SelectedIndex = 0
-            cmbChapters.Tag = chapterCollection
-          End If
-          If ffAPI.AudioStreams.Count > 0 Then
-            AudWidth = 0
-            For Each stream In ffAPI.AudioStreams
-              Dim sStreamText As String = stream.Value.name
-              cmbAudTrack.Items.Add(sStreamText)
-              mnuAudioTrack.DropDownItems.Add(sStreamText)
-              Dim g As Drawing.Graphics = cmbAudTrack.CreateGraphics
-              Dim lWidth As Single = g.MeasureString(sStreamText, cmbAudTrack.Font).Width + 10
-              If lWidth > ChapterWidth Then AudWidth = lWidth
-            Next
-          End If
-          If ffAPI.SubtitleStreams.Count > 0 Then
-            SubWidth = 0
-            For Each stream In ffAPI.SubtitleStreams
-              Dim sStreamText As String = stream.Value.name
-              cmbSubtitles.Items.Add(sStreamText)
-              mnuSubtitleTrack.DropDownItems.Add(sStreamText)
-              Dim g As Drawing.Graphics = cmbSubtitles.CreateGraphics
-              Dim lWidth As Single = g.MeasureString(sStreamText, cmbSubtitles.Font).Width + 10
-              If lWidth > ChapterWidth Then SubWidth = lWidth
-            Next
-          End If
-          cmbVidTrack.Items.Add("Default Video Track. Unable to load at this time.")
-          mnuVideoTrack.DropDownItems.Add("Default")
-          If cmbVidTrack.Visible Then cmbVidTrack.SelectedIndex = 0
-          HandleAudSub()
-          SetVideoResolution(-1, -1)
-          Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-          Dim Channels As Integer = ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_OSDtype_nchannels)
-          Dim sChannel As String = Channels & " channels"
-          Select Case Channels
-            Case -1 : sChannel = String.Empty
-            Case 0 : sChannel = "Unknown Speaker Setup" : Channels = 2
-            Case 1 : sChannel = "Mono"
-            Case 2 : sChannel = "Stereo"
-            Case 3 : sChannel = "2.1 Stereo"
-            Case 4 : sChannel = "Quadraphonic"
-            Case 5 : sChannel = "Surround"
-            Case 6 : sChannel = "5.1 Surround"
-            Case 7 : sChannel = "6.1 Surround"
-            Case 8 : sChannel = "7.1 Surround"
-            Case Else : sChannel = Channels & " channels"
-          End Select
-          SetProps(4, Channels, 0, ffAPI.getFrameRate & " fps " & ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_enc_interlacing), sChannel, KRater(iQ, "bps"))
-
-        Else
-          SetCombos(False, False, False, False)
-          SetVideoResolution(-1, -1)
-          Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-          SetProps(-1, 2, 0, , "Unknown Speaker Setup", KRater(iQ, "bps"))
-        End If
-        If FirstInit Then
-          If frmFS.Visible Then
-            mpPlayer.FullScreenObj = frmFS.pctVideo
-            mpPlayer.FullScreen = True
-            'If cTask IsNot Nothing Then cTask.CreatePreview(frmFS.pctVideo)
-            VidThumb = False
-          Else
-            If cTask IsNot Nothing Then
-              'tmrUpdate_Tick(New Object, New EventArgs)
-              'cTask.CreatePreview(mpPlayer)
-              VidThumb = True
-            Else
-              VidThumb = False
-            End If
-          End If
-          'cTask.Title = FileTitle
-          'cTask.Icon = Me.Icon
-          If mnuRatioAutomatic.Checked Then mnuRatioAutomatic_Click(mnuRatioAutomatic, New EventArgs)
-          If mnuRatioStandard.Checked Then mnuRatioStandard_Click(mnuRatioStandard, New EventArgs)
-          If mnuRatioWide.Checked Then mnuRatioWide_Click(mnuRatioWide, New EventArgs)
-          If mnuScaleHalf.Checked Then mnuScaleHalf_Click(mnuScaleHalf, New EventArgs)
-          If mnuScaleNorm.Checked Then mnuScaleNorm_Click(mnuScaleNorm, New EventArgs)
-          If mnuScaleTwice.Checked Then mnuScaleTwice_Click(mnuScaleTwice, New EventArgs)
-          If Not bDVD Then
-            If mpPlayer.Repeat Then
-              cmdLoop.Image = My.Resources.button_loop_on
-            Else
-              cmdLoop.Image = My.Resources.button_loop_off
-            End If
-            cmdLoop.Tag = Nothing
-            LabelShortcuts()
-          End If
-        End If
-        pctAlbumArt.Image = Nothing
-        If frmFS IsNot Nothing Then frmFS.pctVideo.Image = Nothing
-      Else
-        'AUDIO
-        EnableScreenSaver(True)
-        SetTabs(True, False)
-        'FileTitle = GetTitle(mpPlayer.FileName)
-        sTitleVal = GetTitle(mpPlayer.FileName, True, False)
-        sArtistVal = GetTitle(mpPlayer.FileName, True, True)
-        FileArt = GetArt(mpPlayer.FileName, False, False)
-        'If FileArt IsNot Nothing And Me.WindowState = FormWindowState.Normal And tbsView.SelectedTab Is tabArt Then tbsView_SelectedIndexChanged(New Object, New EventArgs)
-        Select Case IO.Path.GetExtension(mpPlayer.FileName).Substring(1).ToLower
-          Case "mp3" ', "mpe", "mpg", "mpeg", "m1v", "mp2", "m2v", "mp2v", "mpv2", "mpa", "aac", "m2ts" , "m4a", "m4p", "m4v", "mp4"
-            Using cHeader As New Seed.clsHeaderLoader(mpPlayer.FileName)
-              If cHeader.cMPEG IsNot Nothing Then
-                Dim iQual, iChannels As Integer
-                Select Case cHeader.RateFormat
-                  Case "ABR (XING)", "2-Pass ABR (XING)" : iQual = 1
-                  Case "CBR", "CBR (XING)", "2-Pass CBR (XING)" : iQual = 2
-                  Case "VBR (Fraunhofer)", "VBR rh (XING)", "VBR mt/rh (XING)", "VBR mt (XING)" : iQual = 3
-                  Case Else
-                    If cHeader.RateFormat.StartsWith("Full VBR Method") Then
-                      iQual = 3
-                    Else
-                      Debug.Print("Unknown RateFormat: " & cHeader.RateFormat)
-                      iQual = -1
-                    End If
-                End Select
-                Dim sChannels As String = cHeader.cMPEG.GetChannels
-                Select Case sChannels
-                  Case "Single Channel" : iChannels = 1
-                  Case "Stereo" : iChannels = 2
-                  Case "Joint Stereo"
-                    iChannels = -2
-                    sChannels &= " (" & cHeader.cMPEG.GetModeExtension & ")"
-                  Case "Dual Channel" : iChannels = 4
-                  Case Else
-                    Debug.Print("Unknown Channels: " & sChannels)
-                    iChannels = -1
-                End Select
-                SetProps(iQual, iChannels, cHeader.cMPEG.GetBitQual, cHeader.RateFormat, sChannels, KRater(cHeader.cMPEG.GetBitrate, "bps"))
-              End If
-            End Using
-          Case "ogg", "flac"
-            Using cVorbis As New Seed.clsVorbis(mpPlayer.FileName)
-              Dim iQual As Integer, sQual As String
-              If cVorbis.File_MinQuality > 0 And cVorbis.File_MaxQuality > 0 Then
-                If cVorbis.File_Quality > 0 Then
-                  iQual = 2
-                  sQual = "Constant Bitrate"
-                Else
-                  iQual = 3
-                  sQual = "Limited Variable Bitrate"
-                End If
-              Else
-                If cVorbis.File_Quality > 0 Then
-                  iQual = 1
-                  sQual = "Average/Variable Bitrate"
-                Else
-                  iQual = -1
-                  sQual = Nothing
-                End If
-              End If
-              Dim sChannel As String = cVorbis.File_Channels
-              Select Case cVorbis.File_Channels
-                Case 1 : sChannel = "Mono"
-                Case 2 : sChannel = "Stereo"
-                Case 3 : sChannel = "2.1 Stereo"
-                Case 4 : sChannel = "Quadraphonic"
-                Case 5 : sChannel = "Surround"
-                Case 6 : sChannel = "5.1 Surround"
-                Case 7 : sChannel = "6.1 Surround"
-                Case 8 : sChannel = "7.1 Surround"
-              End Select
-              Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-              Dim iQR As Integer = -1
-              Select Case iQ / (cVorbis.File_Rate * cVorbis.File_Channels)
-                Case Is < 0.8 : iQR = 0
-                Case Is < 0.9 : iQR = 1
-                Case Is < 1.1 : iQR = 2
-                Case Is < 1.3 : iQR = 3
-                Case Is < 1.5 : iQR = 4
-                Case Is < 1.7 : iQR = 5
-                Case Is < 1.9 : iQR = 5
-                Case Is < 2.5 : iQR = 6
-                Case Is < 3 : iQR = 7
-                Case Is < 4 : iQR = 8
-                Case Is >= 4 : iQR = 9
-              End Select
-              SetProps(iQual, cVorbis.File_Channels, iQR, sQual, sChannel, KRater(iQ, "bps"))
-            End Using
-          Case "wav"
-            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-            Using cRiff As New Seed.clsRIFF(mpPlayer.FileName)
-              Dim enc, chan, rate As Integer
-              Dim sEnc, sChan, sRate As String
-              enc = 4
-              chan = -1
-              rate = 0
-              sEnc = "WAVE"
-              sChan = Nothing
-              sRate = KRater(iQ, "bps")
-              If cRiff.IsValid Then
-                If cRiff.IsDTS Then
-                  enc = 1
-                  sEnc = "DTS"
-                  Select Case cRiff.DTSData.iAMODE
-                    Case 0
-                      chan = 1
-                      sChan = "Mono"
-                    Case 1
-                      chan = 1
-                      sChan = "Dual Mono (A + B)"
-                    Case 2
-                      chan = 2
-                      sChan = "Left and Right Stereo"
-                    Case 3
-                      chan = -2
-                      sChan = "(Left + Right) - (Left - Right) Stereo"
-                    Case 4
-                      chan = 2
-                      sChan = "Totals Stereo"
-                    Case 5
-                      chan = -2
-                      sChan = "Center, Left, Right"
-                    Case 6
-                      chan = 3
-                      sChan = "Left, Right, Surround"
-                    Case 7
-                      chan = 4
-                      sChan = "Center, Left, Right, Surround"
-                    Case 8
-                      chan = 4
-                      sChan = "Left, Right, Surround Left, Surround Right"
-                    Case 9
-                      chan = 5
-                      sChan = "Center, Left, Right, Surround Left, Surround Right"
-                    Case 10
-                      chan = 7
-                      sChan = "Center Left, Center Right, Left, Right, Surround Left, Surround Right"
-                    Case 11
-                      chan = 7
-                      sChan = "Center, Left, Right, Left Rear, Right Rear, Overhead"
-                    Case 12
-                      chan = 7
-                      sChan = "Center Front, Center Rear, Left Front, Right Front, Left Rear, Right Rear"
-                    Case 13
-                      chan = 7
-                      sChan = "Center Left, Center, Center Right, Left, Right, Surround Left, Surround Right"
-                    Case 14
-                      chan = 8
-                      sChan = "Center Left, Center Right, Left, Right, Surround Left 1, Surround Left 2, Surround Right 1, Surround Right 2"
-                    Case 15
-                      chan = 8
-                      sChan = "Center Left, Center, Center Right, Left, Right, Surround Left, Surround, Surround Right"
-                    Case Else
-                      chan = cRiff.DTSData.iAMODE
-                      sChan = cRiff.DTSData.iAMODE
-                  End Select
-                  If cRiff.DTSData.iLFF > 0 Then sChan &= " & Low Frequency Emitter (" & IIf(cRiff.DTSData.iLFF = 2, "64", "128") & " Interpolation Factor)"
-                  Select Case cRiff.DTSData.iRATE
-                    Case 0
-                      rate = 0
-                      sRate = "32 kbps"
-                    Case 1
-                      rate = 0
-                      sRate = "56 kbps"
-                    Case 2
-                      rate = 0
-                      sRate = "64 kbps"
-                    Case 3
-                      rate = 1
-                      sRate = "96 kbps"
-                    Case 4
-                      rate = 1
-                      sRate = "112 kbps"
-                    Case 5
-                      rate = 2
-                      sRate = "128 kbps"
-                    Case 6
-                      rate = 2
-                      sRate = "192 kbps"
-                    Case 7
-                      rate = 2
-                      sRate = "224 kbps"
-                    Case 8
-                      rate = 3
-                      sRate = "256 kbps"
-                    Case 9
-                      rate = 3
-                      sRate = "320 kbps"
-                    Case 10
-                      rate = 4
-                      sRate = "384 kbps"
-                    Case 11
-                      rate = 4
-                      sRate = "448 kbps"
-                    Case 12
-                      rate = 4
-                      sRate = "512 kbps"
-                    Case 13
-                      rate = 5
-                      sRate = "576 kbps"
-                    Case 14
-                      rate = 5
-                      sRate = "640 kbps"
-                    Case 15
-                      rate = 6
-                      sRate = "768 kbps"
-                    Case 16
-                      rate = 6
-                      sRate = "960 kbps"
-                    Case 17
-                      rate = 7
-                      sRate = "1024 kbps"
-                    Case 18
-                      rate = 7
-                      sRate = "1152 kbps"
-                    Case 19
-                      rate = 7
-                      sRate = "1280 kbps"
-                    Case 20
-                      rate = 8
-                      sRate = "1344 kbps"
-                    Case 21
-                      rate = 8
-                      sRate = "1408 kbps"
-                    Case 22
-                      rate = 9
-                      sRate = "1411.2 kbps"
-                    Case 23
-                      rate = 9
-                      sRate = "1472 kbps"
-                    Case 24
-                      rate = 9
-                      sRate = "1536 kbps"
-                    Case 25
-                      rate = 0
-                      sRate = "Open"
-                  End Select
-                Else
-                  sEnc = WAVAudioCodecs(cRiff.WAVData.Format.Format.wFormatTag)
-                  Select Case cRiff.WAVData.Format.Format.nChannels
-                    Case 1
-                      chan = 1
-                      sChan = "Mono"
-                    Case 2
-                      chan = 2
-                      sChan = "Stereo"
-                    Case 3
-                      chan = 3
-                      sChan = "2.1 Stereo"
-                    Case 4
-                      chan = 4
-                      sChan = "Quadraphonic"
-                    Case 5
-                      chan = 5
-                      sChan = "Surround"
-                    Case 6
-                      chan = 6
-                      sChan = "5.1 Surround"
-                    Case 7
-                      chan = 7
-                      sChan = "6.1 Surround"
-                    Case 8
-                      chan = 8
-                      sChan = "7.1 Surround"
-                    Case Else
-                      chan = cRiff.WAVData.Format.Format.nChannels
-                      sChan = chan
-                  End Select
-                  rate = 9
-                  sRate = KRater(cRiff.WAVData.Format.Format.nAvgBytesPerSec * 8, "bps")
-                  If cRiff.WAVData.Format.cbSize > 0 Or cRiff.WAVData.Format.wBitsPerSample > 0 Then
-                    If cRiff.WAVData.Format.cbSize >= 22 Then
-                      If cRiff.WAVData.dwChannelMask > 0 Then
-                        sChan = String.Empty
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontLeft) = Seed.clsRIFF.ChannelStruct.FrontLeft Then sChan &= "Front Left, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontCenterLeft) = Seed.clsRIFF.ChannelStruct.FrontCenterLeft Then sChan &= "Front Center Left, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontCenter) = Seed.clsRIFF.ChannelStruct.FrontCenter Then sChan &= "Front Center, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontCenterRight) = Seed.clsRIFF.ChannelStruct.FrontCenterRight Then sChan &= "Front Center Right, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontRight) = Seed.clsRIFF.ChannelStruct.FrontRight Then sChan &= "Front Right, "
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.SideLeft) = Seed.clsRIFF.ChannelStruct.SideLeft Then sChan &= "Side Left, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.SideRight) = Seed.clsRIFF.ChannelStruct.SideRight Then sChan &= "Side Right, "
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.RearLeft) = Seed.clsRIFF.ChannelStruct.RearLeft Then sChan &= "Rear Left, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.RearCenter) = Seed.clsRIFF.ChannelStruct.RearCenter Then sChan &= "Rear Center, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.RearRight) = Seed.clsRIFF.ChannelStruct.RearRight Then sChan &= "Rear Right, "
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopCenter) = Seed.clsRIFF.ChannelStruct.TopCenter Then sChan &= "Top Center, "
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopFrontLeft) = Seed.clsRIFF.ChannelStruct.TopFrontLeft Then sChan &= "Top Front Left, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopFrontCenter) = Seed.clsRIFF.ChannelStruct.TopFrontCenter Then sChan &= "Top Front Center, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopFrontRight) = Seed.clsRIFF.ChannelStruct.TopFrontRight Then sChan &= "Top Front Right, "
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopRearLeft) = Seed.clsRIFF.ChannelStruct.TopRearLeft Then sChan &= "Top Rear Left, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopRearCenter) = Seed.clsRIFF.ChannelStruct.TopRearCenter Then sChan &= "Top Rear Center, "
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopRearRight) = Seed.clsRIFF.ChannelStruct.TopRearRight Then sChan &= "Top Rear Right, "
-
-                        If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.LFE) = Seed.clsRIFF.ChannelStruct.LFE Then sChan &= "Low Frequency Emitter, "
-
-                        If sChan.Length > 2 Then sChan = sChan.Substring(0, sChan.Length - 2)
-                      End If
-                      Select Case cRiff.WAVData.SubFormat.ToString.ToLower
-                        Case "6dba3190-67bd-11cf-a0f7-0020afd156e4" : sEnc = "Analog"
-                        Case "00000001-0000-0010-8000-00aa00389b71" : sEnc = "PCM"
-                        Case "00000003-0000-0010-8000-00aa00389b71" : sEnc = "Float (IEEE)"
-                        Case "00000009-0000-0010-8000-00aa00389b71" : sEnc = "DRM"
-                        Case "00000006-0000-0010-8000-00aa00389b71" : sEnc = "A-Law"
-                        Case "00000007-0000-0010-8000-00aa00389b71" : sEnc = "µ-Law"
-                        Case "00000002-0000-0010-8000-00aa00389b71" : sEnc = "ADPCM"
-                        Case "00000050-0000-0010-8000-00aa00389b71" : sEnc = "MPEG"
-                        Case "4995daee-9ee6-11d0-a40e-00a0c9223196" : sEnc = "RIFF"
-                        Case "e436eb8b-524f-11ce-9f53-0020af0ba770" : sEnc = "RIFF WAVE"
-                        Case "1d262760-e957-11cf-a5d6-28db04c10000" : sEnc = "MIDI"
-                        Case "2ca15fa0-6cfe-11cf-a5d6-28dB04c10000" : sEnc = "MIDI Bus"
-                        Case "4995daf0-9ee6-11d0-a40e-00a0c9223196" : sEnc = "RIFF MIDI"
-                        Case Else : sEnc = "Unknown {" & cRiff.WAVData.SubFormat.ToString & "}"
-                      End Select
-                    End If
-                  End If
-                End If
-              End If
-              SetProps(enc, chan, rate, sEnc, sChan, sRate)
-            End Using
-          Case Else
-            Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
-            SetProps(-1, -1, 0, , , KRater(iQ, "bps"))
+            MKVAudioCodecs(Track.CodecID, iEncQ, sCodec)
+            iChannels = Track.Audio.Channels
+            sAudInfo = sCodec & " (" & KRater(Track.Audio.SamplingFrequency, "Hz") & ")"
+            sBitrate = KRater(iQ, "bps")
+          Case &H11
+            SubTrackList.Add(sTrackTitle, Track.Language)
         End Select
-        SetCombos(False, False, False, False)
-        If mpPlayer.Repeat Then
-          cmdLoop.Image = My.Resources.button_loop_on
-        Else
-          cmdLoop.Image = My.Resources.button_loop_off
-        End If
-        cmdLoop.Tag = Nothing
-        LabelShortcuts()
-        VidThumb = False
-      End If
-      SetTitleArtist(sTitleVal, sArtistVal)
-      FirstInit = False
+      Next
+      SetProps(iEncQ, iChannels, iqR, vbNewLine & "Video: " & sVidInfo & vbNewLine & "Audio: " & sAudInfo, iChannels, sBitrate)
+      If SubTrackList.Count > 0 Then SubTrackList.Add("No subtitles", "und")
     End If
   End Sub
 
-  Private Sub HandleAudSub()
-    Dim MyLocale As Globalization.CultureInfo = Nothing
-    Dim sLoc As String = My.Settings.DefaultLocale
-    If sLoc.Contains(" [") Then sLoc = sLoc.Substring(0, sLoc.IndexOf(" ["))
-    For Each culture In Globalization.CultureInfo.GetCultures(Globalization.CultureTypes.NeutralCultures)
-      If culture.NativeName = sLoc Then
-        MyLocale = culture
-        Exit For
-      End If
-    Next
-    If MyLocale Is Nothing Then MyLocale = Globalization.CultureInfo.CurrentCulture
-
-    If cmbAudTrack.Visible Then
-      Dim bAuded As Boolean = False
-      For Each row In cmbAudTrack.Items
-        Dim sRow As String = row
-        If sRow.ToLower.Contains("commentary") Then sRow = Replace(sRow, "commentary", "", , , CompareMethod.Text)
-        If sRow.ToLower.Contains(MyLocale.NativeName) Or
-          sRow.ToLower.Contains(MyLocale.EnglishName) Or
-          sRow.ToLower.Contains(MyLocale.ThreeLetterISOLanguageName) Or
-          sRow.ToLower.Contains(MyLocale.ThreeLetterWindowsLanguageName) Or
-          sRow.ToLower.Contains(MyLocale.DisplayName) Or
-          sRow.ToLower.Contains(MyLocale.Name) Or
-          sRow.ToLower.Contains(MyLocale.IetfLanguageTag) Or
-          sRow.ToLower.Contains(MyLocale.TwoLetterISOLanguageName) Then
-          cmbAudTrack.Text = row
-          bAuded = True
-          Exit For
+  Private Sub LoadData_Video_OGM(ByRef sTitleVal As String, ByRef sArtistVal As String, ByRef VidTrackList As Dictionary(Of String, String), ByRef selVid As Integer, ByRef AudTrackList As Dictionary(Of String, String), ByRef selAud As Integer, ByRef SubTrackList As Dictionary(Of String, String), ByRef selSub As Integer, ByRef ChapterList As List(Of String), ByRef selChapter As Integer)
+    Using cVorbis As New Seed.clsVorbis(mpPlayer.FileName)
+      If Not String.IsNullOrEmpty(cVorbis.Title) Then sTitleVal = cVorbis.Title
+      Dim iEnc As Integer, sEnc As String
+      If cVorbis.File_MinQuality > 0 And cVorbis.File_MaxQuality > 0 Then
+        If cVorbis.File_Quality > 0 Then
+          iEnc = 2
+          sEnc = "Constant Bitrate"
+        Else
+          iEnc = 3
+          sEnc = "Limited Variable Bitrate"
         End If
+      Else
+        If cVorbis.File_Quality > 0 Then
+          iEnc = 1
+          sEnc = "Average/Variable Bitrate"
+        Else
+          iEnc = -1
+          sEnc = Nothing
+        End If
+      End If
+      Dim sChannel As String = cVorbis.File_Channels
+      Select Case cVorbis.File_Channels
+        Case 1 : sChannel = "Mono"
+        Case 2 : sChannel = "Stereo"
+        Case 3 : sChannel = "2.1 Stereo"
+        Case 4 : sChannel = "Quadraphonic"
+        Case 5 : sChannel = "Surround"
+        Case 6 : sChannel = "5.1 Surround"
+        Case 7 : sChannel = "6.1 Surround"
+        Case 8 : sChannel = "7.1 Surround"
+      End Select
+      Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+      Dim iqR As Integer = -1
+      Select Case iQ
+        Case Is < 1024 * 1024 : iqR = 0
+        Case Is < 1024 * 1024 * 1.5 : iqR = 1
+        Case Is < 1024 * 1024 * 2 : iqR = 2
+        Case Is < 1024 * 1024 * 2.5 : iqR = 3
+        Case Is < 1024 * 1024 * 3 : iqR = 4
+        Case Is < 1024 * 1024 * 4 : iqR = 5
+        Case Is < 1024 * 1024 * 6 : iqR = 6
+        Case Is < 1024 * 1024 * 8 : iqR = 7
+        Case Is < 1024 * 1024 * 10 : iqR = 8
+        Case Is >= 1024 * 1024 * 10 : iqR = 9
+      End Select
+      SetProps(iEnc, cVorbis.File_Channels, iqR, sEnc, sChannel, KRater(iQ, "bps"))
+    End Using
+    Dim ffChaps = ffAPI.ChaptersList
+    SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
+    If ffChaps.Count > 0 Then
+      Dim chapterCollection As New Collection
+      For Each chapter In ffChaps
+        ChapterList.Add(chapter.Value)
       Next
-      If Not bAuded Then cmbAudTrack.SelectedIndex = 0
+    End If
+    If ffAPI.AudioStreams.Count > 0 Then
+      For Each stream In ffAPI.AudioStreams
+        Dim sTrackTitle As String = stream.Value.name
+        If sTrackTitle.StartsWith("A: ") Then sTrackTitle = sTrackTitle.Substring(3)
+        AudTrackList.Add(sTrackTitle, stream.Value.languageName)
+        If stream.Value.enabled Then selAud = AudTrackList.Count - 1
+      Next
+    End If
+    If ffAPI.SubtitleStreams.Count > 0 Then
+      For Each stream In ffAPI.SubtitleStreams
+        Dim sTrackTitle As String = stream.Value.name
+        If sTrackTitle.StartsWith("S: ") Then sTrackTitle = sTrackTitle.Substring(3)
+        SubTrackList.Add(sTrackTitle, stream.Value.languageName)
+        If stream.Value.enabled Then selSub = SubTrackList.Count - 1
+      Next
+    End If
+    SetVideoResolution(-1, -1)
+  End Sub
 
-      If cmbSubtitles.Visible Then
-        If bAuded Or Not My.Settings.Subtitles Then
-          If cmbSubtitles.Items.Contains("No subtitles") Then
-            cmbSubtitles.Text = "No subtitles"
-          Else
-            cmbSubtitles.SelectedIndex = 0
+  Private Sub LoadData_Video_AVI(ByRef sTitleVal As String, ByRef sArtistVal As String, ByRef VidTrackList As Dictionary(Of String, String), ByRef selVid As Integer, ByRef AudTrackList As Dictionary(Of String, String), ByRef selAud As Integer, ByRef SubTrackList As Dictionary(Of String, String), ByRef selSub As Integer, ByRef ChapterList As List(Of String), ByRef selChapter As Integer)
+    Using cRiff As New Seed.clsRIFF(mpPlayer.FileName)
+      Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+      Dim enc, chan, rate As Integer
+      Dim sEnc, sChan, sRate As String
+      enc = 4
+      chan = -1
+      rate = 0
+      sEnc = "AVI"
+      sChan = Nothing
+      sRate = KRater(iQ, "bps")
+      If cRiff.IsValid Then
+        chan = cRiff.AVIAudioData(0).Format.nChannels
+        Select Case chan
+          Case 1 : sChan = "Mono"
+          Case 2 : sChan = "Stereo"
+          Case 3 : sChan = "2.1 Stereo"
+          Case 4 : sChan = "Quadraphonic"
+          Case 5 : sChan = "Surround"
+          Case 6 : sChan = "5.1 Surround"
+          Case 7 : sChan = "6.1 Surround"
+          Case 8 : sChan = "7.1 Surround"
+          Case Else : sChan = chan & " Channels"
+        End Select
+        Dim ve As String = "Unknown Encoder"
+        Dim ae As String = "Unknown Encoder"
+        Dim vr As String = "Unknown FPS"
+        Dim ar As String = "Unknown Hz"
+        ve = AVIVideoCodecs(cRiff.AVIVideoData(0).bmiHeader.biCompression)
+        ae = WAVAudioCodecs(cRiff.AVIAudioData(0).Format.wFormatTag)
+        ar = KRater(cRiff.AVIAudioData(0).Format.nSamplesPerSec, "Hz")
+        Dim vidTracks As New List(Of Seed.clsRIFF.AVISTREAMHEADER)
+        Dim audTracks As New List(Of Seed.clsRIFF.AVISTREAMHEADER)
+        For I As Integer = 0 To cRiff.AVIStreamCount - 1
+          If cRiff.AVIStreamData(I).fccType = "vids" Then
+            vidTracks.Add(cRiff.AVIStreamData(I))
+            If String.IsNullOrEmpty(ve) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ve = cRiff.AVIStreamData(I).fccHandler
+            If cRiff.AVIStreamData(I).dwScale > 0 Then vr = Math.Round(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, 3) & " fps " & IIf(cRiff.AVIMainData.dwFlags And Seed.clsRIFF.AVIMAINHEADER_FLAGS.AVIF_ISINTERLEAVED, "Interleaved", "Progressive")
+          ElseIf cRiff.AVIStreamData(I).fccType = "auds" Then
+            audTracks.Add(cRiff.AVIStreamData(I))
+            If String.IsNullOrEmpty(ae) AndAlso Not String.IsNullOrEmpty(cRiff.AVIStreamData(I).fccHandler) Then ae = cRiff.AVIStreamData(I).fccHandler
+            If ae = "0 Hz" AndAlso cRiff.AVIStreamData(I).dwScale > 0 Then ar = KRater(cRiff.AVIStreamData(I).dwRate / cRiff.AVIStreamData(I).dwScale, "Hz")
+          End If
+        Next
+        sEnc = vbNewLine & " Video (" & ve & "): " & vr & vbNewLine & " Audio (" & ae & "): " & ar
+        SetVideoResolution(cRiff.AVIMainData.dwWidth, cRiff.AVIMainData.dwHeight)
+        Select Case cRiff.AVIVideoData(0).bmiHeader.biBitCount
+          Case 0 'specified or implied
+            rate = 0
+          Case 1 'Monochrome
+            rate = 1
+          Case 4 '16 Color
+            rate = 3
+          Case 8 '256 Color
+            rate = 5
+          Case 16 '16-bit color
+            rate = 7
+          Case 24 '24-bit color
+            rate = 8
+          Case 32 '32-bit color
+            rate = 9
+          Case Else
+            rate = 4
+        End Select
+        If LoadFFDShow() Then
+          Dim ffChaps = ffAPI.ChaptersList
+          SetCombos(vidTracks.Count > 1, audTracks.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
+          If ffChaps.Count > 0 Then
+            Dim chapterCollection As New Collection
+            For Each chapter In ffChaps
+              ChapterList.Add(chapter.Value)
+              chapterCollection.Add({chapter.Key, chapter.Value, "und"})
+            Next
+            SpecificChapterList = chapterCollection
+          End If
+          If ffAPI.SubtitleStreams.Count > 0 Then
+            SubWidth = 0
+            For Each stream In ffAPI.SubtitleStreams
+              Dim sStreamText As String = stream.Value.name
+              If sStreamText = "Show Subtitles" Or sStreamText.StartsWith("[Local]") Then Continue For
+              If sStreamText = "Hide Subtitles" Then sStreamText = "No subtitles"
+              SubTrackList.Add(sStreamText, stream.Value.languageName)
+              If stream.Value.enabled Then selSub = SubTrackList.Count - 1
+            Next
           End If
         Else
-          Dim bFound As Boolean = False
-          For Each row As String In cmbSubtitles.Items
-            If row.ToLower.Contains(MyLocale.NativeName) Or
-              row.ToLower.Contains(MyLocale.EnglishName) Or
-              row.ToLower.Contains(MyLocale.ThreeLetterISOLanguageName) Or
-              row.ToLower.Contains(MyLocale.ThreeLetterWindowsLanguageName) Or
-              row.ToLower.Contains(MyLocale.DisplayName) Or
-              row.ToLower.Contains(MyLocale.Name) Or
-              row.ToLower.Contains(MyLocale.IetfLanguageTag) Or
-              row.ToLower.Contains(MyLocale.TwoLetterISOLanguageName) Then
-              cmbSubtitles.Text = row
-              bFound = True
-              Exit For
-            End If
-          Next
-          If Not bFound Then
-            If cmbSubtitles.Items.Contains("No subtitles") Then
-              cmbSubtitles.Text = "No subtitles"
-            Else
-              cmbSubtitles.SelectedIndex = 0
-            End If
-          End If
+          SetCombos(vidTracks.Count > 1, audTracks.Count > 1, False, False)
         End If
+        For v As Integer = 0 To vidTracks.Count - 1
+          Dim sV As String = "Video Track " & v + 1 & " (" & vidTracks(v).fccHandler & ")"
+          If cRiff.AVIINFOData IsNot Nothing Then If cRiff.AVIINFOData.ContainsKey("IVS" & v + 1) Then sV &= " [" & cRiff.AVIINFOData("IVS" & v + 1) & "]"
+          VidTrackList.Add(sV, vidTracks(v).wLanguage)
+        Next
+        For a As Integer = 0 To audTracks.Count - 1
+          Dim sA As String = "Audio Track " & a + 1
+          If cRiff.AVIINFOData IsNot Nothing Then If cRiff.AVIINFOData.ContainsKey("IAS" & a + 1) Then sA &= " [" & cRiff.AVIINFOData("IAS" & a + 1) & "]"
+          AudTrackList.Add(sA, audTracks(a).wLanguage)
+        Next
       End If
-    Else
-      If cmbSubtitles.Visible Then
-        Dim bFound As Boolean = False
-        If My.Settings.Subtitles Then
-          For Each row As String In cmbSubtitles.Items
-            If row.ToLower.Contains(MyLocale.NativeName) Or
-              row.ToLower.Contains(MyLocale.EnglishName) Or
-              row.ToLower.Contains(MyLocale.ThreeLetterISOLanguageName) Or
-              row.ToLower.Contains(MyLocale.ThreeLetterWindowsLanguageName) Or
-              row.ToLower.Contains(MyLocale.DisplayName) Or
-              row.ToLower.Contains(MyLocale.Name) Or
-              row.ToLower.Contains(MyLocale.IetfLanguageTag) Or
-              row.ToLower.Contains(MyLocale.TwoLetterISOLanguageName) Then
-              cmbSubtitles.Text = row
-              bFound = True
-              Exit For
-            End If
-          Next
-        End If
-        If Not bFound Then
-          If cmbSubtitles.Items.Contains("No subtitles") Then
-            cmbSubtitles.Text = "No subtitles"
-          Else
-            cmbSubtitles.SelectedIndex = 0
-          End If
-        End If
-      End If
+      SetProps(enc, chan, rate, sEnc, sChan, sRate)
+    End Using
+  End Sub
+
+  Private Sub LoadData_Video_FFDShow(ByRef sTitleVal As String, ByRef sArtistVal As String, ByRef VidTrackList As Dictionary(Of String, String), ByRef selVid As Integer, ByRef AudTrackList As Dictionary(Of String, String), ByRef selAud As Integer, ByRef SubTrackList As Dictionary(Of String, String), ByRef selSub As Integer, ByRef ChapterList As List(Of String), ByRef selChapter As Integer)
+    Dim ffChaps = ffAPI.ChaptersList
+    SetCombos(False, ffAPI.AudioStreams.Count > 1, ffChaps.Count > 0, ffAPI.SubtitleStreams.Count > 1)
+    If ffChaps.Count > 0 Then
+      Dim chapterCollection As New Collection
+      For Each chapter In ffChaps
+        ChapterList.Add(chapter.Value)
+        chapterCollection.Add({chapter.Key, chapter.Value, "und"})
+      Next
+      SpecificChapterList = chapterCollection
     End If
+    If ffAPI.AudioStreams.Count > 0 Then
+      For Each stream In ffAPI.AudioStreams
+        AudTrackList.Add(stream.Value.name, stream.Value.languageName)
+        If stream.Value.enabled Then selAud = AudTrackList.Count - 1
+      Next
+    End If
+    If ffAPI.SubtitleStreams.Count > 0 Then
+      For Each stream In ffAPI.SubtitleStreams
+        Dim sStreamText As String = stream.Value.name
+        If sStreamText = "Show Subtitles" Or sStreamText.StartsWith("[Local]") Then Continue For
+        If sStreamText = "Hide Subtitles" Then sStreamText = "No subtitles"
+        SubTrackList.Add(sStreamText, stream.Value.languageName)
+        If stream.Value.enabled Then selSub = SubTrackList.Count - 1
+      Next
+    End If
+    SetVideoResolution(-1, -1)
+    Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+    Dim Channels As Integer = ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_OSDtype_nchannels)
+    Dim sChannel As String = Channels & " channels"
+    Select Case Channels
+      Case -1 : sChannel = String.Empty
+      Case 0 : sChannel = "Unknown Speaker Setup" : Channels = 2
+      Case 1 : sChannel = "Mono"
+      Case 2 : sChannel = "Stereo"
+      Case 3 : sChannel = "2.1 Stereo"
+      Case 4 : sChannel = "Quadraphonic"
+      Case 5 : sChannel = "Surround"
+      Case 6 : sChannel = "5.1 Surround"
+      Case 7 : sChannel = "6.1 Surround"
+      Case 8 : sChannel = "7.1 Surround"
+      Case Else : sChannel = Channels & " channels"
+    End Select
+    SetProps(4, Channels, 0, ffAPI.getFrameRate & " fps " & ffAPI.getIntParam(FFDShowAPI.FFDShowConstants.FFDShowDataId.IDFF_enc_interlacing), sChannel, KRater(iQ, "bps"))
+  End Sub
+
+  Private Sub LoadData_Audio(ByRef sTitleVal As String, ByRef sArtistVal As String)
+    EnableScreenSaver(True)
+    SetTabs(True, False)
+    CleanupID3(mpPlayer.FileName)
+    sTitleVal = GetTitle(mpPlayer.FileName, True, False)
+    sArtistVal = GetTitle(mpPlayer.FileName, True, True)
+    FileArt = GetArt(mpPlayer.FileName, False, False)
+    Select Case IO.Path.GetExtension(mpPlayer.FileName).Substring(1).ToLower
+      Case "mp3" ', "mpe", "mpg", "mpeg", "m1v", "mp2", "m2v", "mp2v", "mpv2", "mpa", "aac", "m2ts" , "m4a", "m4p", "m4v", "mp4"
+        LoadData_Audio_MP3()
+      Case "ogg", "flac"
+        LoadData_Audio_Vorbis()
+      Case "wav"
+        LoadData_Audio_WAV()
+      Case Else
+        Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+        SetProps(-1, -1, 0, , , KRater(iQ, "bps"))
+    End Select
+    SetCombos(False, False, False, False)
+    If mpPlayer.Repeat Then
+      cmdLoop.Image = My.Resources.button_loop_on
+    Else
+      cmdLoop.Image = My.Resources.button_loop_off
+    End If
+    cmdLoop.Tag = Nothing
+    VidThumb = False
+  End Sub
+
+  Private Sub LoadData_Audio_MP3()
+    Using cHeader As New Seed.clsHeaderLoader(mpPlayer.FileName)
+      If cHeader.cMPEG IsNot Nothing Then
+        Dim iQual, iChannels As Integer
+        Select Case cHeader.RateFormat
+          Case "ABR (XING)", "2-Pass ABR (XING)" : iQual = 1
+          Case "CBR", "CBR (XING)", "2-Pass CBR (XING)" : iQual = 2
+          Case "VBR (Fraunhofer)", "VBR rh (XING)", "VBR mt/rh (XING)", "VBR mt (XING)" : iQual = 3
+          Case Else
+            If cHeader.RateFormat.StartsWith("Full VBR Method") Then
+              iQual = 3
+            Else
+              Debug.Print("Unknown RateFormat: " & cHeader.RateFormat)
+              iQual = -1
+            End If
+        End Select
+        Dim sChannels As String = cHeader.cMPEG.GetChannels
+        Select Case sChannels
+          Case "Single Channel" : iChannels = 1
+          Case "Stereo" : iChannels = 2
+          Case "Joint Stereo"
+            iChannels = -2
+            sChannels &= " (" & cHeader.cMPEG.GetModeExtension & ")"
+          Case "Dual Channel" : iChannels = 4
+          Case Else
+            Debug.Print("Unknown Channels: " & sChannels)
+            iChannels = -1
+        End Select
+        SetProps(iQual, iChannels, cHeader.cMPEG.GetBitQual, cHeader.RateFormat, sChannels, KRater(cHeader.cMPEG.GetBitrate, "bps"))
+      End If
+    End Using
+  End Sub
+
+  Private Sub LoadData_Audio_Vorbis()
+    Using cVorbis As New Seed.clsVorbis(mpPlayer.FileName)
+      Dim iQual As Integer, sQual As String
+      If cVorbis.File_MinQuality > 0 And cVorbis.File_MaxQuality > 0 Then
+        If cVorbis.File_Quality > 0 Then
+          iQual = 2
+          sQual = "Constant Bitrate"
+        Else
+          iQual = 3
+          sQual = "Limited Variable Bitrate"
+        End If
+      Else
+        If cVorbis.File_Quality > 0 Then
+          iQual = 1
+          sQual = "Average/Variable Bitrate"
+        Else
+          iQual = -1
+          sQual = Nothing
+        End If
+      End If
+      Dim sChannel As String = cVorbis.File_Channels
+      Select Case cVorbis.File_Channels
+        Case 1 : sChannel = "Mono"
+        Case 2 : sChannel = "Stereo"
+        Case 3 : sChannel = "2.1 Stereo"
+        Case 4 : sChannel = "Quadraphonic"
+        Case 5 : sChannel = "Surround"
+        Case 6 : sChannel = "5.1 Surround"
+        Case 7 : sChannel = "6.1 Surround"
+        Case 8 : sChannel = "7.1 Surround"
+      End Select
+      Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+      Dim iQR As Integer = -1
+      Select Case iQ / (cVorbis.File_Rate * cVorbis.File_Channels)
+        Case Is < 0.8 : iQR = 0
+        Case Is < 0.9 : iQR = 1
+        Case Is < 1.1 : iQR = 2
+        Case Is < 1.3 : iQR = 3
+        Case Is < 1.5 : iQR = 4
+        Case Is < 1.7 : iQR = 5
+        Case Is < 1.9 : iQR = 5
+        Case Is < 2.5 : iQR = 6
+        Case Is < 3 : iQR = 7
+        Case Is < 4 : iQR = 8
+        Case Is >= 4 : iQR = 9
+      End Select
+      SetProps(iQual, cVorbis.File_Channels, iQR, sQual, sChannel, KRater(iQ, "bps"))
+    End Using
+  End Sub
+
+  Private Sub LoadData_Audio_WAV()
+    Dim iQ As Long = (My.Computer.FileSystem.GetFileInfo(mpPlayer.FileName).Length * 8) / (mpPlayer.Duration)
+    Using cRiff As New Seed.clsRIFF(mpPlayer.FileName)
+      Dim enc, chan, rate As Integer
+      Dim sEnc, sChan, sRate As String
+      enc = 4
+      chan = -1
+      rate = 0
+      sEnc = "WAVE"
+      sChan = Nothing
+      sRate = KRater(iQ, "bps")
+      If cRiff.IsValid Then
+        If cRiff.IsDTS Then
+          enc = 1
+          sEnc = "DTS"
+          Select Case cRiff.DTSData.iAMODE
+            Case 0
+              chan = 1
+              sChan = "Mono"
+            Case 1
+              chan = 1
+              sChan = "Dual Mono (A + B)"
+            Case 2
+              chan = 2
+              sChan = "Left and Right Stereo"
+            Case 3
+              chan = -2
+              sChan = "(Left + Right) - (Left - Right) Stereo"
+            Case 4
+              chan = 2
+              sChan = "Totals Stereo"
+            Case 5
+              chan = -2
+              sChan = "Center, Left, Right"
+            Case 6
+              chan = 3
+              sChan = "Left, Right, Surround"
+            Case 7
+              chan = 4
+              sChan = "Center, Left, Right, Surround"
+            Case 8
+              chan = 4
+              sChan = "Left, Right, Surround Left, Surround Right"
+            Case 9
+              chan = 5
+              sChan = "Center, Left, Right, Surround Left, Surround Right"
+            Case 10
+              chan = 7
+              sChan = "Center Left, Center Right, Left, Right, Surround Left, Surround Right"
+            Case 11
+              chan = 7
+              sChan = "Center, Left, Right, Left Rear, Right Rear, Overhead"
+            Case 12
+              chan = 7
+              sChan = "Center Front, Center Rear, Left Front, Right Front, Left Rear, Right Rear"
+            Case 13
+              chan = 7
+              sChan = "Center Left, Center, Center Right, Left, Right, Surround Left, Surround Right"
+            Case 14
+              chan = 8
+              sChan = "Center Left, Center Right, Left, Right, Surround Left 1, Surround Left 2, Surround Right 1, Surround Right 2"
+            Case 15
+              chan = 8
+              sChan = "Center Left, Center, Center Right, Left, Right, Surround Left, Surround, Surround Right"
+            Case Else
+              chan = cRiff.DTSData.iAMODE
+              sChan = cRiff.DTSData.iAMODE
+          End Select
+          If cRiff.DTSData.iLFF > 0 Then sChan &= " & Low Frequency Emitter (" & IIf(cRiff.DTSData.iLFF = 2, "64", "128") & " Interpolation Factor)"
+          Select Case cRiff.DTSData.iRATE
+            Case 0
+              rate = 0
+              sRate = "32 kbps"
+            Case 1
+              rate = 0
+              sRate = "56 kbps"
+            Case 2
+              rate = 0
+              sRate = "64 kbps"
+            Case 3
+              rate = 1
+              sRate = "96 kbps"
+            Case 4
+              rate = 1
+              sRate = "112 kbps"
+            Case 5
+              rate = 2
+              sRate = "128 kbps"
+            Case 6
+              rate = 2
+              sRate = "192 kbps"
+            Case 7
+              rate = 2
+              sRate = "224 kbps"
+            Case 8
+              rate = 3
+              sRate = "256 kbps"
+            Case 9
+              rate = 3
+              sRate = "320 kbps"
+            Case 10
+              rate = 4
+              sRate = "384 kbps"
+            Case 11
+              rate = 4
+              sRate = "448 kbps"
+            Case 12
+              rate = 4
+              sRate = "512 kbps"
+            Case 13
+              rate = 5
+              sRate = "576 kbps"
+            Case 14
+              rate = 5
+              sRate = "640 kbps"
+            Case 15
+              rate = 6
+              sRate = "768 kbps"
+            Case 16
+              rate = 6
+              sRate = "960 kbps"
+            Case 17
+              rate = 7
+              sRate = "1024 kbps"
+            Case 18
+              rate = 7
+              sRate = "1152 kbps"
+            Case 19
+              rate = 7
+              sRate = "1280 kbps"
+            Case 20
+              rate = 8
+              sRate = "1344 kbps"
+            Case 21
+              rate = 8
+              sRate = "1408 kbps"
+            Case 22
+              rate = 9
+              sRate = "1411.2 kbps"
+            Case 23
+              rate = 9
+              sRate = "1472 kbps"
+            Case 24
+              rate = 9
+              sRate = "1536 kbps"
+            Case 25
+              rate = 0
+              sRate = "Open"
+          End Select
+        Else
+          sEnc = WAVAudioCodecs(cRiff.WAVData.Format.Format.wFormatTag)
+          Select Case cRiff.WAVData.Format.Format.nChannels
+            Case 1
+              chan = 1
+              sChan = "Mono"
+            Case 2
+              chan = 2
+              sChan = "Stereo"
+            Case 3
+              chan = 3
+              sChan = "2.1 Stereo"
+            Case 4
+              chan = 4
+              sChan = "Quadraphonic"
+            Case 5
+              chan = 5
+              sChan = "Surround"
+            Case 6
+              chan = 6
+              sChan = "5.1 Surround"
+            Case 7
+              chan = 7
+              sChan = "6.1 Surround"
+            Case 8
+              chan = 8
+              sChan = "7.1 Surround"
+            Case Else
+              chan = cRiff.WAVData.Format.Format.nChannels
+              sChan = chan
+          End Select
+          rate = 9
+          sRate = KRater(cRiff.WAVData.Format.Format.nAvgBytesPerSec * 8, "bps")
+          If cRiff.WAVData.Format.cbSize > 0 Or cRiff.WAVData.Format.wBitsPerSample > 0 Then
+            If cRiff.WAVData.Format.cbSize >= 22 Then
+              If cRiff.WAVData.dwChannelMask > 0 Then
+                sChan = String.Empty
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontLeft) = Seed.clsRIFF.ChannelStruct.FrontLeft Then sChan &= "Front Left, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontCenterLeft) = Seed.clsRIFF.ChannelStruct.FrontCenterLeft Then sChan &= "Front Center Left, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontCenter) = Seed.clsRIFF.ChannelStruct.FrontCenter Then sChan &= "Front Center, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontCenterRight) = Seed.clsRIFF.ChannelStruct.FrontCenterRight Then sChan &= "Front Center Right, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.FrontRight) = Seed.clsRIFF.ChannelStruct.FrontRight Then sChan &= "Front Right, "
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.SideLeft) = Seed.clsRIFF.ChannelStruct.SideLeft Then sChan &= "Side Left, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.SideRight) = Seed.clsRIFF.ChannelStruct.SideRight Then sChan &= "Side Right, "
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.RearLeft) = Seed.clsRIFF.ChannelStruct.RearLeft Then sChan &= "Rear Left, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.RearCenter) = Seed.clsRIFF.ChannelStruct.RearCenter Then sChan &= "Rear Center, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.RearRight) = Seed.clsRIFF.ChannelStruct.RearRight Then sChan &= "Rear Right, "
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopCenter) = Seed.clsRIFF.ChannelStruct.TopCenter Then sChan &= "Top Center, "
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopFrontLeft) = Seed.clsRIFF.ChannelStruct.TopFrontLeft Then sChan &= "Top Front Left, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopFrontCenter) = Seed.clsRIFF.ChannelStruct.TopFrontCenter Then sChan &= "Top Front Center, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopFrontRight) = Seed.clsRIFF.ChannelStruct.TopFrontRight Then sChan &= "Top Front Right, "
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopRearLeft) = Seed.clsRIFF.ChannelStruct.TopRearLeft Then sChan &= "Top Rear Left, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopRearCenter) = Seed.clsRIFF.ChannelStruct.TopRearCenter Then sChan &= "Top Rear Center, "
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.TopRearRight) = Seed.clsRIFF.ChannelStruct.TopRearRight Then sChan &= "Top Rear Right, "
+
+                If (cRiff.WAVData.dwChannelMask And Seed.clsRIFF.ChannelStruct.LFE) = Seed.clsRIFF.ChannelStruct.LFE Then sChan &= "Low Frequency Emitter, "
+
+                If sChan.Length > 2 Then sChan = sChan.Substring(0, sChan.Length - 2)
+              End If
+              Select Case cRiff.WAVData.SubFormat.ToString.ToLower
+                Case "6dba3190-67bd-11cf-a0f7-0020afd156e4" : sEnc = "Analog"
+                Case "00000001-0000-0010-8000-00aa00389b71" : sEnc = "PCM"
+                Case "00000003-0000-0010-8000-00aa00389b71" : sEnc = "Float (IEEE)"
+                Case "00000009-0000-0010-8000-00aa00389b71" : sEnc = "DRM"
+                Case "00000006-0000-0010-8000-00aa00389b71" : sEnc = "A-Law"
+                Case "00000007-0000-0010-8000-00aa00389b71" : sEnc = "µ-Law"
+                Case "00000002-0000-0010-8000-00aa00389b71" : sEnc = "ADPCM"
+                Case "00000050-0000-0010-8000-00aa00389b71" : sEnc = "MPEG"
+                Case "4995daee-9ee6-11d0-a40e-00a0c9223196" : sEnc = "RIFF"
+                Case "e436eb8b-524f-11ce-9f53-0020af0ba770" : sEnc = "RIFF WAVE"
+                Case "1d262760-e957-11cf-a5d6-28db04c10000" : sEnc = "MIDI"
+                Case "2ca15fa0-6cfe-11cf-a5d6-28dB04c10000" : sEnc = "MIDI Bus"
+                Case "4995daf0-9ee6-11d0-a40e-00a0c9223196" : sEnc = "RIFF MIDI"
+                Case Else : sEnc = "Unknown {" & cRiff.WAVData.SubFormat.ToString & "}"
+              End Select
+            End If
+          End If
+        End If
+      End If
+      SetProps(enc, chan, rate, sEnc, sChan, sRate)
+    End Using
   End Sub
 
   Private Sub SetTitleArtist(sFileTitle As String, sFileArtist As String)
@@ -3723,7 +3914,7 @@ Public Class frmMain
         cTask.CreatePreview(frmFS.pctVideo)
       ElseIf VidThumb Then
         cTask.CreatePreview(mpPlayer)
-      ElseIf FileArt IsNot Nothing Then
+      ElseIf FileArt IsNot Nothing AndAlso FileArt.Art IsNot Nothing Then
         cTask.CreatePreview(FileArt.Art)
       Else
         cTask.CreatePreview(pnlMain)
@@ -3732,6 +3923,7 @@ Public Class frmMain
       cTask.Tooltip = FileTitle
       cTask.Icon = Me.Icon
     End If
+
   End Sub
 
   Private Sub DrawTitleArtist()
@@ -3740,6 +3932,8 @@ Public Class frmMain
       sTimeString = " (" & ConvertTimeVal(cCD.TrackPositionSeconds) & "/" & ConvertTimeVal(cCD.TrackDurationSeconds) & ")"
     ElseIf mpPlayer.IsFlash Then
       sTimeString = " (" & mpPlayer.Position & "/" & mpPlayer.Duration & " frames)"
+    ElseIf mpPlayer.IsStreaming Then
+      sTimeString = " (Streaming)"
     Else
       sTimeString = " (" & ConvertTimeVal(mpPlayer.Position) & "/" & ConvertTimeVal(mpPlayer.Duration) & ")"
     End If
@@ -3790,7 +3984,7 @@ Public Class frmMain
   End Sub
 
   Private Sub DrawGlassText(autoRedraw As Boolean)
-    If Me.WindowState = FormWindowState.Minimized Then Exit Sub
+    If Me.WindowState = FormWindowState.Minimized Then Return
     Const BarHeight As Integer = 32
     Const EdgeMargin As Integer = 8
     Dim TextFont As New Drawing.Font(Drawing.SystemFonts.CaptionFont.Name, 9)
@@ -3809,6 +4003,8 @@ Public Class frmMain
         sFileTime = "( " & ConvertTimeVal(cCD.TrackPositionSeconds) & " / " & ConvertTimeVal(cCD.TrackDurationSeconds) & " )"
       ElseIf mpPlayer.IsFlash Then
         sFileTime = "( " & mpPlayer.Position & " / " & mpPlayer.Duration & " frames )"
+      ElseIf mpPlayer.IsStreaming Then
+        sFileTime = "(Streaming))"
       Else
         sFileTime = "( " & ConvertTimeVal(mpPlayer.Position) & " / " & ConvertTimeVal(mpPlayer.Duration) & " )"
       End If
@@ -3903,42 +4099,56 @@ Public Class frmMain
       End If
     ElseIf String.IsNullOrEmpty(mpPlayer.FileName) Then
       SetTabs(False, False)
-      If Not Me.Text = "Lime Seed Media Player" Then Me.Text = "Lime Seed Media Player"
-      If pnlMain.Dock = DockStyle.None Then DrawGlassText(True)
-      If Not pbProgress.Value = 0 Then pbProgress.Value = 0
-      If Not pbProgress.Maximum = 1 Then pbProgress.Maximum = 1
+      If Not pbProgress.Maximum = 1000 Then
+        If Not Me.Text = "Lime Seed Media Player" Then Me.Text = "Lime Seed Media Player"
+        If pnlMain.Dock = DockStyle.None Then DrawGlassText(True)
+        If Not pbProgress.Value = 0 Then pbProgress.Value = 0
+        If Not pbProgress.Maximum = 1 Then pbProgress.Maximum = 1
+      End If
       If pbProgress.Enabled Then pbProgress.Enabled = False
     Else
-      If mpPlayer.HasVid Then
-        SetTabs(False, True)
-        If cmbChapters.Visible And Not cmbChapters.DroppedDown And cmbChapters.Tag IsNot Nothing Then
-          Dim ChapterCollection As Collection = CType(cmbChapters.Tag, Collection)
-          cmbChapters.Tag = Nothing
-          If ChapterCollection IsNot Nothing Then
-            Dim lastVal As String = String.Empty
-            For Each chapter In ChapterCollection
-              If chapter(0) > mpPlayer.Position Then
-                If String.IsNullOrEmpty(lastVal) Then
-                  cmbChapters.SelectedIndex = 0
-                Else
-                  cmbChapters.Text = lastVal
-                End If
-                Exit For
-              End If
-              lastVal = chapter(1)
-            Next
-          End If
-          cmbChapters.Tag = ChapterCollection
+      If mpPlayer.IsStreaming Then
+        If mpPlayer.StreamInfo IsNot Nothing Then
+          Dim sArtist As String = mpPlayer.StreamInfo.Artist
+          Dim sTitle As String = mpPlayer.StreamInfo.Title
+          SetTitleArtist(sTitle, sArtist)
+          DrawTitleArtist()
+          SetTabs(True, False)
+          pbProgress.Value = 0
+          pbProgress.Maximum = 100
+          If pbProgress.Enabled Then pbProgress.Enabled = False
         End If
       Else
-        SetTabs(True, False)
-      End If
-      DrawTitleArtist()
-      If Not pbProgress.Maximum = mpPlayer.Duration * 1000 Then pbProgress.Maximum = mpPlayer.Duration * 1000
-      If Not pbProgress.Enabled Then pbProgress.Enabled = True
-      If Not SeekS AndAlso pbProgress.Value <> mpPlayer.Position * 1000 Then
-        pbProgress.Value = mpPlayer.Position * 1000
-        If taskBar IsNot Nothing Then taskBar.SetProgressValue(Me.Handle, Math.Floor(pbProgress.Value), Math.Floor(pbProgress.Maximum))
+        If mpPlayer.HasVid Then
+          SetTabs(False, True)
+          If cmbChapters.Visible And Not cmbChapters.DroppedDown And cmbChapters.Tag Is Nothing Then
+            cmbChapters.Tag = True
+            If SpecificChapterList IsNot Nothing Then
+              Dim lastVal As String = String.Empty
+              For Each chapter In SpecificChapterList
+                If chapter(0) > mpPlayer.Position Then
+                  If String.IsNullOrEmpty(lastVal) Then
+                    cmbChapters.SelectedIndex = 0
+                  Else
+                    cmbChapters.Text = lastVal
+                  End If
+                  Exit For
+                End If
+                lastVal = chapter(1)
+              Next
+            End If
+            cmbChapters.Tag = Nothing
+          End If
+        Else
+          SetTabs(True, False)
+        End If
+        DrawTitleArtist()
+        If Not pbProgress.Maximum = mpPlayer.Duration * 1000 Then pbProgress.Maximum = mpPlayer.Duration * 1000
+        If Not pbProgress.Enabled Then pbProgress.Enabled = True
+        If Not SeekS AndAlso pbProgress.Value <> mpPlayer.Position * 1000 Then
+          pbProgress.Value = mpPlayer.Position * 1000
+          If taskBar IsNot Nothing Then taskBar.SetProgressValue(Me.Handle, Math.Floor(pbProgress.Value), Math.Floor(pbProgress.Maximum))
+        End If
       End If
     End If
     If bCD Then
@@ -3988,7 +4198,12 @@ Public Class frmMain
       cmbChapters.Enabled = Not CBool((uOps And DirectShowLib.Dvd.ValidUOPFlag.PlayChapter) = DirectShowLib.Dvd.ValidUOPFlag.PlayChapter)
       mnuRatio.Tag = CBool((uOps And DirectShowLib.Dvd.ValidUOPFlag.SelectVideoModePreference) = DirectShowLib.Dvd.ValidUOPFlag.SelectVideoModePreference)
     Else
-      If mpPlayer.State = Seed.ctlSeed.MediaState.mPlaying Then
+      If mpPlayer.IsStreaming Then
+        SetPlayPause(False, False)
+        SetStop(True)
+        If cmdLoop.Enabled Then cmdLoop.Enabled = False
+        SetTaskbarStyle(TaskbarLib.TBPFLAG.TBPF_NOPROGRESS)
+      ElseIf mpPlayer.State = Seed.ctlSeed.MediaState.mPlaying Then
         SetPlayPause(False, True)
         SetStop(True)
         If Not cmdLoop.Enabled Then cmdLoop.Enabled = True
@@ -4023,6 +4238,7 @@ Public Class frmMain
         If cmdBackPL.Enabled <> bPrevious Then cmdBackPL.Enabled = bPrevious
         If cmdNextPL.Enabled <> bNext Then cmdNextPL.Enabled = bNext
         If cmdRemoveFromPL.Enabled Then cmdRemoveFromPL.Enabled = False
+        If mnuTransferFile.Enabled Then mnuTransferFile.Enabled = False
         If cmdClearPL.Enabled Then cmdClearPL.Enabled = False
       Catch ex As Exception
         mnuCloseFile.PerformClick()
@@ -4031,54 +4247,117 @@ Public Class frmMain
         dgvPlayList.Rows.Clear()
       End Try
     Else
-      If dgvPlayList.Rows.Count > 0 Then
-        If StrComp(txtPlayListTitle.Tag, UNKNOWN_ALBUM, CompareMethod.Text) = 0 Then
-          Dim sPL As String = String.Empty
-          For Each dgvx As DataGridViewRow In dgvPlayList.Rows
-            If Not String.IsNullOrEmpty(dgvx.Tag(3)) Then
-              If String.IsNullOrEmpty(sPL) Then
-                sPL = dgvx.Tag(3)
-              ElseIf StrComp(sPL, dgvx.Tag(3), CompareMethod.Text) <> 0 And StrComp(dgvx.Tag(3), UNKNOWN_ALBUM, CompareMethod.Text) = 0 Then
-                sPL = UNKNOWN_ALBUM
+      If Not String.IsNullOrEmpty(mpPlayer.FileName) AndAlso mpPlayer.IsStreaming Then
+        If mpPlayer.StreamInfo IsNot Nothing Then
+          If String.IsNullOrEmpty(mpPlayer.StreamInfo.Album) Then
+            If Not txtPlayListTitle.Text = "Streaming (--:--)" Then txtPlayListTitle.Text = "Streaming (--:--)"
+            If Not txtPlayListTitle.Tag = UNKNOWN_ALBUM Then txtPlayListTitle.Tag = UNKNOWN_ALBUM
+          Else
+            If Not txtPlayListTitle.Text = mpPlayer.StreamInfo.Album & " (--:--)" Then txtPlayListTitle.Text = mpPlayer.StreamInfo.Album & " (--:--)"
+            If Not txtPlayListTitle.Tag = mpPlayer.StreamInfo.Album Then txtPlayListTitle.Tag = mpPlayer.StreamInfo.Album
+          End If
+          If cmdLoopPL.Enabled Then cmdLoopPL.Enabled = False
+          If cmdShufflePL.Enabled Then cmdShufflePL.Enabled = False
+          If cmdBackPL.Enabled Then cmdBackPL.Enabled = False
+          If cmdNextPL.Enabled Then cmdNextPL.Enabled = False
+          If cmdRemoveFromPL.Enabled Then cmdRemoveFromPL.Enabled = False
+          If mnuTransferFile.Enabled Then mnuTransferFile.Enabled = False
+          If cmdClearPL.Enabled Then cmdClearPL.Enabled = False
+        End If
+      Else
+        If dgvPlayList.Rows.Count > 0 Then
+          If StrComp(txtPlayListTitle.Tag, UNKNOWN_ALBUM, CompareMethod.Text) = 0 Then
+            Dim sPL As String = String.Empty
+            For Each dgvx As DataGridViewRow In dgvPlayList.Rows
+              If Not String.IsNullOrEmpty(dgvx.Tag(3)) Then
+                If String.IsNullOrEmpty(sPL) Then
+                  sPL = dgvx.Tag(3)
+                ElseIf StrComp(sPL, dgvx.Tag(3), CompareMethod.Text) <> 0 And StrComp(dgvx.Tag(3), UNKNOWN_ALBUM, CompareMethod.Text) = 0 Then
+                  sPL = UNKNOWN_ALBUM
+                End If
               End If
+            Next
+            txtPlayListTitle.Tag = sPL
+          End If
+          Dim plCurrent, plTotal As Double
+          Dim SelItem As Integer = GetSelectedPlayListItem()
+          For I As Integer = 0 To dgvPlayList.RowCount - 1
+            plTotal += RevertTimeVal(dgvPlayList.Rows(I).Tag(5))
+            If SelItem >= 0 Then
+              If SelItem = I Then
+                If bCD Then
+                  plCurrent += cCD.TrackPositionSeconds
+                Else
+                  plCurrent += mpPlayer.Position
+                End If
+              End If
+              If SelItem > I Then plCurrent += RevertTimeVal(dgvPlayList.Rows(I).Tag(5))
             End If
           Next
-          txtPlayListTitle.Tag = sPL
-        End If
-        Dim plCurrent, plTotal As Double
-        Dim SelItem As Integer = GetSelectedPlayListItem()
-        For I As Integer = 0 To dgvPlayList.RowCount - 1
-          plTotal += RevertTimeVal(dgvPlayList.Rows(I).Tag(5))
-          If SelItem >= 0 Then
-            If SelItem = I Then
-              If bCD Then
-                plCurrent += cCD.TrackPositionSeconds
+          If txtPlayListTitle.ReadOnly Then
+            Dim sPLTitle As String = txtPlayListTitle.Tag
+            If DefaultedPLTitle Then
+              If dgvPlayList.RowCount = 1 Then
+                sPLTitle = CStr(dgvPlayList.Rows(0).Tag(3)).Trim
               Else
-                plCurrent += mpPlayer.Position
+                Dim allArtist As String = Nothing
+                Dim allAlbum As String = Nothing
+                For I As Integer = 0 To dgvPlayList.RowCount - 1
+                  If String.IsNullOrEmpty(allArtist) Then allArtist = dgvPlayList.Rows(I).Tag(2)
+                  If String.IsNullOrEmpty(allAlbum) Then allAlbum = dgvPlayList.Rows(I).Tag(3)
+                  If (Not String.IsNullOrEmpty(allArtist)) And (Not String.IsNullOrEmpty(allAlbum)) Then Exit For
+                Next
+                For I As Integer = 0 To dgvPlayList.RowCount - 1
+                  If Not String.IsNullOrEmpty(allAlbum) And Not String.IsNullOrEmpty(dgvPlayList.Rows(I).Tag(3)) Then
+                    Dim sMatchVal As String = Nothing
+                    If MatchNames(allAlbum, CStr(dgvPlayList.Rows(I).Tag(3)), sMatchVal) Then
+                      If Not String.IsNullOrEmpty(sMatchVal) Then allAlbum = sMatchVal
+                    Else
+                      allAlbum = Nothing
+                    End If
+                  End If
+                  If Not String.IsNullOrEmpty(allArtist) And Not String.IsNullOrEmpty(dgvPlayList.Rows(I).Tag(2)) Then
+                    Dim sMatchVal As String = Nothing
+                    If MatchNames(allArtist, CStr(dgvPlayList.Rows(I).Tag(2)), sMatchVal) Then
+                      If Not String.IsNullOrEmpty(sMatchVal) Then allArtist = sMatchVal
+                    Else
+                      allArtist = Nothing
+                    End If
+                  End If
+                  If (String.IsNullOrEmpty(allArtist)) And (String.IsNullOrEmpty(allAlbum)) Then Exit For
+                Next
+                If Not String.IsNullOrEmpty(allAlbum) Then
+                  If allAlbum.ToLower.EndsWith(" disc ") Then allAlbum = allAlbum.Substring(0, allAlbum.Length - 6)
+                  sPLTitle = allAlbum.Trim
+                ElseIf Not String.IsNullOrEmpty(allArtist) Then
+                  sPLTitle = allArtist.Trim
+                Else
+                  sPLTitle = UNKNOWN_ALBUM
+                End If
               End If
+              If Not txtPlayListTitle.Tag = sPLTitle Then txtPlayListTitle.Tag = sPLTitle
             End If
-            If SelItem > I Then plCurrent += RevertTimeVal(dgvPlayList.Rows(I).Tag(5))
+            sPLTitle &= " (" & ConvertTimeVal(plCurrent) & "/" & ConvertTimeVal(plTotal) & ")"
+            If Not txtPlayListTitle.Text = sPLTitle Then txtPlayListTitle.Text = sPLTitle
           End If
-        Next
-        If txtPlayListTitle.ReadOnly Then
-          Dim sMsg As String = txtPlayListTitle.Tag & " (" & ConvertTimeVal(plCurrent) & "/" & ConvertTimeVal(plTotal) & ")"
-          If Not txtPlayListTitle.Text = sMsg Then txtPlayListTitle.Text = sMsg
+          If Not cmdLoopPL.Enabled Then cmdLoopPL.Enabled = True
+          If Not cmdShufflePL.Enabled Then cmdShufflePL.Enabled = True
+          If Not cmdBackPL.Enabled = (SelItem > 0) Then cmdBackPL.Enabled = (SelItem > 0)
+          If Not cmdNextPL.Enabled = (SelItem < dgvPlayList.Rows.Count - 1) Then cmdNextPL.Enabled = (SelItem < dgvPlayList.Rows.Count - 1)
+          If Not cmdRemoveFromPL.Enabled Then cmdRemoveFromPL.Enabled = True
+          If Not mnuTransferFile.Enabled Then mnuTransferFile.Enabled = True
+          If Not cmdClearPL.Enabled Then cmdClearPL.Enabled = True
+        Else
+          If Not txtPlayListTitle.Text = UNKNOWN_ALBUM & " (--:--/--:--)" Then txtPlayListTitle.Text = UNKNOWN_ALBUM & " (--:--/--:--)"
+          If Not txtPlayListTitle.Tag = UNKNOWN_ALBUM Then txtPlayListTitle.Tag = UNKNOWN_ALBUM
+          If cmdLoopPL.Enabled Then cmdLoopPL.Enabled = False
+          If cmdShufflePL.Enabled Then cmdShufflePL.Enabled = False
+          If cmdBackPL.Enabled Then cmdBackPL.Enabled = False
+          If cmdNextPL.Enabled Then cmdNextPL.Enabled = False
+          If cmdRemoveFromPL.Enabled Then cmdRemoveFromPL.Enabled = False
+          If mnuTransferFile.Enabled Then mnuTransferFile.Enabled = False
+          If cmdClearPL.Enabled Then cmdClearPL.Enabled = False
         End If
-        If Not cmdLoopPL.Enabled Then cmdLoopPL.Enabled = True
-        If Not cmdShufflePL.Enabled Then cmdShufflePL.Enabled = True
-        If Not cmdBackPL.Enabled = (SelItem > 0) Then cmdBackPL.Enabled = (SelItem > 0)
-        If Not cmdNextPL.Enabled = (SelItem < dgvPlayList.Rows.Count - 1) Then cmdNextPL.Enabled = (SelItem < dgvPlayList.Rows.Count - 1)
-        If Not cmdRemoveFromPL.Enabled Then cmdRemoveFromPL.Enabled = True
-        If Not cmdClearPL.Enabled Then cmdClearPL.Enabled = True
-      Else
-        If Not txtPlayListTitle.Text = UNKNOWN_ALBUM & " (--:--/--:--)" Then txtPlayListTitle.Text = UNKNOWN_ALBUM & " (--:--/--:--)"
-        If Not txtPlayListTitle.Tag = UNKNOWN_ALBUM Then txtPlayListTitle.Tag = UNKNOWN_ALBUM
-        If cmdLoopPL.Enabled Then cmdLoopPL.Enabled = False
-        If cmdShufflePL.Enabled Then cmdShufflePL.Enabled = False
-        If cmdBackPL.Enabled Then cmdBackPL.Enabled = False
-        If cmdNextPL.Enabled Then cmdNextPL.Enabled = False
-        If cmdRemoveFromPL.Enabled Then cmdRemoveFromPL.Enabled = False
-        If cmdClearPL.Enabled Then cmdClearPL.Enabled = False
       End If
     End If
     If VisualStyles.VisualStyleInformation.DisplayName = "Aero style" And TaskbarFinder.TaskbarVisible Then
@@ -4109,6 +4388,23 @@ Public Class frmMain
     SaveTempPL()
   End Sub
 
+  Private Function MatchNames(NameA As String, NameB As String, ByRef Match As String) As Boolean
+    If NameA.ToLowerInvariant = NameB.ToLowerInvariant Then Match = NameA : Return True
+    If NameA.ToLowerInvariant.StartsWith(NameB.ToLowerInvariant) Then Match = NameB : Return True
+    If NameB.ToLowerInvariant.StartsWith(NameA.ToLowerInvariant) Then Match = NameA : Return True
+    Dim matchData As String = Nothing
+    For I As Integer = 0 To NameA.Length - 1
+      If Char.ToLowerInvariant(NameA(I)) = Char.ToLowerInvariant(NameB(I)) Then
+        matchData &= NameA(I)
+      Else
+        Exit For
+      End If
+    Next
+    If String.IsNullOrEmpty(matchData) Then Return False
+    If matchData.Length < 3 Then Return False
+    Match = matchData : Return True
+  End Function
+
   Private Sub tmrVis_Tick(sender As System.Object, e As System.EventArgs) Handles tmrVis.Tick
     If volDevice IsNot Nothing Then
       tmrVis.Enabled = False
@@ -4117,9 +4413,9 @@ Public Class frmMain
         Channels = volDevice.AudioMeterInformation.PeakValues.Count
       Catch ex As Exception
         Channels = -1
+        SetBeatDevice()
         Try
-          Dim devEnum As New CoreAudioApi.MMDeviceEnumerator
-          volDevice = devEnum.GetDefaultAudioEndpoint(CoreAudioApi.EDataFlow.eRender, CoreAudioApi.ERole.eMultimedia)
+          Channels = volDevice.AudioMeterInformation.PeakValues.Count
         Catch ex2 As Exception
           Channels = -1
         End Try
@@ -4166,7 +4462,7 @@ Public Class frmMain
           If My.Settings.Visualization_Rate > 120 Then My.Settings.Visualization_Rate = 120
           tmrVis.Interval = Int(1000 / My.Settings.Visualization_Rate)
           tmrVis.Enabled = True
-          Exit Sub
+          Return
         Next
       End If
     End If
@@ -4204,7 +4500,7 @@ Public Class frmMain
       Me.Close()
     Else
       volControl.SetVolume(90)
-      frmText.SetText("Loading")
+      frmText.SetText("Loading", DragDropEffects.None)
       frmText.Hide()
 
       If VisualStyles.VisualStyleInformation.DisplayName = "Aero style" And TaskbarFinder.TaskbarVisible Then
@@ -4226,24 +4522,21 @@ Public Class frmMain
       cmdLoopPL.Tag = 0
       frmFS = New frmFullScreen
       frmFS.ParentPlayer = Me
-      Dim tW, tH, tX, tY As Integer
-      tW = My.Settings.Size.Width
-      tH = My.Settings.Size.Height
-      If tW > My.Computer.Screen.Bounds.Width Then tW = 640
-      If tH > My.Computer.Screen.Bounds.Height Then tH = 480
+      Dim tX, tY As Integer
       tX = My.Settings.Location.X
       tY = My.Settings.Location.Y
       If tX < 0 Then tX = 0
-      If tX > My.Computer.Screen.Bounds.Width - tW Then tX = My.Computer.Screen.Bounds.Width - tW
+      If tX > My.Computer.Screen.Bounds.Width - Me.MinimumSize.Width Then tX = My.Computer.Screen.Bounds.Width - Me.MinimumSize.Width
       If tY < 0 Then tY = 0
-      If tY > My.Computer.Screen.Bounds.Height - tH Then tY = My.Computer.Screen.Bounds.Height - tH
+      If tY > My.Computer.Screen.Bounds.Height - Me.MinimumSize.Height Then tY = My.Computer.Screen.Bounds.Height - Me.MinimumSize.Height
       If Me.instanceID > 0 Then
         tX += (Me.instanceID * 20)
         tY += (Me.instanceID * 20)
       End If
       Me.Location = New Drawing.Point(tX, tY)
-      Me.Size = New Drawing.Size(tW, tH)
-      mpPlayer.AudioDevice = My.Settings.Device
+      Me.Size = Me.MinimumSize
+      audDeviceName = My.Settings.Device
+      mpPlayer.AudioDevice = audDeviceName
       mpPlayer.QueueTime = My.Settings.Gapless
       If Me.Tag Is Nothing Then
         tmrCommandCycle.Stop()
@@ -4264,14 +4557,30 @@ Public Class frmMain
       DrawGlassText(True)
       joyPad = New clsJoyDetection
       LabelShortcuts()
-      Try
-        Dim devEnum As New CoreAudioApi.MMDeviceEnumerator
-        volDevice = devEnum.GetDefaultAudioEndpoint(CoreAudioApi.EDataFlow.eRender, CoreAudioApi.ERole.eMultimedia)
-      Catch ex As Exception
-
-      End Try
+      SetBeatDevice()
       SetVisualizations()
     End If
+  End Sub
+
+  Private Sub SetBeatDevice()
+    Try
+      Dim devEnum As New CoreAudioApi.MMDeviceEnumerator
+      Dim devEnum2 = devEnum.EnumerateAudioEndPoints(CoreAudioApi.EDataFlow.eRender, CoreAudioApi.ERole.eMultimedia)
+      Dim bFound As Boolean = False
+      For I As Integer = 0 To devEnum2.Count - 1
+        If devEnum2.Item(I).FriendlyName = audDeviceName Or audDeviceName.StartsWith(devEnum2.Item(I).FriendlyName) Then
+          bFound = True
+          volDevice = devEnum2.Item(I)
+          Exit For
+        End If
+      Next
+      If Not bFound Then
+        Debug.Print("Defaulting")
+        volDevice = devEnum.GetDefaultAudioEndpoint(CoreAudioApi.EDataFlow.eRender, CoreAudioApi.ERole.eMultimedia)
+      End If
+    Catch ex As Exception
+      Debug.Print(ex.ToString)
+    End Try
   End Sub
 
   Private Sub frmMain_Shown(sender As Object, e As System.EventArgs) Handles Me.Shown
@@ -4282,14 +4591,14 @@ Public Class frmMain
   End Sub
 
   Public Sub StartupRun(Commands As Collections.ObjectModel.ReadOnlyCollection(Of String))
-    If Commands.Count = 0 Then Exit Sub
+    If Commands.Count = 0 Then Return
     If Commands.Count = 1 Then
       Dim sCmd As String = Commands(0)
       If sCmd.StartsWith("""") And sCmd.EndsWith("""") Then sCmd = sCmd.Substring(1, sCmd.Length - 2)
       If mpPlayer.State = Seed.ctlSeed.MediaState.mClosed Then
         If My.Computer.FileSystem.FileExists(sCmd) Then
           Select Case IO.Path.GetExtension(sCmd).ToLower
-            Case ".llpl", ".m3u", ".pls" : OpenPlayList(sCmd, True)
+            Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(sCmd, True)
             Case Else
               mpPlayer.SetNoQueue()
               OpenFile(sCmd, True)
@@ -4300,13 +4609,14 @@ Public Class frmMain
             OpenDVD(sCmd)
           Else
             txtPlayListTitle.Tag = IO.Path.GetFileName(sCmd)
+            DefaultedPLTitle = False
             AddDirToPlayListAndMaybePlay(sCmd)
           End If
         End If
       Else
         If My.Computer.FileSystem.FileExists(sCmd) Then
           Select Case IO.Path.GetExtension(sCmd).ToLower
-            Case ".llpl", ".m3u", ".pls" : OpenPlayList(sCmd, False)
+            Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(sCmd, False)
             Case Else
               If dgvPlayList.Rows.Count > 0 Then
                 AddToPlayList(sCmd)
@@ -4320,6 +4630,7 @@ Public Class frmMain
             AddToPlayList(sCmd)
           Else
             txtPlayListTitle.Tag = IO.Path.GetFileName(sCmd)
+            DefaultedPLTitle = False
             AddDirToPlayListAndMaybePlay(sCmd)
           End If
         End If
@@ -4335,12 +4646,13 @@ Public Class frmMain
           If sCmd.StartsWith("""") And sCmd.EndsWith("""") Then sCmd = sCmd.Substring(1, sCmd.Length - 2)
           If My.Computer.FileSystem.FileExists(sCmd) Then
             Select Case IO.Path.GetExtension(sCmd).ToLower
-              Case ".llpl", ".m3u", ".pls" : OpenPlayList(sCmd, False)
+              Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(sCmd, False)
               Case Else
                 AddToPlayList(sCmd, , , False)
             End Select
           ElseIf My.Computer.FileSystem.DirectoryExists(sCmd) Then
             txtPlayListTitle.Tag = IO.Path.GetFileName(sCmd)
+            DefaultedPLTitle = True
             AddDirToPlayListAndMaybePlay(sCmd)
           End If
         Next
@@ -4355,11 +4667,12 @@ Public Class frmMain
           If sCmd.StartsWith("""") And sCmd.EndsWith("""") Then sCmd = sCmd.Substring(1, sCmd.Length - 2)
           If My.Computer.FileSystem.FileExists(sCmd) Then
             Select Case IO.Path.GetExtension(sCmd).ToLower
-              Case ".llpl", ".m3u", ".pls" : OpenPlayList(sCmd, False)
+              Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(sCmd, False)
               Case Else : AddToPlayList(sCmd, , , False)
             End Select
           ElseIf My.Computer.FileSystem.DirectoryExists(sCmd) Then
             txtPlayListTitle.Tag = IO.Path.GetFileName(sCmd)
+            DefaultedPLTitle = True
             AddDirToPlayListAndMaybePlay(sCmd)
           End If
         Next
@@ -4370,7 +4683,7 @@ Public Class frmMain
 
   Private Sub tmrCommandCycle_Tick(sender As System.Object, e As System.EventArgs) Handles tmrCommandCycle.Tick
     tmrCommandCycle.Stop()
-    If tmrCommandCycle.Tag Is Nothing Then Exit Sub
+    If tmrCommandCycle.Tag Is Nothing Then Return
     Dim colTmp As ObjectModel.Collection(Of String) = tmrCommandCycle.Tag
     tmrCommandCycle.Tag = Nothing
     Dim aryTmp(colTmp.Count - 1) As String
@@ -4432,11 +4745,11 @@ Public Class frmMain
 #End Region
 
 #Region "Drag/Drop"
-  Public Sub DragDropEvent(sender As Object, e As DragEventArgs)
+  Public Sub DragDropEvent(sender As Object, e As DragEventArgs, Optional ForceCtrl As Boolean = False)
     If e.Data.GetFormats(True).Contains("FileDrop") Then
       Dim Data = e.Data.GetData("FileDrop")
       Dim dragDropInvoker As New DragDropFilesInvoker(AddressOf DragDropFiles)
-      dragDropInvoker.BeginInvoke(Data, My.Computer.Keyboard.CtrlKeyDown, Nothing, Nothing)
+      dragDropInvoker.BeginInvoke(Data, My.Computer.Keyboard.CtrlKeyDown Or ForceCtrl, Nothing, Nothing)
     Else
       e.Effect = DragDropEffects.None
     End If
@@ -4456,7 +4769,7 @@ Public Class frmMain
           For Each Item In sData
             If My.Computer.FileSystem.FileExists(Item) Then
               Select Case IO.Path.GetExtension(Item).ToLower
-                Case ".llpl", ".m3u", ".pls" : OpenPlayList(Item)
+                Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(Item)
                 Case Else : AddToPlayList(Item)
               End Select
             ElseIf My.Computer.FileSystem.DirectoryExists(Item) Then
@@ -4469,14 +4782,14 @@ Public Class frmMain
             If My.Computer.FileSystem.FileExists(sData(0)) Then
               If ControlKey Then
                 Select Case IO.Path.GetExtension(sData(0)).ToLower
-                  Case ".llpl", ".m3u", ".pls" : OpenPlayList(sData(0))
+                  Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(sData(0))
                   Case Else
                     AddToPlayList(sData(0))
                     StartPlayList()
                 End Select
               Else
                 Select Case IO.Path.GetExtension(sData(0)).ToLower
-                  Case ".llpl", ".m3u", ".pls" : OpenPlayList(sData(0), True)
+                  Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(sData(0), True)
                   Case Else
                     OpenFile(sData(0), True)
                     ThreadedInitial()
@@ -4484,13 +4797,14 @@ Public Class frmMain
               End If
             ElseIf My.Computer.FileSystem.DirectoryExists(sData(0)) Then
               txtPlayListTitle.Tag = IO.Path.GetFileName(sData(0))
+              DefaultedPLTitle = True
               AddDirToPlayListAndMaybePlay(sData(0))
             End If
           Else
             For Each Item In sData
               If My.Computer.FileSystem.FileExists(Item) Then
                 Select Case IO.Path.GetExtension(Item).ToLower
-                  Case ".llpl", ".m3u", ".pls" : OpenPlayList(Item)
+                  Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(Item)
                   Case Else : AddToPlayList(Item)
                 End Select
               ElseIf My.Computer.FileSystem.DirectoryExists(Item) Then
@@ -4505,7 +4819,7 @@ Public Class frmMain
         For Each Item In sData
           If My.Computer.FileSystem.FileExists(Item) Then
             Select Case IO.Path.GetExtension(Item).ToLower
-              Case ".llpl", ".m3u", ".pls" : OpenPlayList(Item)
+              Case ".llpl", ".m3u", ".m3u8", ".pls" : OpenPlayList(Item)
               Case Else : AddToPlayList(Item)
             End Select
           ElseIf My.Computer.FileSystem.DirectoryExists(Item) Then
@@ -4517,17 +4831,18 @@ Public Class frmMain
     End If
   End Sub
 
-  Public Sub DragEnterEvent(sender As Object, e As DragEventArgs)
+  Public Sub DragEnterEvent(sender As Object, e As DragEventArgs, Optional ForceCtrl As Boolean = False)
     e.Effect = DragDropEffects.All
   End Sub
 
-  Public Sub DragOverEvent(sender As Object, e As DragEventArgs)
+  Public Sub DragOverEvent(sender As Object, e As DragEventArgs, Optional ForceCtrl As Boolean = False)
     If e.Data.GetFormats(True).Contains("FileDrop") Then
       Dim Data = e.Data.GetData("FileDrop")
       Dim sTrackData As String
+      Dim eTrackEffect As DragDropEffects = DragDropEffects.None
       If dgvPlayList.RowCount = 0 Then
-        If Not String.IsNullOrEmpty(mpPlayer.FileName) And My.Computer.Keyboard.CtrlKeyDown Then
-          e.Effect = DragDropEffects.Copy
+        If Not String.IsNullOrEmpty(mpPlayer.FileName) And (My.Computer.Keyboard.CtrlKeyDown Or ForceCtrl) Then
+          eTrackEffect = DragDropEffects.Copy
           If UBound(Data) = 0 Then
             sTrackData = "Add """ & IO.Path.GetFileName(Data(0)) & """ to PlayList"
           Else
@@ -4539,12 +4854,12 @@ Public Class frmMain
           End If
         Else
           If UBound(Data) = 0 AndAlso My.Computer.FileSystem.FileExists(Data(0)) Then
-            If My.Computer.Keyboard.CtrlKeyDown Then
+            If My.Computer.Keyboard.CtrlKeyDown Or ForceCtrl Then
               sTrackData = "Add """ & IO.Path.GetFileName(Data(0)) & """ to PlayList and Play"
-              e.Effect = DragDropEffects.Link
+              eTrackEffect = DragDropEffects.Link
             Else
               sTrackData = "Play """ & IO.Path.GetFileName(Data(0)) & """"
-              e.Effect = DragDropEffects.Move
+              eTrackEffect = DragDropEffects.Move
             End If
           Else
             If UBound(Data) = 0 Then
@@ -4556,11 +4871,11 @@ Public Class frmMain
               Next
               sTrackData = sTrackData.Substring(0, sTrackData.Length - 2)
             End If
-            e.Effect = DragDropEffects.Link
+            eTrackEffect = DragDropEffects.Link
           End If
         End If
       Else
-        e.Effect = DragDropEffects.Copy
+        eTrackEffect = DragDropEffects.Copy
         If UBound(Data) = 0 Then
           sTrackData = "Add """ & IO.Path.GetFileName(Data(0)) & """ to PlayList"
         Else
@@ -4571,7 +4886,8 @@ Public Class frmMain
           sTrackData = sTrackData.Substring(0, sTrackData.Length - 2)
         End If
       End If
-      CursorText(sTrackData)
+      CursorText(sTrackData, eTrackEffect)
+      e.Effect = eTrackEffect
     Else
       e.Effect = DragDropEffects.None
     End If
@@ -4638,17 +4954,21 @@ Public Class frmMain
       End If
     Else
       mpPlayer.FileName = Path
-      If mpPlayer.FileName <> Path Then
-        Dim sTmp As String = mpPlayer.FileName
-        mpPlayer.FileName = Nothing
-        MsgBox("Lime Seed was unable to play the file """ & IO.Path.GetFileName(Path) & """. Error returned: " & vbNewLine & sTmp, MsgBoxStyle.Exclamation, "Media Playback Error")
-      Else
+      If mpPlayer.FileName = Path Or System.IO.File.Exists(mpPlayer.FileName) Then
         pbProgress.Maximum = mpPlayer.Duration * 1000
         pbProgress.Value = mpPlayer.Position
         mpPlayer.LinearVolume = bpgVolume.Value
         mpPlayer.StateFade = False
         mpPlayer.Position = 0
         If AutoPlay Then mpPlayer.mpPlay()
+      ElseIf String.IsNullOrEmpty(mpPlayer.FileName) Then
+        pbProgress.Maximum = 1000
+        pbProgress.Value = 0
+        mpPlayer.FileName = Nothing
+      Else
+        Dim sTmp As String = mpPlayer.FileName
+        mpPlayer.FileName = Nothing
+        MsgBox("Lime Seed was unable to play the file """ & IO.Path.GetFileName(Path) & """. Error returned: " & vbNewLine & sTmp, MsgBoxStyle.Exclamation, "Media Playback Error")
       End If
     End If
   End Sub
@@ -4685,8 +5005,12 @@ Public Class frmMain
     If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
       Using ID3v2Tags As New Seed.clsID3v2(Path)
         If ID3v2Tags.HasID3v2Tag Then
-          If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TP1")) Then Artist = ID3v2Tags.FindFrame("TP1")
-          If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TT2")) Then Title = ID3v2Tags.FindFrame("TT2")
+          If ID3v2Tags.FindFrame("TP2") Then
+            Artist = ID3v2Tags.FindFrameMatchString("TP2")
+          ElseIf ID3v2Tags.FindFrame("TP1") Then
+            Artist = ID3v2Tags.FindFrameMatchString("TP1")
+          End If
+          If ID3v2Tags.FindFrame("TT2") Then Title = ID3v2Tags.FindFrameMatchString("TT2")
         End If
       End Using
       Using ID3v1Tags As New Seed.clsID3v1(Path)
@@ -4695,6 +5019,12 @@ Public Class frmMain
           If String.IsNullOrEmpty(Title) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Title) Then Title = ID3v1Tags.Title
         End If
       End Using
+      If Path.Contains(IO.Path.Combine(IO.Path.GetTempPath, "seedTemp")) Then
+        If mpPlayer.StreamInfo IsNot Nothing Then
+          If String.IsNullOrEmpty(Artist) Then Artist = mpPlayer.StreamInfo.Artist
+          If String.IsNullOrEmpty(Title) Then Title = mpPlayer.StreamInfo.Title
+        End If
+      End If
     ElseIf IO.Path.GetExtension(Path).ToLower = ".ogg" Or IO.Path.GetExtension(Path).ToLower = ".ogm" Or IO.Path.GetExtension(Path).ToLower = ".flac" Then
       Using cVorbis As New Seed.clsVorbis(Path)
         If cVorbis.HasVorbis Then
@@ -4737,19 +5067,443 @@ Public Class frmMain
     End If
   End Function
 
+  Private Sub CleanupID3(MP3Path As String)
+    If Not IO.Path.GetExtension(MP3Path).ToLower = ".mp3" Then Return
+    If Not My.Settings.ID3_Modify Then Return
+    If Not IO.File.Exists(MP3Path) Then Return
+    Dim Track As String = Nothing
+    Dim Track1 As Byte = 0
+    Dim Track2 As String = Nothing
+    Dim Title As String = Nothing
+    Dim Title1 As String = Nothing
+    Dim Title2 As String = Nothing
+    Dim Artist As String = Nothing
+    Dim Artist1 As String = Nothing
+    Dim Artist2 As String = Nothing
+    Dim Album As String = Nothing
+    Dim Album1 As String = Nothing
+    Dim Album2 As String = Nothing
+    Dim Year As String = Nothing
+    Dim Year1 As String = Nothing
+    Dim Year2 As String = Nothing
+    Dim Genre As String = Nothing
+    Dim Genre1 As String = Nothing
+    Dim Genre2 As String = Nothing
+    Using ID3v1Tags As New Seed.clsID3v1(MP3Path)
+      Track1 = ID3v1Tags.Track
+      Title1 = ID3v1Tags.Title
+      Artist1 = ID3v1Tags.Artist
+      Album1 = ID3v1Tags.Album
+      Year1 = ID3v1Tags.Year
+      If ID3v1Tags.Genre < &HC0 Then Genre1 = Seed.clsID3v1.GenreName(ID3v1Tags.Genre)
+    End Using
+    Dim vSVer As String = String.Format("2.{0}.0", My.Settings.ID3_Ver)
+    Dim v2Ver As String = Nothing
+    Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
+      If ID3v2Tags.HasID3v2Tag Then
+        v2Ver = ID3v2Tags.ID3v2Ver
+        If ID3v2Tags.FindFrame("TRK") Then Track2 = ID3v2Tags.FindFrameMatchString("TRK")
+        If ID3v2Tags.FindFrame("TT2") Then Title2 = ID3v2Tags.FindFrameMatchString("TT2")
+        If ID3v2Tags.FindFrame("TP2") Then
+          Artist2 = ID3v2Tags.FindFrameMatchString("TP2")
+        ElseIf ID3v2Tags.FindFrame("TP1") Then
+          Artist2 = ID3v2Tags.FindFrameMatchString("TP1")
+        End If
+        If ID3v2Tags.FindFrame("TAL") Then Album2 = ID3v2Tags.FindFrameMatchString("TAL")
+        If ID3v2Tags.FindFrame("TRD") Then
+          Year2 = ID3v2Tags.FindFrameMatchString("TRD")
+        ElseIf ID3v2Tags.FindFrame("TYE") Then
+          Year2 = ID3v2Tags.FindFrameMatchString("TYE")
+        End If
+        If ID3v2Tags.FindFrame("TCO") Then Genre2 = ID3v2Tags.Genre
+      End If
+    End Using
+
+    If Not Track1 = Val(Track2) Then
+      Dim empty1 As Boolean = False
+      Dim empty2 As Boolean = False
+      empty1 = (Track1 = 0 Or Track1 = &HFF)
+      If String.IsNullOrEmpty(Track2) Then
+        empty2 = True
+      Else
+        If Track2.Contains("/") Then Track2 = Track2.Substring(0, Track2.IndexOf("/")).Trim
+        If Not IsNumeric(Track2) Then
+          empty2 = True
+        ElseIf Val(Track2) = 0 Or Val(Track2) = &HFF Then
+          empty2 = True
+        End If
+      End If
+      If empty1 And empty2 Then
+        Track = Nothing
+      ElseIf empty2 Then
+        Track = Track1
+      ElseIf empty1 Then
+        Track = Val(Track2)
+      Else
+        If Val(Track2) = Track1 Then
+          Track = Track1
+        Else
+          If Track1 > Val(Track2) Then
+            Track = Track1
+          Else
+            Track = Track2
+          End If
+        End If
+      End If
+    Else
+      Track = Track1
+    End If
+
+    If Not Title1 = Title2 Then
+      If String.IsNullOrEmpty(Title1) And String.IsNullOrEmpty(Title2) Then
+        Title = Nothing
+      ElseIf String.IsNullOrEmpty(Title1) Then
+        Title = Title2
+      ElseIf String.IsNullOrEmpty(Title2) Then
+        Title = Title1
+      Else
+        If Title1.Length > Title2.Length Then
+          Title = Title1
+        Else
+          Title = Title2
+        End If
+      End If
+    Else
+      Title = Title1
+    End If
+
+    If Not Artist1 = Artist2 Then
+      If String.IsNullOrEmpty(Artist1) And String.IsNullOrEmpty(Artist2) Then
+        Artist = Nothing
+      ElseIf String.IsNullOrEmpty(Artist1) Then
+        Artist = Artist2
+      ElseIf String.IsNullOrEmpty(Artist2) Then
+        Artist = Artist1
+      Else
+        If Artist1.Length > Artist2.Length Then
+          Artist = Artist1
+        Else
+          Artist = Artist2
+        End If
+      End If
+    Else
+      Artist = Artist1
+    End If
+
+    If Not Album1 = Album2 Then
+      If String.IsNullOrEmpty(Album1) And String.IsNullOrEmpty(Album2) Then
+        Album = Nothing
+      ElseIf String.IsNullOrEmpty(Album1) Then
+        Album = Album2
+      ElseIf String.IsNullOrEmpty(Album2) Then
+        Album = Album1
+      Else
+        If Album1.Length > Album2.Length Then
+          Album = Album1
+        Else
+          Album = Album2
+        End If
+      End If
+    Else
+      Album = Album1
+    End If
+
+    If Not Year1 = Year2 Then
+      Dim empty1 As Boolean = False
+      Dim empty2 As Boolean = False
+      If String.IsNullOrEmpty(Year1) Then
+        empty1 = True
+      ElseIf Not IsNumeric(Year1) Then
+        empty1 = True
+      ElseIf Val(Year1) = 0 Then
+        empty1 = True
+      End If
+      If String.IsNullOrEmpty(Year2) Then
+        empty2 = True
+      ElseIf Not IsNumeric(Year2) Then
+        empty2 = True
+      ElseIf Val(Year2) = 0 Then
+        empty2 = True
+      End If
+      If empty1 And empty2 Then
+        Year = Nothing
+      ElseIf empty2 Then
+        Year = Year1
+      Else
+        Year = Year2
+      End If
+    Else
+      Year = Year1
+    End If
+
+    If Not Genre1 = Genre2 Then
+      Dim empty1 As Boolean = False
+      Dim empty2 As Boolean = False
+      If String.IsNullOrEmpty(Genre1) Then
+        empty1 = True
+      ElseIf Genre1 = "Other" Then
+        empty1 = True
+      End If
+      If String.IsNullOrEmpty(Genre2) Then
+        empty2 = True
+      ElseIf Genre2 = "Other" Then
+        empty2 = True
+      End If
+
+      If empty1 And empty2 Then
+        Genre = Nothing
+      ElseIf empty2 Then
+        Genre = Genre1
+      ElseIf empty1 Then
+        Genre = Genre2
+      Else
+        If Genre2.Contains(vbNewLine) Then
+          For Each fGenre In Split(Genre2, vbNewLine)
+            If StrComp(Genre1, Genre2, CompareMethod.Text) = 0 Then
+              Genre = Genre1
+              Exit For
+            End If
+          Next
+          If String.IsNullOrEmpty(Genre) Then Genre = Genre2.Substring(0, Genre2.IndexOf(vbNewLine))
+        Else
+          If StrComp(Genre1, Genre2, CompareMethod.Text) = 0 Then
+            Genre = Genre1
+          Else
+            Genre = Genre2
+          End If
+        End If
+      End If
+    Else
+      Genre = Genre1
+    End If
+    'TODO: Verify this is all right
+    Debug.Print("Determined Values:")
+    Debug.Print("Track " & Track)
+    Debug.Print("Title: " & Title)
+    Debug.Print("Artist: " & Artist)
+    Debug.Print("Album: " & Album)
+    Debug.Print("Year: " & Year)
+    Debug.Print("Genre: " & Genre)
+    Debug.Print("Cleaning: " & My.Settings.ID3_Clean.ToString)
+    Debug.Print("Version: " & My.Settings.ID3_Ver)
+    Debug.Print("")
+
+    If My.Settings.ID3_Clean Then
+      Using ID3v1Tags As New Seed.clsID3v1(MP3Path)
+        If Not String.IsNullOrEmpty(Track) Then ID3v1Tags.Track = Track
+        If Not String.IsNullOrEmpty(Title) Then ID3v1Tags.Title = Title
+        If Not String.IsNullOrEmpty(Artist) Then ID3v1Tags.Artist = Artist
+        If Not String.IsNullOrEmpty(Album) Then ID3v1Tags.Album = Album
+        If Not String.IsNullOrEmpty(Year) Then ID3v1Tags.Year = Year
+        ID3v1Tags.Genre = &HC
+        If Not String.IsNullOrEmpty(Genre) Then
+          If Genre.Contains(vbNewLine) Then
+            For Each fGenre In Split(Genre, vbNewLine)
+              Dim bFound As Boolean = False
+              For I As Integer = 0 To &HBF
+                If StrComp(Genre, Seed.clsID3v1.GenreName(I), CompareMethod.Text) = 0 Then
+                  bFound = True
+                  ID3v1Tags.Genre = I
+                  Exit For
+                End If
+              Next
+              If bFound Then Exit For
+            Next
+          Else
+            For I As Integer = 0 To &HBF
+              If StrComp(Genre, Seed.clsID3v1.GenreName(I), CompareMethod.Text) = 0 Then
+                ID3v1Tags.Genre = I
+                Exit For
+              End If
+            Next
+          End If
+        End If
+        Try
+          ID3v1Tags.Save()
+        Catch ex As Exception
+        End Try
+      End Using
+      Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
+        If Not ID3v2Tags.HasID3v2Tag Then
+          If vSVer = "2.0.0" Then
+            ID3v2Tags.ID3v2Ver = "2.3.0"
+          Else
+            ID3v2Tags.ID3v2Ver = vSVer
+          End If
+        End If
+        If Not String.IsNullOrEmpty(Track) Then If Not ID3v2Tags.FindFrame("TRK") Then ID3v2Tags.AddTextFrame("TRK", New Seed.clsID3v2.EncodedText(Track))
+        If Not String.IsNullOrEmpty(Title) Then If Not ID3v2Tags.FindFrame("TT2") Then ID3v2Tags.AddTextFrame("TT2", New Seed.clsID3v2.EncodedText(Title))
+        If Not String.IsNullOrEmpty(Artist) Then
+          If Not ID3v2Tags.FindFrame("TP2") Then ID3v2Tags.AddTextFrame("TP2", New Seed.clsID3v2.EncodedText(Artist))
+          If Not ID3v2Tags.FindFrame("TP1") Then ID3v2Tags.AddTextFrame("TP1", New Seed.clsID3v2.EncodedText(Artist))
+        End If
+        If Not String.IsNullOrEmpty(Album) Then If Not ID3v2Tags.FindFrame("TAL") Then ID3v2Tags.AddTextFrame("TAL", New Seed.clsID3v2.EncodedText(Album))
+        If Not String.IsNullOrEmpty(Year) Then
+          If Not ID3v2Tags.FindFrame("TRD") Then ID3v2Tags.AddTextFrame("TRD", New Seed.clsID3v2.EncodedText(Year))
+          If Not ID3v2Tags.FindFrame("TYE") Then ID3v2Tags.AddTextFrame("TYE", New Seed.clsID3v2.EncodedText(Year))
+        End If
+        If Not String.IsNullOrEmpty(Genre) Then If Not ID3v2Tags.FindFrame("TCO") Then ID3v2Tags.Genre = Genre
+        If ID3v2Tags.FindFrame("PIC") Then
+          Dim picList() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
+          If picList IsNot Nothing Then
+            For I As Integer = 0 To picList.Length - 1
+              If CType(picList(I), Seed.clsID3v2.Parsed_APIC).Type = Seed.clsID3v2.ID3_PIC_TYPE.INVALID Then
+                ID3v2Tags.RemoveFrame("PIC", I)
+                Continue For
+              End If
+            Next
+          End If
+        End If
+        Try
+          ID3v2Tags.Save()
+        Catch ex As Exception
+        End Try
+      End Using
+    End If
+
+    If Not vSVer = "2.0.0" Then
+      If Not v2Ver = vSVer Then
+        Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
+          If Not ID3v2Tags.HasID3v2Tag Then Return
+          ID3v2Tags.ID3v2Ver = vSVer
+          Try
+            ID3v2Tags.Save()
+          Catch ex As Exception
+          End Try
+        End Using
+      End If
+    End If
+  End Sub
+
+  Private Function SendArtA(Artist As String, Album As String, DoSearch As Boolean) As ImageWithName
+    If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Album) Then Return Nothing
+    If String.IsNullOrEmpty(Artist) Then
+      If DoSearch Then
+        macArt = New AppleNet(Album, AppleNet.Term.Album)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If String.IsNullOrEmpty(Album) Then
+      If DoSearch Then
+        macArt = New AppleNet(Artist, AppleNet.Term.Artist)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If DoSearch Then
+      macArt = New AppleNet(Artist & " " & Album, AppleNet.Term.Any)
+      Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+    End If
+    Return Nothing
+  End Function
+
+  Private Function SendArtT(Artist As String, Title As String, DoSearch As Boolean) As ImageWithName
+    If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Title) Then Return Nothing
+    If String.IsNullOrEmpty(Artist) Then
+      If DoSearch Then
+        macArt = New AppleNet(Title, AppleNet.Term.Title)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If String.IsNullOrEmpty(Title) Then
+      If DoSearch Then
+        macArt = New AppleNet(Artist, AppleNet.Term.Artist)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If DoSearch Then
+      macArt = New AppleNet(Artist & " " & Title, AppleNet.Term.Any)
+      Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+    End If
+    Return Nothing
+  End Function
+
+  Private Sub SaveArtToMP3(MP3Path As String, ImagePath As String, Optional AlbumName As String = Nothing)
+    If Not IO.Path.GetExtension(MP3Path).ToLower = ".mp3" Then Return
+    If Not My.Settings.ID3_Modify Then Return
+    If Not My.Settings.ID3_Art Then Return
+    If Not IO.File.Exists(ImagePath) Then Return
+    If Not IO.File.Exists(MP3Path) Then Return
+    Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
+      If Not ID3v2Tags.HasID3v2Tag Then Return
+      Dim shouldSave As Boolean = True
+      If ID3v2Tags.FindFrame("PIC") Then
+        Dim picList() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
+        If picList IsNot Nothing Then
+          For I As Integer = 0 To picList.Length - 1
+            Dim iPic As Seed.clsID3v2.Parsed_APIC = picList(I)
+            If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.INVALID Then
+              If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I)
+              Continue For
+            End If
+            If ID3v2Tags.ID3v2Ver = "2.2.0" Then
+              If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then
+                If CompareArtSizes(iPic.Image, ImagePath) Then
+                  If String.IsNullOrEmpty(iPic.Description) OrElse iPic.Description.ToLower.Contains("album cover") Then
+                    If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I)
+                  Else
+                    Debug.Print("Not removing """ & iPic.Description & """ image!")
+                  End If
+                Else
+                  shouldSave = False
+                End If
+              End If
+            Else
+              If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER Then
+                If CompareArtSizes(iPic.Image, ImagePath) Then
+                  If String.IsNullOrEmpty(iPic.Description) OrElse iPic.Description.ToLower.Contains("album cover") Then
+                    If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I)
+                  Else
+                    Debug.Print("Not removing """ & iPic.Description & """ image!")
+                  End If
+                Else
+                  shouldSave = False
+                End If
+              End If
+            End If
+          Next
+        End If
+      End If
+      Try
+        If shouldSave Then
+          If ID3v2Tags.ID3v2Ver = "2.2.0" Then
+            If Not ID3v2Tags.AddImageFrame(IO.File.ReadAllBytes(ImagePath), Seed.clsID3v2.ID3_PIC_TYPE.OTHER, Seed.clsID3v2.ExtToMIME(ImagePath), Seed.clsID3v2.EncodedText.Empty) = Seed.clsID3v2.ID3Returns.Added Then Return
+          Else
+            If Not ID3v2Tags.AddImageFrame(IO.File.ReadAllBytes(ImagePath), Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Seed.clsID3v2.ExtToMIME(ImagePath), Seed.clsID3v2.EncodedText.Empty) = Seed.clsID3v2.ID3Returns.Added Then Return
+          End If
+          ID3v2Tags.Save()
+        End If
+      Catch ex As Exception
+
+      End Try
+    End Using
+  End Sub
+
   Private Function GetArt(Path As String, DoSearch As Boolean, ForceSearch As Boolean) As ImageWithName
     If bCD Then
-      If DoSearch Then macArt = New AppleNet(dgvPlayList.Rows(GetSelectedPlayListItem).Tag(2), dgvPlayList.Rows(GetSelectedPlayListItem).Tag(3))
+      If DoSearch Then
+        macArt = New AppleNet(dgvPlayList.Rows(GetSelectedPlayListItem).Tag(3), AppleNet.Term.Album)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
       Return Nothing
-    Else
-      If ForceSearch Then
-        Dim Artist As String = String.Empty
-        Dim Album As String = String.Empty
-        If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
+    End If
+    Dim Artist As String = String.Empty
+    Dim Album As String = String.Empty
+    Select Case IO.Path.GetExtension(Path).ToLower
+      Case ".mp3"
+        CleanupID3(Path)
+        If ForceSearch Then
           Using ID3v2Tags As New Seed.clsID3v2(Path)
             If ID3v2Tags.HasID3v2Tag Then
-              If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TP1")) Then Artist = ID3v2Tags.FindFrame("TP1")
-              If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TAL")) Then Album = ID3v2Tags.FindFrame("TAL")
+              If ID3v2Tags.FindFrame("TP2") Then
+                Artist = ID3v2Tags.FindFrameMatchString("TP2")
+              ElseIf ID3v2Tags.FindFrame("TP1") Then
+                Artist = ID3v2Tags.FindFrameMatchString("TP1")
+              End If
+              If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
             End If
           End Using
           Using ID3v1Tags As New Seed.clsID3v1(Path)
@@ -4758,58 +5512,43 @@ Public Class frmMain
               If String.IsNullOrEmpty(Album) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Album) Then Album = ID3v1Tags.Album
             End If
           End Using
-        ElseIf IO.Path.GetExtension(Path).ToLower = ".ogg" Or IO.Path.GetExtension(Path).ToLower = ".ogm" Or IO.Path.GetExtension(Path).ToLower = ".flac" Then
-          Using cVorbis As New Seed.clsVorbis(Path)
-            If cVorbis.HasVorbis Then
-              If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
-              If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
-            End If
-          End Using
-        Else
-          'idunno yet
+          Return SendArtA(Artist, Album, DoSearch)
         End If
-        If DoSearch Then macArt = New AppleNet(Artist, Album)
-        Return Nothing
-      End If
-      Dim jPath As String = IO.Path.GetDirectoryName(Path) & "\Folder.jpg"
-      If My.Computer.FileSystem.FileExists(jPath) Then
-        If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
-        Return New ImageWithName(jPath)
-      End If
-      If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
         Using ID3v2Tags As New Seed.clsID3v2(Path)
           If ID3v2Tags.HasID3v2Tag Then
-            Dim sPIC As String = IIf(ID3v2Tags.ID3v2Ver = "2.2.0", "PIC", "APIC")
-            If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame(sPIC)) Then
-              Dim fData As String = ID3v2Tags.FindFrame(sPIC)
-              Dim pData() As String = Split(fData, vbNewLine, 4)
-              Dim sTmpPath As String = IO.Path.GetTempFileName
-              My.Computer.FileSystem.WriteAllText(sTmpPath, pData(3), False, System.Text.Encoding.GetEncoding("latin1"))
-              Try
-                Return New ImageWithName(PathToImg(sTmpPath), Path)
-              Finally
-                My.Computer.FileSystem.DeleteFile(sTmpPath)
-              End Try
+            If ID3v2Tags.FindFrame("PIC") Then
+              Dim fData() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
+              For Each picType In Seed.clsID3v2.ID3_PIC_TYPE_DISPLAYORDER
+                For Each pData As Seed.clsID3v2.Parsed_APIC In fData
+                  If pData.Type = picType Then
+                    If pData.Picture IsNot Nothing Then
+
+                      Dim j2Path As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+                      If My.Computer.FileSystem.FileExists(j2Path) Then
+                        If Not (IO.File.GetAttributes(j2Path) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(j2Path, IO.FileAttributes.Hidden)
+                        Dim myReturn As Boolean = False
+                        If CompareArtSizes(pData.Picture, j2Path) Then myReturn = True
+                        SaveArtToMP3(Path, j2Path, Album)
+                        If myReturn Then Return New ImageWithName(j2Path)
+                      End If
+
+                      Return (New ImageWithName(pData.Picture, Path))
+
+                    End If
+                  End If
+                Next
+              Next
             End If
           End If
         End Using
-      ElseIf IO.Path.GetExtension(Path).ToLower = ".ogg" Or IO.Path.GetExtension(Path).ToLower = ".ogm" Or IO.Path.GetExtension(Path).ToLower = ".flac" Then
-        Using cVorbis As New Seed.clsVorbis(Path)
-          If cVorbis.HasVorbis Then
-            If cVorbis.Pictures IsNot Nothing Then
-              Debug.Print(cVorbis.Pictures.Count)
-              Return cVorbis.Pictures(0).Image.Clone
-            End If
-          End If
-        End Using
-      End If
-      If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
-        Dim Artist As String = String.Empty
-        Dim Album As String = String.Empty
         Using ID3v2Tags As New Seed.clsID3v2(Path)
           If ID3v2Tags.HasID3v2Tag Then
-            If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TP1")) Then Artist = ID3v2Tags.FindFrame("TP1")
-            If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TAL")) Then Album = ID3v2Tags.FindFrame("TAL")
+            If ID3v2Tags.FindFrame("TP2") Then
+              Artist = ID3v2Tags.FindFrameMatchString("TP2")
+            ElseIf ID3v2Tags.FindFrame("TP1") Then
+              Artist = ID3v2Tags.FindFrameMatchString("TP1")
+            End If
+            If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
           End If
         End Using
         Using ID3v1Tags As New Seed.clsID3v1(Path)
@@ -4818,31 +5557,69 @@ Public Class frmMain
             If String.IsNullOrEmpty(Album) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Album) Then Album = ID3v1Tags.Album
           End If
         End Using
-        If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Album) Then
-          Return Nothing
-        Else
-          If DoSearch Then macArt = New AppleNet(Artist, Album)
-          Return Nothing
+        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+        If My.Computer.FileSystem.FileExists(jPath) Then
+          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+          SaveArtToMP3(Path, jPath, Album)
+          Return New ImageWithName(jPath)
         End If
-      ElseIf IO.Path.GetExtension(Path).ToLower = ".ogg" Or IO.Path.GetExtension(Path).ToLower = ".ogm" Or IO.Path.GetExtension(Path).ToLower = ".flac" Then
-        Dim Artist As String = String.Empty
-        Dim Album As String = String.Empty
+        Return SendArtA(Artist, Album, DoSearch)
+      Case ".ogg", ".ogm", ".flac"
+        If ForceSearch Then
+          Using cVorbis As New Seed.clsVorbis(Path)
+            If cVorbis.HasVorbis Then
+              If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
+              If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
+            End If
+          End Using
+          Return SendArtA(Artist, Album, DoSearch)
+        End If
+        Using cVorbis As New Seed.clsVorbis(Path)
+          If cVorbis.HasVorbis Then
+            If cVorbis.Pictures IsNot Nothing Then
+              If cVorbis.Pictures.Count > 0 Then
+                For Each picType In Seed.clsID3v2.ID3_PIC_TYPE_DISPLAYORDER
+                  For I As Integer = 0 To cVorbis.Pictures.Count - 1
+                    If cVorbis.Pictures(I).PicType = picType Then
+                      Return cVorbis.Pictures(I).Image.Clone
+                    End If
+                  Next
+                Next
+                Return cVorbis.Pictures(0).Image.Clone
+              End If
+            End If
+          End If
+        End Using
         Using cVorbis As New Seed.clsVorbis(Path)
           If cVorbis.HasVorbis Then
             If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
             If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
           End If
         End Using
-        If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Album) Then
-          Return Nothing
-        Else
-          If DoSearch Then macArt = New AppleNet(Artist, Album)
-          Return Nothing
+        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+        If My.Computer.FileSystem.FileExists(jPath) Then
+          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+          Return New ImageWithName(jPath)
         End If
-      Else
+        Return SendArtA(Artist, Album, DoSearch)
+      Case Else
+        If ForceSearch Then
+          Dim Title As String = String.Empty
+          If IO.Path.GetFileNameWithoutExtension(Path).Contains(" - ") Then
+            Artist = Split(IO.Path.GetFileNameWithoutExtension(Path), " - ", 2)(0)
+            Title = Split(IO.Path.GetFileNameWithoutExtension(Path), " - ", 2)(1)
+          Else
+            Title = IO.Path.GetFileNameWithoutExtension(Path)
+          End If
+          Return SendArtT(Artist, Title, DoSearch)
+        End If
+        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+        If My.Computer.FileSystem.FileExists(jPath) Then
+          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+          Return New ImageWithName(jPath)
+        End If
         Return Nothing
-      End If
-    End If
+    End Select
   End Function
 
   <System.Runtime.InteropServices.DllImportAttribute("user32.dll")> Private Shared Function DestroyIcon(handle As IntPtr) As Boolean
@@ -4911,6 +5688,8 @@ Public Class frmMain
         If My.Computer.FileSystem.FileExists(value) Then
           mFile = value
           mArt = PathToImg(value)
+        Else
+          mFile = value
         End If
       End Set
     End Property
@@ -5158,23 +5937,23 @@ Public Class frmMain
   End Function
 
   Private Sub JoyRun(SearchFor As String)
-    If Not My.Settings.Gamepad Then Exit Sub
+    If Not My.Settings.Gamepad Then Return
     If bDVD And mpPlayer.GetDVDCurrentDomain = DirectShowLib.Dvd.DvdDomain.VideoTitleSetMenu Then
       If SearchFor = "X Axis Left" Then
         mpPlayer.DVDSelectButton(DirectShowLib.Dvd.DvdRelativeButton.Left)
-        Exit Sub
+        Return
       ElseIf SearchFor = "X Axis Right" Then
         mpPlayer.DVDSelectButton(DirectShowLib.Dvd.DvdRelativeButton.Right)
-        Exit Sub
+        Return
       ElseIf SearchFor = "Y Axis Top" Then
         mpPlayer.DVDSelectButton(DirectShowLib.Dvd.DvdRelativeButton.Upper)
-        Exit Sub
+        Return
       ElseIf SearchFor = "Y Axis Bottom" Then
         mpPlayer.DVDSelectButton(DirectShowLib.Dvd.DvdRelativeButton.Lower)
-        Exit Sub
+        Return
       ElseIf SearchFor = My.Settings.Gamepad_PlayPause Then
         mpPlayer.DVDActivateButton()
-        Exit Sub
+        Return
       End If
     End If
     If tbsView.SelectedTab Is tabPlayList Then
@@ -5305,8 +6084,12 @@ Public Class frmMain
         If IO.Path.GetExtension(mpPlayer.FileName).ToLower = ".mp3" Then
           Using ID3v2Tags As New Seed.clsID3v2(mpPlayer.FileName)
             If ID3v2Tags.HasID3v2Tag Then
-              If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TP1")) Then Artist = ID3v2Tags.FindFrame("TP1")
-              If Not String.IsNullOrWhiteSpace(ID3v2Tags.FindFrame("TAL")) Then Album = ID3v2Tags.FindFrame("TAL")
+              If ID3v2Tags.FindFrame("TP2") Then
+                Artist = ID3v2Tags.FindFrameMatchString("TP2")
+              ElseIf ID3v2Tags.FindFrame("TP1") Then
+                Artist = ID3v2Tags.FindFrameMatchString("TP1")
+              End If
+              If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
             End If
           End Using
           Using ID3v1Tags As New Seed.clsID3v1(mpPlayer.FileName)
@@ -5332,7 +6115,7 @@ Public Class frmMain
           If StrEquiv(ret("artistName"), Artist) And StrEquiv(ret("collectionName"), Album) Then
             If Not ret("artworkUrl100") Is Nothing Then
               macArt.ChooseRow(ret)
-              Exit Sub
+              Return
             End If
           End If
         Next
@@ -5350,12 +6133,31 @@ Public Class frmMain
 
   End Sub
 
+  Private Sub macArt_Progress(sender As Object, e As System.Net.DownloadProgressChangedEventArgs) Handles macArt.Progress
+    If Me.InvokeRequired Then
+      Me.Invoke(New Net.DownloadProgressChangedEventHandler(AddressOf macArt_Progress), sender, e)
+      Return
+    End If
+    If e.TotalBytesToReceive > 0 Then
+      If e.ProgressPercentage > 0 And e.ProgressPercentage < 100 Then
+        pbArt.Visible = True
+        pbArt.Maximum = e.TotalBytesToReceive
+        If e.BytesReceived < e.TotalBytesToReceive Then pbArt.Value = e.BytesReceived
+        ttDisp.SetToolTip(pbArt, "Downloading Art: " & ByteSize(e.BytesReceived) & "/" & ByteSize(e.TotalBytesToReceive) & " - " & e.ProgressPercentage & "%")
+      Else
+        pbArt.Visible = False
+        pbArt.Value = 0
+        ttDisp.SetToolTip(pbArt, "")
+      End If
+    End If
+  End Sub
 
   Private Sub macArt_Complete(sender As Object, e As AppleNet.CompleteEventArgs) Handles macArt.Complete
     If Me.InvokeRequired Then
       Me.Invoke(New EventHandler(Of AppleNet.CompleteEventArgs)(AddressOf macArt_Complete), sender, e)
     Else
-      Dim sArt As String = IO.Path.GetDirectoryName(mpPlayer.FileName) & "\Folder.jpg"
+      CleanupID3(mpPlayer.FileName)
+      Dim sArt As String = IO.Path.Combine(IO.Path.GetDirectoryName(mpPlayer.FileName), "Folder.jpg")
       FileArt = New ImageWithName(Drawing.Image.FromStream(New IO.MemoryStream(e.Cover)), sArt)
       If cTask IsNot Nothing Then cTask.CreatePreview(FileArt.Art)
       If Not My.Computer.FileSystem.FileExists(sArt) Then
@@ -5365,17 +6167,17 @@ Public Class frmMain
         Catch ex As Exception
           Debug.Print("Unable to save: " & ex.Message)
         End Try
+        SaveArtToMP3(mpPlayer.FileName, sArt)
       Else
-        Dim oldArt = Drawing.Image.FromFile(sArt)
-        If oldArt.Width * oldArt.Height < FileArt.Art.Width * FileArt.Art.Height Then
+        If CompareArtSizes(sArt, FileArt.Art) Then
           Try
-            oldArt.Dispose()
             My.Computer.FileSystem.DeleteFile(sArt)
             FileArt.Art.Save(sArt, Drawing.Imaging.ImageFormat.Jpeg)
             IO.File.SetAttributes(sArt, IO.FileAttributes.Hidden)
           Catch ex As Exception
             Debug.Print("Unable to save: " & ex.Message)
           End Try
+          SaveArtToMP3(mpPlayer.FileName, sArt)
         Else
           Debug.Print("Larger Folder.jpg already exists.")
         End If
@@ -5389,7 +6191,7 @@ Public Class frmMain
       Me.Invoke(New EventHandler(Of AppleNet.FailEventArgs)(AddressOf macArt_Failed), sender, e)
     Else
       Debug.Print("Art Failed: " & e.Error.Message)
-      FileArt = New ImageWithName(My.Resources.Logo, "LOGO")
+      FileArt = New ImageWithName(My.Resources.UnknownAlbum, "UNKNOWNALBUM")
     End If
   End Sub
 #End Region
@@ -5404,6 +6206,8 @@ Public Class frmMain
         If mFArt IsNot Nothing Then
           If mFArt.FileName = "LOGO" Then
             If Not pctAlbumArt.BackgroundImageLayout = ImageLayout.Center Then pctAlbumArt.BackgroundImageLayout = ImageLayout.Center
+          ElseIf mFArt.FileName = "LOADING" Or mFArt.FileName = "UNKNOWNALBUM" Then
+            If Not pctAlbumArt.BackgroundImageLayout = ImageLayout.Zoom Then pctAlbumArt.BackgroundImageLayout = ImageLayout.Zoom
           Else
             If Not pctAlbumArt.BackgroundImageLayout = ImageLayout.Zoom Then pctAlbumArt.BackgroundImageLayout = ImageLayout.Zoom
           End If
@@ -5412,15 +6216,21 @@ Public Class frmMain
             bgArt = mFArt
           End If
         Else
-          If Not pctAlbumArt.BackgroundImageLayout = ImageLayout.Center Then pctAlbumArt.BackgroundImageLayout = ImageLayout.Center
-          If pctAlbumArt.BackgroundImage IsNot Nothing Then
-            If Not bgArt.FileName = "LOGO" Then
+          If Not String.IsNullOrEmpty(mpPlayer.FileName) Then
+            pctAlbumArt.BackgroundImage = My.Resources.UnknownAlbum
+            If Not pctAlbumArt.BackgroundImageLayout = ImageLayout.Zoom Then pctAlbumArt.BackgroundImageLayout = ImageLayout.Zoom
+            mFArt = New ImageWithName(My.Resources.UnknownAlbum, "UNKNOWNALBUM")
+          Else
+            If Not pctAlbumArt.BackgroundImageLayout = ImageLayout.Center Then pctAlbumArt.BackgroundImageLayout = ImageLayout.Center
+            If pctAlbumArt.BackgroundImage IsNot Nothing Then
+              If Not bgArt.FileName = "LOGO" Then
+                pctAlbumArt.BackgroundImage = My.Resources.Logo
+                bgArt = New ImageWithName(My.Resources.Logo, "LOGO")
+              End If
+            Else
               pctAlbumArt.BackgroundImage = My.Resources.Logo
               bgArt = New ImageWithName(My.Resources.Logo, "LOGO")
             End If
-          Else
-            pctAlbumArt.BackgroundImage = My.Resources.Logo
-            bgArt = New ImageWithName(My.Resources.Logo, "LOGO")
           End If
         End If
       End If
@@ -5458,10 +6268,54 @@ Public Class frmMain
           FileTitle = _Artist & " - " & _Title
         End If
       End If
-
     Next
     txtPlayListTitle.Tag = Album
+    DefaultedPLTitle = False
   End Sub
+
+  Private Function CompareArtSizes(OldArt As Drawing.Image, NewArt As Drawing.Image) As Boolean
+    Return OldArt.Width * OldArt.Height < NewArt.Width * NewArt.Height
+  End Function
+
+  Private Function CompareArtSizes(OldArt As String, NewArt As Drawing.Image) As Boolean
+    Using iOldArt As Drawing.Image = Drawing.Image.FromFile(OldArt)
+      If iOldArt Is Nothing Then Return True
+      Return iOldArt.Width * iOldArt.Height < NewArt.Width * NewArt.Height
+    End Using
+  End Function
+
+  Private Function CompareArtSizes(OldArt As Drawing.Image, NewArt As String) As Boolean
+    Using iNewArt As Drawing.Image = Drawing.Image.FromFile(NewArt)
+      If iNewArt Is Nothing Then Return False
+      Return OldArt.Width * OldArt.Height < iNewArt.Width * iNewArt.Height
+    End Using
+  End Function
+
+  Private Function CompareArtSizes(OldArt As String, NewArt As String) As Boolean
+    Using iOldArt As Drawing.Image = Drawing.Image.FromFile(OldArt)
+      If iOldArt Is Nothing Then Return True
+      Using iNewArt As Drawing.Image = Drawing.Image.FromFile(NewArt)
+        If iNewArt Is Nothing Then Return False
+        Return iOldArt.Width * iOldArt.Height < iNewArt.Width * iNewArt.Height
+      End Using
+    End Using
+  End Function
+
+  Private Function CompareArtSizes(OldArt As Byte(), NewArt As String) As Boolean
+    Dim sTmpPath As String = IO.Path.GetTempFileName
+    My.Computer.FileSystem.WriteAllBytes(sTmpPath, OldArt, False)
+    Try
+      Using iOldArt As Drawing.Image = PathToImg(sTmpPath)
+        If iOldArt Is Nothing Then Return True
+        Using iNewArt As Drawing.Image = Drawing.Image.FromFile(NewArt)
+          If iNewArt Is Nothing Then Return False
+          Return iOldArt.Width * iOldArt.Height < iNewArt.Width * iNewArt.Height
+        End Using
+      End Using
+    Finally
+      My.Computer.FileSystem.DeleteFile(sTmpPath)
+    End Try
+  End Function
 #End Region
 
   Private Sub pctQuality_MouseDoubleClick(sender As Object, e As System.Windows.Forms.MouseEventArgs) Handles pctQuality.MouseDoubleClick
@@ -5485,6 +6339,21 @@ Public Class frmMain
       ClearPlayList()
       SaveTempPL()
       Me.Close()
+    End If
+  End Sub
+
+  Private Sub mpPlayer_NetDownload(sender As Object, e As Seed.ctlSeed.DownloadChangedEventArgs) Handles mpPlayer.NetDownload
+    If Me.InvokeRequired Then
+      Me.Invoke(New EventHandler(AddressOf mpPlayer_NetDownload), sender, e)
+    Else
+      pbProgress.Enabled = False
+      pbProgress.Maximum = 1000
+      pbProgress.Value = Math.Round(e.BytesReceived / e.TotalBytesToReceive * 100, 1) * 10
+      If e.UserState = "BUFFER" Then
+        If Not Me.Text = "Buffering (" & pbProgress.Value \ 10 & "%)" Then Me.Text = "Buffering (" & pbProgress.Value \ 10 & "%)"
+      Else
+        If Me.Text.StartsWith("Lime Seed Media Player") AndAlso Not Me.Text = "Lime Seed Media Player (" & pbProgress.Value \ 10 & "%)" Then Me.Text = "Lime Seed Media Player (" & pbProgress.Value \ 10 & "%)"
+      End If
     End If
   End Sub
 End Class

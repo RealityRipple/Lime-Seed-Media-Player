@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="clsHeaders.vb" />
+    <Compile Include="clsSocket.vb" />
     <Compile Include="ctlSeed.Designer.vb">
       <DependentUpon>ctlSeed.vb</DependentUpon>
     </Compile>
@@ -145,6 +146,7 @@
     </Compile>
     <Compile Include="Headers\clsID3v1.vb" />
     <Compile Include="Headers\clsID3v2.vb" />
+    <Compile Include="Headers\clsID3v2b.vb" />
     <Compile Include="Headers\clsMIDI.vb" />
     <Compile Include="Headers\clsMKV.vb" />
     <Compile Include="Headers\clsMPEG.vb" />

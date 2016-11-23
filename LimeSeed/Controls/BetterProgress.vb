@@ -14,7 +14,9 @@ Public Class BetterProgress
   Private mBarBG As Color
   Private mBarFG As Color
   Private mBarBorder As Color
+  Private mBarProg As ProgressBarStyle
   'Private TransparentBG As Boolean
+  Private marqueeLoc As Long
 
   Public Event ValueChanged(sender As Object, e As EventArgs)
 
@@ -38,6 +40,18 @@ Public Class BetterProgress
       If Not mBarStyle = value Then
         mBarStyle = value
         'TransparentBG = (mBarStyle = BetterProgressStyle.CustomColorsSlanted And MyBase.BackColor = Color.Transparent)
+        Me.Invalidate()
+      End If
+    End Set
+  End Property
+
+  Property Style As ProgressBarStyle
+    Get
+      Return mBarProg
+    End Get
+    Set(value As ProgressBarStyle)
+      If Not mBarProg = value Then
+        mBarProg = value
         Me.Invalidate()
       End If
     End Set
@@ -88,6 +102,7 @@ Public Class BetterProgress
     mBarBG = SystemColors.Control
     mBarFG = SystemColors.Highlight
     mBarBorder = SystemColors.ActiveBorder
+    mBarProg = ProgressBarStyle.Continuous
   End Sub
 
   Protected Overrides Sub OnResize(e As EventArgs)
@@ -96,7 +111,7 @@ Public Class BetterProgress
   End Sub
 
   Protected Overrides Sub OnPaint(e As PaintEventArgs)
-    If e.Graphics Is Nothing Then Exit Sub
+    If e.Graphics Is Nothing Then Return
     Me.SuspendLayout()
     Using bgBrush As New SolidBrush(mBarBG), fgBrush As New SolidBrush(mBarFG), backBrush As New SolidBrush(Me.BackColor), borderPen As New Pen(mBarBorder)
       Using g As Graphics = e.Graphics
@@ -111,25 +126,51 @@ Public Class BetterProgress
                 g.DrawLines(SystemPens.ButtonShadow, {New Point(0, Me.ClientRectangle.Height), New Point(0, 0), New Point(Me.ClientRectangle.Width, 0)})
               End If
             Else
-              Dim percent As Decimal = (val - min) / (max - min)
-              Dim rect As Rectangle = Me.ClientRectangle
-              If ProgressBarRenderer.IsSupported Then
-                ProgressBarRenderer.DrawHorizontalBar(g, rect)
+              If mBarProg = ProgressBarStyle.Marquee Then
+                Dim rect As Rectangle = Me.ClientRectangle
+                If ProgressBarRenderer.IsSupported Then
+                  ProgressBarRenderer.DrawHorizontalBar(g, rect)
+                Else
+                  g.FillRectangle(SystemBrushes.ButtonFace, rect)
+                  g.DrawLines(SystemPens.ButtonHighlight, {New Point(0, Me.ClientRectangle.Height), New Point(Me.ClientRectangle.Width, Me.ClientRectangle.Height), New Point(Me.ClientRectangle.Width, 0)})
+                  g.DrawLines(SystemPens.ButtonShadow, {New Point(0, Me.ClientRectangle.Height), New Point(0, 0), New Point(Me.ClientRectangle.Width, 0)})
+                End If
+                marqueeLoc += 1
+                If marqueeLoc >= rect.Right + rect.Height Then marqueeLoc = rect.Left - rect.Height
+                rect.Y += 1
+                rect.X = marqueeLoc + rect.Height
+                rect.Width = rect.Height * 2
+                rect.Height -= 2
+                If ProgressBarRenderer.IsSupported Then
+
+                  ProgressBarRenderer.DrawHorizontalChunks(g, rect)
+
+                  g.FillRectangles(backBrush, {New Rectangle(0, 0, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, 0, 1, 1), New Rectangle(0, Me.ClientRectangle.Height - 1, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1, 1, 1)})
+                Else
+                  g.FillRectangle(SystemBrushes.MenuHighlight, rect)
+                End If
+
               Else
-                g.FillRectangle(SystemBrushes.ButtonFace, rect)
-                g.DrawLines(SystemPens.ButtonHighlight, {New Point(0, Me.ClientRectangle.Height), New Point(Me.ClientRectangle.Width, Me.ClientRectangle.Height), New Point(Me.ClientRectangle.Width, 0)})
-                g.DrawLines(SystemPens.ButtonShadow, {New Point(0, Me.ClientRectangle.Height), New Point(0, 0), New Point(Me.ClientRectangle.Width, 0)})
-              End If
-              rect.Y += 1
-              rect.X += 1
-              rect.Width -= 2
-              rect.Width *= percent
-              rect.Height -= 2
-              If ProgressBarRenderer.IsSupported Then
-                ProgressBarRenderer.DrawHorizontalChunks(g, rect)
-                g.FillRectangles(backBrush, {New Rectangle(0, 0, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, 0, 1, 1), New Rectangle(0, Me.ClientRectangle.Height - 1, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1, 1, 1)})
-              Else
-                g.FillRectangle(SystemBrushes.MenuHighlight, rect)
+                Dim percent As Decimal = (val - min) / (max - min)
+                Dim rect As Rectangle = Me.ClientRectangle
+                If ProgressBarRenderer.IsSupported Then
+                  ProgressBarRenderer.DrawHorizontalBar(g, rect)
+                Else
+                  g.FillRectangle(SystemBrushes.ButtonFace, rect)
+                  g.DrawLines(SystemPens.ButtonHighlight, {New Point(0, Me.ClientRectangle.Height), New Point(Me.ClientRectangle.Width, Me.ClientRectangle.Height), New Point(Me.ClientRectangle.Width, 0)})
+                  g.DrawLines(SystemPens.ButtonShadow, {New Point(0, Me.ClientRectangle.Height), New Point(0, 0), New Point(Me.ClientRectangle.Width, 0)})
+                End If
+                rect.Y += 1
+                rect.X += 1
+                rect.Width -= 2
+                rect.Width *= percent
+                rect.Height -= 2
+                If ProgressBarRenderer.IsSupported Then
+                  ProgressBarRenderer.DrawHorizontalChunks(g, rect)
+                  g.FillRectangles(backBrush, {New Rectangle(0, 0, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, 0, 1, 1), New Rectangle(0, Me.ClientRectangle.Height - 1, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1, 1, 1)})
+                Else
+                  g.FillRectangle(SystemBrushes.MenuHighlight, rect)
+                End If
               End If
             End If
           Case BetterProgressStyle.CustomColorsSlanted

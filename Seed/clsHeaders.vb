@@ -15,11 +15,11 @@
   Private sPath As String
 
   Public Sub New(FilePath As String)
-    If String.IsNullOrEmpty(FilePath) Then Exit Sub
-    If Not My.Computer.FileSystem.FileExists(FilePath) Then Exit Sub
-    If My.Computer.FileSystem.GetFileInfo(FilePath).Length >= 1024L * 1024L * 1024L * 2L Then Exit Sub
+    If String.IsNullOrEmpty(FilePath) Then Return
+    If Not My.Computer.FileSystem.FileExists(FilePath) Then Return
+    If My.Computer.FileSystem.GetFileInfo(FilePath).Length >= 1024L * 1024L * 1024L * 2L Then Return
     sPath = FilePath
-    Dim bFile() As Byte = My.Computer.FileSystem.ReadAllBytes(FilePath)
+    Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(FilePath)
     lSize = bFile.Length
     Dim Id3v1 As Boolean = (GetString(bFile, bFile.Length - &H80, 3) = "TAG")
     Dim lFram As Integer = -1
@@ -41,7 +41,7 @@
       End If
       lFram = lFram + 1
     Loop
-    If lFram = -1 Then Exit Sub
+    If lFram = -1 Then Return
     fStart = lFram
     fLen = lSize - fStart - IIf(Id3v1, &H80, 0)
     cMPEG = New clsMPEG(GetDWORD(bFile))
@@ -60,7 +60,7 @@
 
   Private Function GetVBRDuration() As Double
     Dim dDur As Double = 0
-    Dim bFile() As Byte = My.Computer.FileSystem.ReadAllBytes(sPath)
+    Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(sPath)
     Dim lFram As Integer = -1
     Dim lFrames As UInt32 = 0
     Do
@@ -162,37 +162,20 @@
   End Property
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
         cMPEG = Nothing
         cVBRI = Nothing
         cXING = Nothing
-        ' TODO: dispose managed state (managed objects).
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
-
-  ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
-    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
     Dispose(True)
     GC.SuppressFinalize(Me)
   End Sub
 #End Region
-
 End Class

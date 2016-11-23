@@ -45,9 +45,10 @@ Partial Class frmProps
     Me.dgvID3v2 = New System.Windows.Forms.DataGridView()
     Me.colID3v2Tag = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.colID3v2Value = New System.Windows.Forms.DataGridViewTextBoxColumn()
+    Me.cmdID3v2Add = New System.Windows.Forms.Button()
+    Me.cmdID3v2Remove = New System.Windows.Forms.Button()
     Me.cmdID3v2Save = New System.Windows.Forms.Button()
     Me.cmdID3v2Reset = New System.Windows.Forms.Button()
-    Me.cmdID3v2Add = New System.Windows.Forms.Button()
     Me.tabVorbis = New System.Windows.Forms.TabPage()
     Me.dgvVorbis = New System.Windows.Forms.DataGridView()
     Me.colVorbisTag = New System.Windows.Forms.DataGridViewTextBoxColumn()
@@ -222,8 +223,8 @@ Partial Class frmProps
     Me.pnlID3v1.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50.0!))
     Me.pnlID3v1.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50.0!))
     Me.pnlID3v1.Controls.Add(Me.dgvID3v1, 0, 0)
-    Me.pnlID3v1.Controls.Add(Me.cmdID3v1Reset, 0, 1)
-    Me.pnlID3v1.Controls.Add(Me.cmdID3v1Save, 1, 1)
+    Me.pnlID3v1.Controls.Add(Me.cmdID3v1Reset, 1, 1)
+    Me.pnlID3v1.Controls.Add(Me.cmdID3v1Save, 0, 1)
     Me.pnlID3v1.Dock = System.Windows.Forms.DockStyle.Fill
     Me.pnlID3v1.Location = New System.Drawing.Point(0, 0)
     Me.pnlID3v1.Name = "pnlID3v1"
@@ -253,7 +254,7 @@ Partial Class frmProps
     Me.dgvID3v1.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
     Me.dgvID3v1.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
     Me.dgvID3v1.Size = New System.Drawing.Size(286, 181)
-    Me.dgvID3v1.TabIndex = 1
+    Me.dgvID3v1.TabIndex = 0
     '
     'colID3v1Tag
     '
@@ -276,7 +277,7 @@ Partial Class frmProps
     '
     Me.cmdID3v1Reset.Anchor = System.Windows.Forms.AnchorStyles.None
     Me.cmdID3v1Reset.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdID3v1Reset.Location = New System.Drawing.Point(35, 190)
+    Me.cmdID3v1Reset.Location = New System.Drawing.Point(181, 190)
     Me.cmdID3v1Reset.Name = "cmdID3v1Reset"
     Me.cmdID3v1Reset.Size = New System.Drawing.Size(75, 25)
     Me.cmdID3v1Reset.TabIndex = 2
@@ -287,10 +288,10 @@ Partial Class frmProps
     '
     Me.cmdID3v1Save.Anchor = System.Windows.Forms.AnchorStyles.None
     Me.cmdID3v1Save.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdID3v1Save.Location = New System.Drawing.Point(181, 190)
+    Me.cmdID3v1Save.Location = New System.Drawing.Point(35, 190)
     Me.cmdID3v1Save.Name = "cmdID3v1Save"
     Me.cmdID3v1Save.Size = New System.Drawing.Size(75, 25)
-    Me.cmdID3v1Save.TabIndex = 3
+    Me.cmdID3v1Save.TabIndex = 1
     Me.cmdID3v1Save.Text = "Save"
     Me.cmdID3v1Save.UseVisualStyleBackColor = True
     '
@@ -306,19 +307,22 @@ Partial Class frmProps
     '
     'pnlID3v2
     '
-    Me.pnlID3v2.ColumnCount = 3
-    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333!))
-    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333!))
-    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333!))
+    Me.pnlID3v2.ColumnCount = 2
+    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50.00249!))
+    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 49.99751!))
+    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20.0!))
+    Me.pnlID3v2.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20.0!))
     Me.pnlID3v2.Controls.Add(Me.dgvID3v2, 0, 0)
-    Me.pnlID3v2.Controls.Add(Me.cmdID3v2Save, 2, 1)
-    Me.pnlID3v2.Controls.Add(Me.cmdID3v2Reset, 1, 1)
     Me.pnlID3v2.Controls.Add(Me.cmdID3v2Add, 0, 1)
+    Me.pnlID3v2.Controls.Add(Me.cmdID3v2Remove, 1, 1)
+    Me.pnlID3v2.Controls.Add(Me.cmdID3v2Save, 0, 2)
+    Me.pnlID3v2.Controls.Add(Me.cmdID3v2Reset, 1, 2)
     Me.pnlID3v2.Dock = System.Windows.Forms.DockStyle.Fill
     Me.pnlID3v2.Location = New System.Drawing.Point(0, 0)
     Me.pnlID3v2.Name = "pnlID3v2"
-    Me.pnlID3v2.RowCount = 2
+    Me.pnlID3v2.RowCount = 3
     Me.pnlID3v2.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+    Me.pnlID3v2.RowStyles.Add(New System.Windows.Forms.RowStyle())
     Me.pnlID3v2.RowStyles.Add(New System.Windows.Forms.RowStyle())
     Me.pnlID3v2.Size = New System.Drawing.Size(292, 218)
     Me.pnlID3v2.TabIndex = 2
@@ -335,15 +339,15 @@ Partial Class frmProps
     Me.dgvID3v2.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText
     Me.dgvID3v2.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
     Me.dgvID3v2.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.colID3v2Tag, Me.colID3v2Value})
-    Me.pnlID3v2.SetColumnSpan(Me.dgvID3v2, 3)
+    Me.pnlID3v2.SetColumnSpan(Me.dgvID3v2, 2)
     Me.dgvID3v2.Dock = System.Windows.Forms.DockStyle.Fill
     Me.dgvID3v2.Location = New System.Drawing.Point(3, 3)
     Me.dgvID3v2.Name = "dgvID3v2"
     Me.dgvID3v2.RowHeadersVisible = False
     Me.dgvID3v2.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
     Me.dgvID3v2.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
-    Me.dgvID3v2.Size = New System.Drawing.Size(286, 181)
-    Me.dgvID3v2.TabIndex = 1
+    Me.dgvID3v2.Size = New System.Drawing.Size(286, 150)
+    Me.dgvID3v2.TabIndex = 0
     '
     'colID3v2Tag
     '
@@ -351,7 +355,6 @@ Partial Class frmProps
     Me.colID3v2Tag.FillWeight = 33.0!
     Me.colID3v2Tag.HeaderText = "Tag"
     Me.colID3v2Tag.Name = "colID3v2Tag"
-    Me.colID3v2Tag.ReadOnly = True
     Me.colID3v2Tag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
     '
     'colID3v2Value
@@ -362,11 +365,33 @@ Partial Class frmProps
     Me.colID3v2Value.Name = "colID3v2Value"
     Me.colID3v2Value.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
     '
+    'cmdID3v2Add
+    '
+    Me.cmdID3v2Add.Anchor = System.Windows.Forms.AnchorStyles.None
+    Me.cmdID3v2Add.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.cmdID3v2Add.Location = New System.Drawing.Point(28, 159)
+    Me.cmdID3v2Add.Name = "cmdID3v2Add"
+    Me.cmdID3v2Add.Size = New System.Drawing.Size(90, 25)
+    Me.cmdID3v2Add.TabIndex = 1
+    Me.cmdID3v2Add.Text = "Add Tag"
+    Me.cmdID3v2Add.UseVisualStyleBackColor = True
+    '
+    'cmdID3v2Remove
+    '
+    Me.cmdID3v2Remove.Anchor = System.Windows.Forms.AnchorStyles.None
+    Me.cmdID3v2Remove.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.cmdID3v2Remove.Location = New System.Drawing.Point(174, 159)
+    Me.cmdID3v2Remove.Name = "cmdID3v2Remove"
+    Me.cmdID3v2Remove.Size = New System.Drawing.Size(90, 25)
+    Me.cmdID3v2Remove.TabIndex = 2
+    Me.cmdID3v2Remove.Text = "Remove Tag"
+    Me.cmdID3v2Remove.UseVisualStyleBackColor = True
+    '
     'cmdID3v2Save
     '
     Me.cmdID3v2Save.Anchor = System.Windows.Forms.AnchorStyles.None
     Me.cmdID3v2Save.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdID3v2Save.Location = New System.Drawing.Point(205, 190)
+    Me.cmdID3v2Save.Location = New System.Drawing.Point(35, 190)
     Me.cmdID3v2Save.Name = "cmdID3v2Save"
     Me.cmdID3v2Save.Size = New System.Drawing.Size(75, 25)
     Me.cmdID3v2Save.TabIndex = 3
@@ -377,23 +402,12 @@ Partial Class frmProps
     '
     Me.cmdID3v2Reset.Anchor = System.Windows.Forms.AnchorStyles.None
     Me.cmdID3v2Reset.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdID3v2Reset.Location = New System.Drawing.Point(108, 190)
+    Me.cmdID3v2Reset.Location = New System.Drawing.Point(181, 190)
     Me.cmdID3v2Reset.Name = "cmdID3v2Reset"
     Me.cmdID3v2Reset.Size = New System.Drawing.Size(75, 25)
-    Me.cmdID3v2Reset.TabIndex = 2
+    Me.cmdID3v2Reset.TabIndex = 4
     Me.cmdID3v2Reset.Text = "Reset"
     Me.cmdID3v2Reset.UseVisualStyleBackColor = True
-    '
-    'cmdID3v2Add
-    '
-    Me.cmdID3v2Add.Anchor = System.Windows.Forms.AnchorStyles.None
-    Me.cmdID3v2Add.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdID3v2Add.Location = New System.Drawing.Point(11, 190)
-    Me.cmdID3v2Add.Name = "cmdID3v2Add"
-    Me.cmdID3v2Add.Size = New System.Drawing.Size(75, 25)
-    Me.cmdID3v2Add.TabIndex = 4
-    Me.cmdID3v2Add.Text = "Add Tag"
-    Me.cmdID3v2Add.UseVisualStyleBackColor = True
     '
     'tabVorbis
     '
@@ -992,8 +1006,6 @@ Partial Class frmProps
   Friend WithEvents dgvID3v2 As System.Windows.Forms.DataGridView
   Friend WithEvents dgvVorbis As System.Windows.Forms.DataGridView
   Friend WithEvents dgvMPEG As System.Windows.Forms.DataGridView
-  Friend WithEvents colID3v2Tag As System.Windows.Forms.DataGridViewTextBoxColumn
-  Friend WithEvents colID3v2Value As System.Windows.Forms.DataGridViewTextBoxColumn
   Friend WithEvents colVorbisTag As System.Windows.Forms.DataGridViewTextBoxColumn
   Friend WithEvents colVorbisValue As System.Windows.Forms.DataGridViewTextBoxColumn
   Friend WithEvents colMPEGTag As System.Windows.Forms.DataGridViewTextBoxColumn
@@ -1015,4 +1027,7 @@ Partial Class frmProps
   Friend WithEvents cmdID3v2Reset As System.Windows.Forms.Button
   Friend WithEvents cmdID3v2Save As System.Windows.Forms.Button
   Friend WithEvents cmdID3v2Add As System.Windows.Forms.Button
+  Friend WithEvents colID3v2Tag As System.Windows.Forms.DataGridViewTextBoxColumn
+  Friend WithEvents colID3v2Value As System.Windows.Forms.DataGridViewTextBoxColumn
+  Friend WithEvents cmdID3v2Remove As System.Windows.Forms.Button
 End Class

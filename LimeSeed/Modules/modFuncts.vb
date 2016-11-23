@@ -46,7 +46,7 @@ Module modFuncts
     End If
   End Function
 
-  Public Function GetDWORD(bIn() As Byte, Optional ByVal lStart As Long = 0) As UInt32
+  Public Function GetDWORD(bIn As Byte(), Optional ByVal lStart As Long = 0) As UInt32
     Dim bTmp(3) As Byte
     If lStart + 3 >= bIn.Length Then
       bTmp(0) = 0
@@ -186,7 +186,7 @@ Module modFuncts
     End Select
   End Function
 
-  Public Function CheckMPEG(bFile() As Byte, ByVal lPos As Long) As Boolean
+  Public Function CheckMPEG(bFile As Byte(), ByVal lPos As Long) As Boolean
     Dim lLen As Long
     Dim cMPTest As New Seed.clsMPEG(GetDWORD(bFile, lPos))
     If cMPTest.CheckValidity Then
@@ -222,7 +222,7 @@ Module modFuncts
         Dim pRY As UInt64 = mkvHeader.TrackEntries(I).Video.DisplayHeight
         pixelSize = New Drawing.Size(pX, pY)
         displaySize = New Drawing.Size(pRX, pRY)
-        Exit Sub
+        Return
       End If
     Next I
     pixelSize = Drawing.Size.Empty
@@ -313,7 +313,7 @@ Module modFuncts
     Next
   End Sub
 
-  Public Sub FindAdditionalMKVChapters(Path As String, Direction As Byte, ByRef cmbChapters As ComboBox, ByRef mnuChapterTrack As ToolStripMenuItem, ByRef ChapterWidth As Single, ByRef ChapterCollection As Collection, ByRef RunningTime As ULong)
+  Public Sub FindAdditionalMKVChapters(Path As String, Direction As Byte, ByRef ChapterCollection As Collection, ByRef RunningTime As ULong)
     If IO.File.Exists(Path) Then
       Dim SearchDir As String = IO.Path.GetDirectoryName(Path)
       If Not SearchDir.EndsWith(IO.Path.DirectorySeparatorChar) Then SearchDir &= IO.Path.DirectorySeparatorChar
@@ -359,7 +359,7 @@ Module modFuncts
                   End If
                   If Not String.IsNullOrEmpty(PrevPath) Then
                     If IO.File.Exists(PrevPath) Then
-                      FindAdditionalMKVChapters(SearchPath, Direction, cmbChapters, mnuChapterTrack, ChapterWidth, ChapterCollection, RunningTime)
+                      FindAdditionalMKVChapters(SearchPath, Direction, ChapterCollection, RunningTime)
                     End If
                   End If
 
@@ -368,18 +368,17 @@ Module modFuncts
                     If Not Edition.FlagHidden Then
                       For Each Atom In Edition.Atoms
                         If Not Atom.FlagHidden Then
-                          Dim sChapterText As String
-                          If Atom.Display(0).Language Is Nothing Then
-                            sChapterText = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim sChapterLang As String
+                          If Atom.Display(0).Language Is Nothing OrElse Atom.Display(0).Language.Count = 0 Then
+                            sChapterLang = "und"
+                          ElseIf Atom.Display(0).Language.Count = 1 Then
+                            sChapterLang = Atom.Display(0).Language(0)
                           Else
-                            sChapterText = Atom.Display(0).Title & " [" & Join(Atom.Display(0).Language, ", ") & "]: " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                            sChapterLang = Join(Atom.Display(0).Language, ", ")
                           End If
-                          cmbChapters.Items.Add(sChapterText)
-                          mnuChapterTrack.DropDownItems.Add(sChapterText)
-                          Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-                          Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-                          If lWidth > ChapterWidth Then ChapterWidth = lWidth
-                          ChapterCollection.Add({CDbl(RunningTime + Atom.TimeStart / 1000000000), sChapterText})
+                          ChapterCollection.Add({dChapterStart, sChapterText, sChapterLang})
                         End If
                       Next
                     End If
@@ -391,7 +390,7 @@ Module modFuncts
                       RunningTime += mpTest.GetFileDuration(SearchPath)
                     End Using
                   End If
-                  Exit Sub
+                  Return
                 End If
               End If
             End If
@@ -423,18 +422,17 @@ Module modFuncts
                     If Not Edition.FlagHidden Then
                       For Each Atom In Edition.Atoms
                         If Not Atom.FlagHidden Then
-                          Dim sChapterText As String
-                          If Atom.Display(0).Language Is Nothing Then
-                            sChapterText = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim sChapterLang As String
+                          If Atom.Display(0).Language Is Nothing OrElse Atom.Display(0).Language.Count = 0 Then
+                            sChapterLang = "und"
+                          ElseIf Atom.Display(0).Language.Count = 1 Then
+                            sChapterLang = Atom.Display(0).Language(0)
                           Else
-                            sChapterText = Atom.Display(0).Title & " [" & Join(Atom.Display(0).Language, ", ") & "]: " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                            sChapterLang = Join(Atom.Display(0).Language, ", ")
                           End If
-                          cmbChapters.Items.Add(sChapterText)
-                          mnuChapterTrack.DropDownItems.Add(sChapterText)
-                          Dim g As Drawing.Graphics = cmbChapters.CreateGraphics
-                          Dim lWidth As Single = g.MeasureString(sChapterText, cmbChapters.Font).Width + 10
-                          If lWidth > ChapterWidth Then ChapterWidth = lWidth
-                          ChapterCollection.Add({CDbl(RunningTime + Atom.TimeStart / 1000000000), sChapterText})
+                          ChapterCollection.Add({dChapterStart, sChapterText, sChapterLang})
                         End If
                       Next
                     End If
@@ -463,11 +461,11 @@ Module modFuncts
                   End If
                   If Not String.IsNullOrEmpty(NextPath) Then
                     If IO.File.Exists(NextPath) Then
-                      FindAdditionalMKVChapters(SearchPath, Direction, cmbChapters, mnuChapterTrack, ChapterWidth, ChapterCollection, RunningTime)
+                      FindAdditionalMKVChapters(SearchPath, Direction, ChapterCollection, RunningTime)
                     End If
                   End If
 
-                  Exit Sub
+                  Return
                 End If
               End If
             End If
@@ -478,7 +476,7 @@ Module modFuncts
     End If
   End Sub
 
-  Public Function FindInByteArray(bIn() As Byte, ByVal bFind() As Byte, Optional ByVal lStart As Integer = 0) As Integer
+  Public Function FindInByteArray(bIn As Byte(), ByVal bFind As Byte(), Optional ByVal lStart As Integer = 0) As Integer
     For I As Integer = lStart To bIn.Length - bFind.Length - 1
       Dim bFound As Boolean = True
       For J As Integer = 0 To bFind.Length - 1
@@ -526,6 +524,7 @@ Module modFuncts
       My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m1v", "M1V")
       My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m2ts", "M2TS")
       My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m3u", "M3U")
+      My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m3u8", "M3U")
       My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m4a", "M4A")
       My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m4p", "M4P")
       My.Computer.Registry.LocalMachine.CreateSubKey("SOFTWARE").CreateSubKey("Clients").CreateSubKey("Media").CreateSubKey("LSMP").CreateSubKey("Capabilities").CreateSubKey("FileAssociations").SetValue(".m4v", "M4V")
@@ -588,7 +587,7 @@ Module modFuncts
   End Function
 
   Public Function CoolName(SafeFileName As String) As String
-    Return SafeFileName.Replace("{QUESTION}", "ʔ").Replace("{COLON}", ChrW(&HA789)).Replace("{ASTERISK}", "•").Replace("{QUOTE}", "″").Replace("{GREATER}", "˃").Replace("{LESS}", "˂").Replace("{PIPE}", "¦").Replace("{BACKSLASH}", "〵").Replace("{SLASH}", " ⁄").Replace("{ELLIPSIS}", "…")
+    Return SafeFileName.Replace("{QUESTION}", "？").Replace("{COLON}", ChrW(&HA789)).Replace("{ASTERISK}", "•").Replace("{QUOTE}", "ʺ").Replace("{GREATER}", "˃").Replace("{LESS}", "˂").Replace("{PIPE}", "¦").Replace("{BACKSLASH}", "〵").Replace("{SLASH}", " ⁄ ").Replace("{ELLIPSIS}", "…")
   End Function
 
   Public Sub SetCursor(Visible As Boolean)
@@ -644,9 +643,13 @@ Module modFuncts
   Public Function PathToImg(Path As String) As Drawing.Image
     If My.Computer.FileSystem.FileExists(Path) Then
       If My.Computer.FileSystem.GetFileInfo(Path).Length >= 1024L * 1024L * 1024L * 4L Then Return Nothing
-      Dim bData() As Byte = My.Computer.FileSystem.ReadAllBytes(Path)
-      Dim pStream As New IO.MemoryStream(bData)
-      Return Drawing.Image.FromStream(pStream, True, True)
+      Try
+        Dim bData As Byte() = My.Computer.FileSystem.ReadAllBytes(Path)
+        Dim pStream As New IO.MemoryStream(bData)
+        Return Drawing.Image.FromStream(pStream, True, True)
+      Catch ex As Exception
+        Return Nothing
+      End Try
     Else
       Return Nothing
     End If
@@ -658,15 +661,15 @@ Module modFuncts
     Using ms1 As New IO.MemoryStream, ms2 As New IO.MemoryStream
       image1.Save(ms1, image1.RawFormat)
       image2.Save(ms2, image2.RawFormat)
-      Dim ba1() As Byte
-      Dim ba2() As Byte
+      Dim ba1 As Byte()
+      Dim ba2 As Byte()
       ba1 = ms1.ToArray
       ba2 = ms2.ToArray
       Return ba1.SequenceEqual(ba2)
     End Using
   End Function
 
-  Public Function FormatBytes(bData() As Byte) As String
+  Public Function FormatBytes(bData As Byte()) As String
     Dim sBuild As New System.Text.StringBuilder
     sBuild.Append("0000   ")
     If bData.Length = 0 Then
@@ -790,6 +793,9 @@ Module modFuncts
       Case "A_MS/ACM"
         iEncQ = 4
         sCodec = "Microsoft™ ACM"
+      Case "A_AAC"
+        iEncQ = 3
+        sCodec = "Advanced Audio Codec"
       Case "A_AAC/MPEG2/MAIN"
         iEncQ = 3
         sCodec = "AAC MPEG2 Main Profile"
@@ -839,6 +845,7 @@ Module modFuncts
     Select Case CodecID
       Case "V_MS/VFW/FOURCC" : Return "Microsoft™ Video Codec Manager"
       Case "V_UNCOMPRESSED" : Return "Uncompressed"
+      Case "V_MPEGH/ISO/HEVC" : Return "MPEGH ISO High Efficiency Video Codec"
       Case "V_MPEG4/ISO/SP" : Return "MPEG4 ISO simple profile (DivX4)"
       Case "V_MPEG4/ISO/ASP" : Return "MPEG4 ISO advanced simple profile (DivX4, XviD, FFMPEG)"
       Case "V_MPEG4/ISO/AP" : Return "MPEG4 ISO advanced profile"
@@ -1281,7 +1288,7 @@ Module modFuncts
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_VIXL : Return "Miro Video XL Motion JPEG"
       Case Seed.clsRIFF.AVIFormatTag.AVI_FORMAT_WHAM : Return "Microsoft Video 1 (WHAM)"
       Case Else
-        Dim bTag() As Byte = BitConverter.GetBytes(CUInt(formatTag))
+        Dim bTag As Byte() = BitConverter.GetBytes(CUInt(formatTag))
         Dim sTag As String = Text.Encoding.GetEncoding(LATIN_1).GetString(bTag)
         Return "Unknown: " & sTag
     End Select
@@ -1314,6 +1321,70 @@ Module modFuncts
       Case "ITCH" : Return "Technician"
       Case Else : Return Key
     End Select
+  End Function
+
+  Public Function CompareLanguages(LangA As String, LangB As String) As Boolean
+    If String.IsNullOrEmpty(LangA) Then LangA = "und"
+    If String.IsNullOrEmpty(LangB) Then LangB = "und"
+    If LangA = "0" Then LangA = "und"
+    If LangB = "0" Then LangB = "und"
+    If LangA.Contains(" [") And LangA.Substring(LangA.IndexOf(" [") + 2).Contains("]") Then
+      LangA = LangA.Substring(LangA.IndexOf(" [") + 2)
+      LangA = LangA.Substring(0, LangA.IndexOf("]"))
+    End If
+    If LangB.Contains(" [") And LangB.Substring(LangB.IndexOf(" [") + 2).Contains("]") Then
+      LangB = LangB.Substring(LangB.IndexOf(" [") + 2)
+      LangB = LangB.Substring(0, LangB.IndexOf("]"))
+    End If
+    LangA = LangA.ToLower
+    LangB = LangB.ToLower
+    Dim locA As Globalization.CultureInfo = Nothing
+    If IsNumeric(LangA) Then
+      locA = New Globalization.CultureInfo(CInt(LangA))
+    Else
+      For Each culture In Globalization.CultureInfo.GetCultures(Globalization.CultureTypes.NeutralCultures)
+        If culture.NativeName.Contains(LangA) Or
+          LangA.Contains(culture.NativeName) Or
+          LangA.Contains(culture.EnglishName) Or
+          LangA.Contains(culture.ThreeLetterISOLanguageName) Or
+          LangA.Contains(culture.ThreeLetterWindowsLanguageName) Or
+          LangA.Contains(culture.DisplayName) Or
+          LangA.Contains(culture.Name) Or
+          LangA.Contains(culture.IetfLanguageTag) Or
+          LangA.Contains(culture.TwoLetterISOLanguageName) Then
+          locA = culture
+          Exit For
+        End If
+      Next
+    End If
+    If locA Is Nothing Then Debug.Print("Unknown Localization: " & LangA)
+
+    Dim locB As Globalization.CultureInfo = Nothing
+    If IsNumeric(LangB) Then
+      locB = New Globalization.CultureInfo(CInt(LangB))
+    Else
+      For Each culture In Globalization.CultureInfo.GetCultures(Globalization.CultureTypes.NeutralCultures)
+        If culture.NativeName.Contains(LangB) Or
+          LangB.Contains(culture.NativeName) Or
+          LangB.Contains(culture.EnglishName) Or
+          LangB.Contains(culture.ThreeLetterISOLanguageName) Or
+          LangB.Contains(culture.ThreeLetterWindowsLanguageName) Or
+          LangB.Contains(culture.DisplayName) Or
+          LangB.Contains(culture.Name) Or
+          LangB.Contains(culture.IetfLanguageTag) Or
+          LangB.Contains(culture.TwoLetterISOLanguageName) Then
+          locB = culture
+          Exit For
+        End If
+      Next
+    End If
+    If locB Is Nothing Then Debug.Print("Unknown Localization: " & LangB)
+
+    If locA Is Nothing And locB Is Nothing Then Return True
+    If locA Is Nothing Then Return False
+    If locB Is Nothing Then Return False
+
+    Return locA.LCID = locB.LCID
   End Function
 
   ''' <summary>
@@ -1831,7 +1902,7 @@ Public Class Sound
     lngReturn = mixerOpen(hmixer, 0, 0, 0, 0)
 
     ' Error check
-    If lngReturn <> 0 Then Exit Sub
+    If lngReturn <> 0 Then Return
 
     ' Obtain the volumne control object
     Call GetVolumeControl(hmixer, MIXERLINE_COMPONENTTYPE_DST_SPEAKERS, MIXERCONTROL_CONTROLTYPE_VOLUME, volCtrl)
@@ -1854,7 +1925,7 @@ Public Class Sound
     lngReturn = mixerOpen(hmixer, 0, 0, 0, 0)
 
     ' Error check
-    If lngReturn <> 0 Then Exit Sub
+    If lngReturn <> 0 Then Return
 
     ' Obtain the volumne control object
     Call GetVolumeControl(hmixer, MIXERLINE_COMPONENTTYPE_DST_SPEAKERS, MIXERCONTROL_CONTROLTYPE_MUTE, volCtrl)
@@ -2081,7 +2152,6 @@ Friend Class AlbumInfo
     cCDText.RunWorkerAsync(Drive)
   End Sub
 
-
   Private Sub cCDText_RunWorkerCompleted(sender As Object, e As System.ComponentModel.RunWorkerCompletedEventArgs) Handles cCDText.RunWorkerCompleted
     Dim result As ReadCdTextWorkerResult = TryCast(e.Result, ReadCdTextWorkerResult)
     If result.Success AndAlso result.CDText.TrackData.Rows.Count > 0 Then
@@ -2089,8 +2159,7 @@ Friend Class AlbumInfo
       sAlbum = StrConv(result.CDText.TrackData.Rows(0).Item(2), VbStrConv.ProperCase)
       sArtist = StrConv(result.CDText.TrackData.Rows(0).Item(3), VbStrConv.ProperCase)
 
-
-      cArtwork = New AppleNet(sArtist, sAlbum)
+      cArtwork = New AppleNet(sAlbum, AppleNet.Term.Album)
       Dim SpecialArtist As Boolean = True
       For I As Integer = 1 To result.CDText.TrackData.Rows.Count - 1
         If Split(result.CDText.TrackData.Rows(I).Item(2), "-").Length <> 2 Then
@@ -2116,9 +2185,13 @@ Friend Class AlbumInfo
       RaiseEvent Info(sArtist, sAlbum, Trks, Nothing)
     Else
       Debug.Print(result.ErrorMessage)
-      If cInfo Is Nothing Then cInfo = New CDDBNet
-      Dim ID As String = CalcDiscID(cDrive.Name(0))
-      cInfo.FindDisc(ID)
+      Try
+        If cInfo Is Nothing Then cInfo = New CDDBNet
+        Dim ID As String = CalcDiscID(cDrive.Name(0))
+        cInfo.FindDisc(ID)
+      Catch ex As Exception
+
+      End Try
     End If
   End Sub
 
@@ -2195,8 +2268,12 @@ Friend Class AlbumInfo
       sArtist = GetLine(sSplits, "DTITLE")
       sAlbum = GetLine(sSplits, "DTITLE")
     End If
+    If Not sArtist = sAlbum Then
+      cArtwork = New AppleNet(sAlbum, AppleNet.Term.Album)
+    Else
+      cArtwork = New AppleNet(sArtist, AppleNet.Term.Artist)
+    End If
 
-    cArtwork = New AppleNet(sArtist, sAlbum)
     Dim SpecialArtist As Boolean = True
     For I As Integer = 0 To Rows - 1
       If Split(GetLine(sSplits, "TTITLE" & I), " / ").Length <> 2 Then
@@ -2232,13 +2309,13 @@ Friend Class AlbumInfo
         'For Each ret In (From fRet In e.Rows Where fRet.Contains("""artistName"":""" & _artist & """") And fRet.Contains("""collectionName"":""" & _album & """"))
         '  If ret.Contains("artworkUrl100") Then
         cArtwork.ChooseRow(ret)
-        Exit Sub
+        Return
       End If
     Next
     For Each ret In e.Rows
       If Not ret("artworkUrl100") Is Nothing Then
         cArtwork.ChooseRow(ret)
-        Exit Sub
+        Return
       End If
     Next
     Stop
@@ -2256,41 +2333,24 @@ Friend Class AlbumInfo
   End Sub
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
-        ' TODO: dispose managed state (managed objects).
-
         cInfo = Nothing
         cArtwork = Nothing
         cCDText.Dispose()
         cCDText = Nothing
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
 
-  ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
-    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
     Dispose(True)
     GC.SuppressFinalize(Me)
   End Sub
 #End Region
-
 End Class
 
 Friend Class PowerProfile
@@ -2315,10 +2375,10 @@ Friend Class PowerProfile
     Public ProcessorMaxThrottle As Byte
     <MarshalAs(UnmanagedType.I1)> Public FastSystemS4 As Boolean
     <MarshalAs(UnmanagedType.ByValArray, SizeConst:=3)> _
-    Public spare2() As Byte
+    Public spare2 As Byte()
     <MarshalAs(UnmanagedType.I1)> Public DiskSpinDown As Boolean
     <MarshalAs(UnmanagedType.ByValArray, SizeConst:=8)> _
-    Public spare3() As Byte
+    Public spare3 As Byte()
     <MarshalAs(UnmanagedType.I1)> Public SystemBatteriesPresent As Boolean
     <MarshalAs(UnmanagedType.I1)> Public BatteriesAreShortTerm As Boolean
     <MarshalAs(UnmanagedType.ByValArray, SizeConst:=3)> _

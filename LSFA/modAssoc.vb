@@ -63,7 +63,7 @@
     If String.IsNullOrEmpty(Command) Then
       MsgBox("Please change association settings within Lime Seed or your Windows Association control panel item.", MsgBoxStyle.Exclamation, "Lime Seed File Association")
     Else
-      If InStr(Command, " THUMB ") > 0 Then
+      If InStr(Command, " THUMB ") > 0 And 1 = 0 Then 'TODO: Enable if you ever get a thumbnail and property generator working better than K-Lite
         Thumbnails = True
         Shell("C:\Windows\Microsoft.NET\Framework" & IIf(Environment.Is64BitOperatingSystem, "64", String.Empty) & "\v4.0.30319\RegASM.exe """ & Application.StartupPath & "\GreenThumb.dll"" /codebase", AppWinStyle.Hide, True)
         For Each CRSub In My.Computer.Registry.ClassesRoot.GetSubKeyNames
@@ -620,14 +620,15 @@
             OpenSubKey("Shell Extensions", True).
             CreateSubKey("Approved")
         End If
-        My.Computer.Registry.LocalMachine.
-              OpenSubKey("SOFTWARE", True).
-              OpenSubKey("Microsoft", True).
-              OpenSubKey("Windows", True).
-              OpenSubKey("CurrentVersion", True).
-              OpenSubKey("Shell Extensions", True).
-              OpenSubKey("Approved", True).
-              SetValue(CLSID_THUMBPROP.ToString("B").ToUpper, "GreenThumb.PropertyHandler", Microsoft.Win32.RegistryValueKind.String)
+        'TODO: Enable if you ever get a thumbnail and property generator working better than K-Lite
+        'My.Computer.Registry.LocalMachine.
+        '      OpenSubKey("SOFTWARE", True).
+        '      OpenSubKey("Microsoft", True).
+        '      OpenSubKey("Windows", True).
+        '      OpenSubKey("CurrentVersion", True).
+        '      OpenSubKey("Shell Extensions", True).
+        '      OpenSubKey("Approved", True).
+        '      SetValue(CLSID_THUMBPROP.ToString("B").ToUpper, "GreenThumb.PropertyHandler", Microsoft.Win32.RegistryValueKind.String)
     End Select
   End Sub
 
@@ -770,7 +771,7 @@
         Add_Associate("WMV", 72, "Windows Media Video File", ".wmv")
         Add_Associate("WVX", 73, "Windows Media Video Redirector", ".wvx")
       Case FileTypes.File_M3U
-        Add_Associate("M3U", 74, "MP3 Playlist File", ".m3u")
+        Add_Associate("M3U", 74, "MP3 Playlist File", ".m3u", ".m3u8")
       Case FileTypes.File_PLS
         Add_Associate("PLS", 75, "Generic Playlist File", ".pls")
       Case FileTypes.File_LLPL
@@ -985,7 +986,7 @@
         Rem_Associate("WMV", ".wmv")
         Rem_Associate("WVX", ".wvx")
       Case FileTypes.File_M3U
-        Rem_Associate("M3U", ".m3u")
+        Rem_Associate("M3U", ".m3u", ".m3u8")
       Case FileTypes.File_PLS
         Rem_Associate("PLS", ".pls")
       Case FileTypes.File_LLPL

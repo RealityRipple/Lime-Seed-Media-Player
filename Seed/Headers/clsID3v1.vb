@@ -15,7 +15,7 @@
     LoadID3v1()
   End Sub
 
-  Public Property MP3File() As String
+  Public Property MP3File As String
     Get
       Return m_sMp3File
     End Get
@@ -33,7 +33,7 @@
 
   Private Sub LoadID3v1()
     Try
-      If Not My.Computer.FileSystem.FileExists(m_sMp3File) Then Exit Sub
+      If Not My.Computer.FileSystem.FileExists(m_sMp3File) Then Return
       m_HasTag = False
       m_bTrack = 0
       m_sTitle = vbNullString
@@ -129,7 +129,7 @@
     End If
   End Sub
 
-  Public Property Album() As String
+  Public Property Album As String
     Get
       Return m_sAlbum
     End Get
@@ -138,7 +138,7 @@
     End Set
   End Property
 
-  Public Property Artist() As String
+  Public Property Artist As String
     Get
       Return m_sArtist
     End Get
@@ -147,7 +147,7 @@
     End Set
   End Property
 
-  Public Property Comment() As String
+  Public Property Comment As String
     Get
       Return m_sComment
     End Get
@@ -156,7 +156,7 @@
     End Set
   End Property
 
-  Public Property Genre() As Byte
+  Public Property Genre As Byte
     Get
       Return m_bGenre
     End Get
@@ -165,7 +165,7 @@
     End Set
   End Property
 
-  Public Property Title() As String
+  Public Property Title As String
     Get
       Return m_sTitle
     End Get
@@ -174,7 +174,7 @@
     End Set
   End Property
 
-  Public Property Track() As Byte
+  Public Property Track As Byte
     Get
       Return m_bTrack
     End Get
@@ -183,7 +183,7 @@
     End Set
   End Property
 
-  Public Property Year() As String
+  Public Property Year As String
     Get
       Return m_sYear
     End Get
@@ -405,31 +405,15 @@
   End Function
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean 
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
-        ' TODO: dispose managed state (managed objects).
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
-
-  ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
-    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
     Dispose(True)
     GC.SuppressFinalize(Me)
   End Sub

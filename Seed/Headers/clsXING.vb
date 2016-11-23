@@ -4,7 +4,7 @@
     Public FieldFlags As Long
     Public Frames As Long
     Public Bytes As Long
-    Public ToC() As Byte
+    Public ToC As Byte()
     Public Quality As Long
   End Structure
   Private Structure XINGExtend
@@ -31,7 +31,7 @@
   Private xHeader As XINGHeader
   Private xExtend As XINGExtend
 
-  Public Sub New(bFrame() As Byte, ByRef cMPEG As clsMPEG)
+  Public Sub New(bFrame As Byte(), ByRef cMPEG As clsMPEG)
     Dim I As Integer
     Dim lStrt As Long
     Dim lPos As Long
@@ -52,7 +52,7 @@
     xHeader.headerID = GetString(bFrame, lPos, 4)
     If xHeader.headerID <> "Xing" And xHeader.headerID <> "Info" Then
       xHeader.headerID = vbNullString
-      Exit Sub
+      Return
     End If
     lPos += 4
     xHeader.FieldFlags = GetDWORD(bFrame, lPos)
@@ -77,7 +77,7 @@
       lPos += 4
     End If
     xExtend.EncoderVStr = GetString(bFrame, lPos, 9)
-    If Replace(Trim(xExtend.EncoderVStr), vbNullChar, vbNullString) = vbNullString Then Exit Sub
+    If Replace(Trim(xExtend.EncoderVStr), vbNullChar, vbNullString) = vbNullString Then Return
     lPos += 9
     xExtend.InfoTagRev = bFrame(lPos)
     lPos += 1
@@ -255,12 +255,12 @@
                            IIf(bNOGAPtoLAST, "--nogap (from last)", vbNullString))
     End Get
   End Property
-  Public ReadOnly Property ATHType() As Byte
+  Public ReadOnly Property ATHType As Byte
     Get
       Return (xExtend.EncodFlags And &HFF)
     End Get
   End Property
-  Public ReadOnly Property MinimalBitrate() As Byte
+  Public ReadOnly Property MinimalBitrate As Byte
     Get
       Return xExtend.Bitrate
     End Get
@@ -275,7 +275,7 @@
       Return (xExtend.EncoderDelay And &HFFF)
     End Get
   End Property
-  Public ReadOnly Property NoiseSharpening() As Byte
+  Public ReadOnly Property NoiseSharpening As Byte
     Get
       Return ((xExtend.Misc And &HC0) \ 2 ^ 6)
     End Get

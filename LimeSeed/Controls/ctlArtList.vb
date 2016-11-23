@@ -42,10 +42,12 @@
   End Sub
 
   Public Sub AddRow(RowData As Generic.Dictionary(Of String, Object))
-    If Not RowData("artworkUrl100") Is Nothing Then
+    If RowData.ContainsKey("artworkUrl100") Then
       Dim pnlTmp As New TableLayoutPanel
       Dim pctTmp As New PictureBox
       Dim lblTmp As New Label
+      Dim tmpID As Integer = pnlArtwork.Controls.Count
+      If RowData.ContainsKey("collectionId") Then tmpID = RowData("collectionId")
       pnlTmp.ColumnCount = 1
       pnlTmp.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0!))
       pnlTmp.RowCount = 2
@@ -53,22 +55,13 @@
       pnlTmp.RowStyles.Add(New RowStyle(SizeType.AutoSize, 1.0!))
       pnlTmp.Size = New Drawing.Size(106, 139)
       pnlTmp.Margin = New Padding(0)
-      pnlTmp.Name = "pnlArt" & Hex(RowData.GetHashCode)
+      pnlTmp.Name = "pnlArt" & Hex(tmpID)
       pnlTmp.Tag = RowData
       pnlTmp.BackColor = Drawing.Color.Transparent
-      pctTmp.Tag = GetArtworkURI(RowData, String.Empty)
+      pctTmp.Tag = GetArtworkURI(RowData)
       pctTmp.Dock = DockStyle.Fill
-      Dim imgTmp As Drawing.Image = New Drawing.Bitmap(100, 100)
-      Using g As Drawing.Graphics = Drawing.Graphics.FromImage(imgTmp)
-        g.Clear(Drawing.Color.White)
-        Using limeBrush As New Drawing.Drawing2D.LinearGradientBrush(New Drawing.Rectangle(0, 0, 99, 99), Drawing.Color.White, Drawing.Color.Lime, Drawing.Drawing2D.LinearGradientMode.Vertical)
-          g.FillRectangle(limeBrush, New Drawing.Rectangle(0, 0, 99, 99))
-        End Using
-        g.DrawRectangle(Drawing.Pens.Black, 0, 0, 99, 99)
-        g.DrawString("Loading...", New Drawing.Font(Drawing.FontFamily.GenericSansSerif, 14), Drawing.Brushes.Black, New Drawing.RectangleF(1, 1, 98, 98), New Drawing.StringFormat With {.Alignment = Drawing.StringAlignment.Center, .LineAlignment = Drawing.StringAlignment.Center})
-      End Using
-      pctTmp.Image = imgTmp
-      pctTmp.Name = "pctArt" & Hex(RowData.GetHashCode)
+      pctTmp.Image = My.Resources.loadingart
+      pctTmp.Name = "pctArt" & Hex(tmpID)
       Dim tArtist As String = GetArtist(RowData)
       Dim tAlbum As String = GetAlbum(RowData)
       If String.IsNullOrEmpty(tArtist) Then
@@ -79,8 +72,8 @@
         Stop
         tAlbum = "Unknown Album"
       End If
-      lblTmp.Text = tArtist & " - " & tAlbum
-      lblTmp.Name = "lblArt" & Hex(RowData.GetHashCode)
+      lblTmp.Text = tArtist & vbNewLine & """" & tAlbum & """"
+      lblTmp.Name = "lblArt" & Hex(tmpID)
       lblTmp.Anchor = (AnchorStyles.Left Or AnchorStyles.Right)
       lblTmp.AutoSize = True
       lblTmp.TextAlign = Drawing.ContentAlignment.TopCenter
@@ -92,36 +85,76 @@
       AddHandler pctTmp.Click, AddressOf ElementClick
       AddHandler lblTmp.Click, AddressOf ElementClick
       pnlArtwork.Controls.Add(pnlTmp)
+      Dim sToolTip As String = Nothing
+      If RowData.ContainsKey("collectionName") Then sToolTip &= RowData("collectionName") & vbNewLine
+      If RowData.ContainsKey("artistName") Then sToolTip &= "   by " & RowData("artistName") & vbNewLine
+      If RowData.ContainsKey("primaryGenreName") Then
+        sToolTip &= vbNewLine & RowData("primaryGenreName")
+        If RowData("collectionType") Is Nothing Then
+          sToolTip &= " Disc"
+        Else
+          sToolTip &= " " & RowData("collectionType")
+        End If
+        If RowData.ContainsKey("trackCount") Then sToolTip &= " with " & RowData("trackCount") & " Track" & IIf(RowData("trackCount") = 1, "", "s")
+        sToolTip &= vbNewLine
+      ElseIf RowData.ContainsKey("trackCount") Then
+        If Not RowData.ContainsKey("collectionType") Then
+          sToolTip &= RowData("trackCount") & " Track Disc" & vbNewLine
+        Else
+          sToolTip &= RowData("trackCount") & " Track " & RowData("collectionType") & vbNewLine
+        End If
+      End If
+      If RowData.ContainsKey("releaseDate") Then
+        Dim relDate As Date = DateValue(RowData("releaseDate"))
+        sToolTip &= "Released " & relDate.ToLongDateString & vbNewLine
+      End If
+      'If RowData.ContainsKey("copyright") Then sToolTip &= vbNewLine & RowData("copyright") & vbNewLine
+      If sToolTip.EndsWith(vbNewLine) Then sToolTip = sToolTip.Substring(0, sToolTip.Length - 2)
+      If Not String.IsNullOrEmpty(sToolTip) Then
+        ttArtwork.SetToolTip(pnlTmp, sToolTip)
+        ttArtwork.SetToolTip(lblTmp, sToolTip)
+        ttArtwork.SetToolTip(pctTmp, sToolTip)
+      End If
     End If
   End Sub
 
   Private Sub GetArtwork(pctTmp As PictureBox)
     Dim rowURI As Uri = pctTmp.Tag
-    If sckReader.IsBusy Then sckReader.CancelAsync()
-    Do While sckReader.IsBusy
+    If sckReader IsNot Nothing Then
+      If sckReader.IsBusy Then sckReader.CancelAsync()
+      sckReader.Dispose()
+      sckReader = Nothing
       Application.DoEvents()
-      Threading.Thread.Sleep(1)
-    Loop
+      sckReader = New Net.WebClient
+    Else
+      sckReader = New Net.WebClient
+    End If
+    Application.DoEvents()
     sckReader.DownloadDataAsync(rowURI, pctTmp.Name)
   End Sub
 
-  Private Function GetArtworkURI(Row As Generic.Dictionary(Of String, Object), Optional ByVal SetSize As String = ".") As Uri
+  Private Function GetArtworkURI(Row As Generic.Dictionary(Of String, Object)) As Uri
     Dim sURL As String = Row("artworkUrl100").ToString
     If String.IsNullOrEmpty(sURL) Then Return Nothing
-    If Not String.IsNullOrEmpty(SetSize) Then If sURL.Contains(".100x100-75.") Then sURL = sURL.Replace(".100x100-75.", SetSize)
     Return New Uri(sURL)
   End Function
 
   Private Function GetArtist(Row As Generic.Dictionary(Of String, Object)) As String
-    Dim sName As String = Row("artistName").ToString
-    If String.IsNullOrEmpty(sName) Then Return Nothing
-    Return UnEscape(sName)
+    If Row.ContainsKey("artistName") Then
+      Dim sName As String = Row("artistName").ToString
+      If String.IsNullOrEmpty(sName) Then Return Nothing
+      Return UnEscape(sName)
+    End If
+    Return Nothing
   End Function
 
   Private Function GetAlbum(Row As Generic.Dictionary(Of String, Object)) As String
-    Dim sName As String = Row("collectionName").ToString
-    If String.IsNullOrEmpty(sName) Then Return Nothing
-    Return UnEscape(sName)
+    If Row.ContainsKey("collectionName") Then
+      Dim sName As String = Row("collectionName").ToString
+      If String.IsNullOrEmpty(sName) Then Return Nothing
+      Return UnEscape(sName)
+    End If
+    Return Nothing
   End Function
 
   Private Function UnEscape(Data As String) As String
@@ -167,7 +200,7 @@
         Me.Cursor = Cursors.AppStarting
         Dim tX As New Threading.Thread(New Threading.ParameterizedThreadStart(AddressOf GetArtwork))
         tX.Start(item.Controls(0))
-        Exit Sub
+        Return
       End If
     Next
     tmrArtwork.Enabled = True
@@ -184,7 +217,7 @@
       pbProgress.Value = 100
 
       Dim pnl = (From item As TableLayoutPanel In pnlArtwork.Controls Where item.Name = CType(e.UserState, String).Replace("pct", "pnl")).FirstOrDefault
-      If pnl Is Nothing Then Exit Sub
+      If pnl Is Nothing Then Return
       Dim pctTmp As PictureBox = pnl.Controls(0)
       If e.Error Is Nothing Then
         lblProgress.Text = "100%"

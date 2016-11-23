@@ -1,5 +1,5 @@
 ﻿Friend Module modHeaderFunctions
-  Public Function GetDWORD(bIn() As Byte, Optional ByVal lStart As Long = 0) As UInt32
+  Public Function GetDWORD(bIn As Byte(), Optional ByVal lStart As Long = 0) As UInt32
     Dim bTmp(3) As Byte
     If lStart + 3 >= bIn.Length Then
       bTmp(0) = 0
@@ -23,7 +23,7 @@
     End If
     Return BitConverter.ToUInt32(bTmp, 0)
   End Function
-  Public Function GetWORD(bIn() As Byte, Optional ByVal lStart As Long = 0) As UInt16
+  Public Function GetWORD(bIn As Byte(), Optional ByVal lStart As Long = 0) As UInt16
     Dim bTmp(1) As Byte
     If lStart + 1 >= bIn.Length Then
       bTmp(0) = 0
@@ -45,11 +45,11 @@
       Return sHex
     End If
   End Function
-  Public Function GetString(bIn() As Byte, ByVal lStart As Long, ByVal lLength As Long) As String
+  Public Function GetString(bIn As Byte(), ByVal lStart As Long, ByVal lLength As Long) As String
     If bIn.Length < lStart + lLength Then Return String.Empty
     Return System.Text.Encoding.GetEncoding(LATIN_1).GetString(bIn, lStart, lLength)
   End Function
-  Public Function GetBytePos(bIn() As Byte, ByVal bFind As Byte, Optional ByVal lStart As Integer = 0) As Integer
+  Public Function GetBytePos(bIn As Byte(), ByVal bFind As Byte, Optional ByVal lStart As Integer = 0) As Integer
     If lStart = -1 Then lStart = 0
     For I As Integer = lStart To bIn.Length - 1
       If bIn(I) = bFind Then Return I

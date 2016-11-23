@@ -50,7 +50,7 @@ End Class
 '    For I As Integer = 0 To cdDrives.Length - 1
 '      If cdDrives(I).disc Then
 '        RaiseEvent CDExists()
-'        Exit Sub
+'        return
 '      End If
 '    Next
 '    RaiseEvent NoCDs()
@@ -528,7 +528,7 @@ Public Class DataReadEventArgs
     m_Data = data
     m_DataSize = size
   End Sub
-  Public ReadOnly Property Data() As Byte()
+  Public ReadOnly Property Data As Byte()
     Get
       Return m_Data
     End Get
@@ -826,7 +826,7 @@ Friend Class Win32Functions
   Public Structure TRACK_DATA
     Public Reserved As Byte
     Private BitMapped As Byte
-    Public Property Control() As Byte
+    Public Property Control As Byte
       Get
         Return CByte(BitMapped And &HF)
       End Get
@@ -834,7 +834,7 @@ Friend Class Win32Functions
         BitMapped = CByte((BitMapped And &HF0) Or (value And CByte(&HF)))
       End Set
     End Property
-    Public Property Adr() As Byte
+    Public Property Adr As Byte
       Get
         Return CByte((BitMapped And CByte(&HF0)) >> 4)
       End Get

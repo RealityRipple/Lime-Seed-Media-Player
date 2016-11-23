@@ -96,8 +96,8 @@
   End Sub
 
   Private Sub cmbDrive_SelectedIndexChanged(sender As System.Object, e As System.EventArgs) Handles cmbDrive.SelectedIndexChanged
-    If String.IsNullOrEmpty(cmbDrive.SelectedItem) Or cmbDrive.DroppedDown Then Exit Sub
-    If cDrive Is Nothing Then Exit Sub
+    If String.IsNullOrEmpty(cmbDrive.SelectedItem) Or cmbDrive.DroppedDown Then Return
+    If cDrive Is Nothing Then Return
     If cDrive.Open(cmbDrive.SelectedItem.Substring(0, 1)) Then
       If cDrive.IsCDReady Then
         If cDrive.Refresh And cDrive.GetNumTracks > 0 Then
@@ -112,7 +112,7 @@
                 End If
                 J += 1
               Next
-              If Not Redo Then Exit Sub
+              If Not Redo Then Return
             End If
             dgvTracks.Rows.Clear()
             txtAlbumAlbum.Text = "Unknown Album"
@@ -143,10 +143,10 @@
           dgvTracks.Rows.Clear()
           lblStatus.Text = "Unable to read Table of Contents for drive " & cmbDrive.SelectedItem & "."
         End If
-        Else
-          dgvTracks.Rows.Clear()
-          lblStatus.Text = "Drive " & cmbDrive.SelectedItem & " is not ready."
-        End If
+      Else
+        dgvTracks.Rows.Clear()
+        lblStatus.Text = "Drive " & cmbDrive.SelectedItem & " is not ready."
+      End If
     Else
       dgvTracks.Rows.Clear()
       lblStatus.Text = "Unable to open connection to drive " & cmbDrive.SelectedItem & "."
@@ -275,7 +275,11 @@
       txtAlbumAlbum.Text = sAlbum
       txtAlbumArtist.Text = sArtist
       'txtAlbumGenre.Text = 
-      cArtwork = New AppleNet(sArtist, sAlbum)
+      If Not sAlbum = sArtist Then
+        cArtwork = New AppleNet(sAlbum, AppleNet.Term.Album)
+      Else
+        cArtwork = New AppleNet(sArtist, AppleNet.Term.Artist)
+      End If
       Dim SpecialArtist As Boolean = True
       For I As Integer = 0 To dgvTracks.Rows.Count - 1
         If Split(GetLine(sSplits, "TTITLE" & I), " / ").Length <> 2 Then
@@ -294,6 +298,7 @@
         End If
         dgvTracks.Rows(I).Cells(4).Value = sAlbum
       Next
+
     End If
   End Sub
 
@@ -308,7 +313,7 @@
   Private Sub cmdRip_Click(sender As System.Object, e As System.EventArgs) Handles cmdRip.Click
     If dgvTracks.Rows.Count = 0 Then
       Beep()
-      Exit Sub
+      Return
     End If
     If cmdRip.Text = sRip Then
       cmdRip.Text = sCancel
@@ -341,26 +346,21 @@
           mWriter = Nothing
           Using ID3er As New Seed.clsID3v2(fPath)
             ID3er.ID3v2Ver = "2.3.0"
-            ID3er.PutFrame("TP1", dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value)
-            ID3er.PutFrame("TP2", dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value)
-            ID3er.PutFrame("TAL", dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value)
-            ID3er.PutFrame("TT2", sTitle)
-            ID3er.PutFrame("TRK", sTrack)
+            ID3er.AddTextFrame("TP1", New Seed.clsID3v2.EncodedText(dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value))
+            ID3er.AddTextFrame("TP2", New Seed.clsID3v2.EncodedText(dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value))
+            ID3er.AddTextFrame("TAL", New Seed.clsID3v2.EncodedText(dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value))
+            ID3er.AddTextFrame("TT2", New Seed.clsID3v2.EncodedText(sTitle))
+            ID3er.AddTextFrame("TRK", New Seed.clsID3v2.EncodedText(sTrack))
             If Not String.IsNullOrEmpty(txtAlbumGenre.Text) AndAlso Not txtAlbumGenre.Text = "Unknown Genre" Then ID3er.Genre = txtAlbumGenre.Text
-            If Not String.IsNullOrEmpty(txtAlbumYear.Text) AndAlso Not txtAlbumYear.Text = "Unknown Year" Then ID3er.PutFrame("TYE", txtAlbumYear.Text)
-            If pctCover.Tag IsNot Nothing Then
-              Dim bCover() As Byte = pctCover.Tag
-              Dim picCover As String
-              picCover = vbNullChar
-              picCover &= "image/jpeg" & vbNullChar
-              picCover &= Chr(3)
-              Dim CoverDescr As String = dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value & " Album Cover"
-              If CoverDescr.Length > 64 Then CoverDescr = CoverDescr.Substring(0, 61) & "..."
-              picCover &= CoverDescr & vbNullChar
-              picCover &= System.Text.Encoding.GetEncoding(LATIN_1).GetString(bCover)
-              ID3er.SetFrame("APIC", picCover)
+            If Not String.IsNullOrEmpty(txtAlbumYear.Text) AndAlso Not txtAlbumYear.Text = "Unknown Year" Then
+              ID3er.AddTextFrame("TRD", New Seed.clsID3v2.EncodedText(txtAlbumYear.Text))
+              ID3er.AddTextFrame("TYE", New Seed.clsID3v2.EncodedText(txtAlbumYear.Text))
             End If
-            ID3er.PutFrame("TEN", "LimeSeed [LAME v" & beVer.byMajorVersion & "." & beVer.byMinorVersion & " (" & beVer.byMonth & "/" & beVer.byDay & "/" & beVer.wYear & ")]")
+            If pctCover.Tag IsNot Nothing Then
+              Dim bCover As Byte() = pctCover.Tag
+              ID3er.AddImageFrame(bCover, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Seed.clsID3v2.ID3_PIC_MIME.JPG, Seed.clsID3v2.EncodedText.Empty)
+            End If
+            ID3er.AddTextFrame("TEN", New Seed.clsID3v2.EncodedText("LimeSeed [LAME v" & beVer.byMajorVersion & "." & beVer.byMinorVersion & " (" & beVer.byMonth & "/" & beVer.byDay & "/" & beVer.wYear & ")]"))
             ID3er.Save()
           End Using
           Using ID3v1 As New Seed.clsID3v1(fPath)
@@ -387,7 +387,7 @@
         End If
         If cmdRip.Text = sRip Then Exit For
       Next
-      If Not My.Computer.FileSystem.FileExists(fDir & "Folder.jpg") And pctCover.Tag IsNot Nothing Then My.Computer.FileSystem.WriteAllBytes(fDir & "Folder.jpg", pctCover.Tag, False)
+      If Not My.Computer.FileSystem.FileExists(IO.Path.Combine(fDir, "Folder.jpg")) And pctCover.Tag IsNot Nothing Then My.Computer.FileSystem.WriteAllBytes(IO.Path.Combine(fDir, "Folder.jpg"), pctCover.Tag, False)
 
       If sArtistDir.Contains("{") Then My.Computer.FileSystem.RenameDirectory(sArtistDir, cArtistDir)
       If sAlbumDir.Contains("{") Then My.Computer.FileSystem.RenameDirectory(sAlbumDir, cAlbumDir)
@@ -423,7 +423,7 @@
         If StrEquiv(ret("artistName"), txtAlbumArtist.Text) And StrEquiv(ret("collectionName"), txtAlbumAlbum.Text) Then
           If Not ret("artworkUrl100") Is Nothing Then
             cArtwork.ChooseRow(ret)
-            Exit Sub
+            Return
           End If
         End If
       Next
@@ -481,7 +481,7 @@
 
   Private Sub cmdGetInfo_Click(sender As System.Object, e As System.EventArgs) Handles cmdGetInfo.Click
     noPrompt = False
-    cArtwork = New AppleNet(txtAlbumArtist.Text, txtAlbumAlbum.Text)
+    cArtwork = New AppleNet(txtAlbumAlbum.Text, AppleNet.Term.Any)
   End Sub
 
   Private Sub cmdSendInfo_Click(sender As System.Object, e As System.EventArgs) Handles cmdSendInfo.Click
@@ -596,7 +596,7 @@
       sArtist = StrConv(result.CDText.TrackData.Rows(0).Item(3), VbStrConv.ProperCase)
       txtAlbumAlbum.Text = sAlbum
       txtAlbumArtist.Text = sArtist
-      cArtwork = New AppleNet(sArtist, sAlbum)
+      cArtwork = New AppleNet(sAlbum, AppleNet.Term.Album)
       Dim SpecialArtist As Boolean = True
       For I As Integer = 1 To result.CDText.TrackData.Rows.Count - 1
         If Split(result.CDText.TrackData.Rows(I).Item(2), "-").Length <> 2 Then
@@ -619,10 +619,14 @@
 
     Else
       Debug.Print(result.ErrorMessage)
-      If cInfo Is Nothing Then cInfo = New CDDBNet
-      Dim ID As String = CalcDiscID(cmbDrive.SelectedItem.substring(0, 1))
-      lLastRev = 0
-      cInfo.FindDisc(ID)
+      Try
+        If cInfo Is Nothing Then cInfo = New CDDBNet
+        Dim ID As String = CalcDiscID(cmbDrive.SelectedItem.substring(0, 1))
+        lLastRev = 0
+        cInfo.FindDisc(ID)
+      Catch ex As Exception
+
+      End Try
       'MessageBox.Show(result.ErrorMessage)
     End If
     'GoButton.Enabled = True
@@ -636,8 +640,8 @@
       'cdlArt.InitialDirectory = My.Computer.FileSystem.SpecialDirectories.MyDocuments
       cdlArt.Title = "Select Album Cover..."
       If cdlArt.ShowDialog(Me) = DialogResult.OK Then
-        If My.Computer.FileSystem.GetFileInfo(cdlArt.FileName).Length >= 1024L * 1024L * 1024L * 4L Then Exit Sub
-        Dim bCover() As Byte = My.Computer.FileSystem.ReadAllBytes(cdlArt.FileName)
+        If My.Computer.FileSystem.GetFileInfo(cdlArt.FileName).Length >= 1024L * 1024L * 1024L * 4L Then Return
+        Dim bCover As Byte() = My.Computer.FileSystem.ReadAllBytes(cdlArt.FileName)
         pctCover.Image = Drawing.Image.FromStream(New IO.MemoryStream(bCover))
         pctCover.Tag = bCover
       End If
@@ -650,8 +654,8 @@
       If UBound(Data) = 0 Then
         Select Case IO.Path.GetExtension(Data(0)).ToLower
           Case ".jpg", ".jpeg", ".gif", ".png", ".bmp"
-            If My.Computer.FileSystem.GetFileInfo(Data(0)).Length >= 1024L * 1024L * 1024L * 4L Then Exit Sub
-            Dim bCover() As Byte = My.Computer.FileSystem.ReadAllBytes(Data(0))
+            If My.Computer.FileSystem.GetFileInfo(Data(0)).Length >= 1024L * 1024L * 1024L * 4L Then Return
+            Dim bCover As Byte() = My.Computer.FileSystem.ReadAllBytes(Data(0))
             pctCover.Image = Drawing.Image.FromStream(New IO.MemoryStream(bCover))
             pctCover.Tag = bCover
           Case Else
@@ -686,14 +690,22 @@
       e.Effect = DragDropEffects.None
     End If
   End Sub
+
+  Private Sub cArtwork_Progress(sender As Object, e As System.Net.DownloadProgressChangedEventArgs) Handles cArtwork.Progress
+    If Me.InvokeRequired Then
+      Me.Invoke(New Net.DownloadProgressChangedEventHandler(AddressOf cArtwork_Progress), sender, e)
+      Return
+    End If
+    lblStatus.Text = "Downloading Art: " & ByteSize(e.BytesReceived) & "/" & ByteSize(e.TotalBytesToReceive) & " - " & e.ProgressPercentage & "%"
+  End Sub
 End Class
 
 Friend Class AppleNet
   Private WithEvents wsApple As Net.WebClient
   Public Class CompleteEventArgs
     Inherits EventArgs
-    Public Cover() As Byte
-    Public Sub New(bCover() As Byte)
+    Public Cover As Byte()
+    Public Sub New(bCover As Byte())
       Cover = bCover
     End Sub
   End Class
@@ -732,10 +744,22 @@ Friend Class AppleNet
     End Sub
   End Class
   Public Event Choices(sender As Object, e As ChoicesEventArgs)
-  Private cArtist, cAlbum, cArtURL As String, cArtTry As Integer = 0
-  Public Sub New(Artist As String, ByVal Album As String)
-    cArtist = Artist.Trim
-    cAlbum = Album.Trim
+  Public Event Progress(sender As Object, e As Net.DownloadProgressChangedEventArgs)
+  Private cSearch, cArtURL As String
+  Private cArtTry As Integer = 0
+  Private cQualTry As Integer = 0
+  Private cTerm As Term
+  Private cMaxArtSize As Integer
+  Public Enum Term
+    Title
+    Artist
+    Album
+    Any
+  End Enum
+  Public Sub New(SearchTerm As String, Optional TermType As Term = Term.Any, Optional maxArtSize As Integer = 2048)
+    cSearch = SearchTerm.Trim
+    cTerm = TermType
+    cMaxArtSize = maxArtSize
     wsApple = New Net.WebClient
     wsApple.Encoding = System.Text.Encoding.UTF8
     Dim tX As New Threading.Thread(New Threading.ThreadStart(AddressOf DownloadAsync))
@@ -744,13 +768,16 @@ Friend Class AppleNet
 
   Private Sub DownloadAsync()
     Dim appleURI As Uri
-    If String.IsNullOrEmpty(cArtist) Then
-      appleURI = New Uri("http://itunes.apple.com/search?term=" & cAlbum.Replace(" "c, "+"c) & "&media=music&entity=album")
-    ElseIf String.IsNullOrEmpty(cAlbum) Then
-      appleURI = New Uri("http://itunes.apple.com/search?artistTerm=" & cArtist.Replace(" "c, "+"c) & "&media=music&entity=album")
-    Else
-      appleURI = New Uri("http://itunes.apple.com/search?term=" & cAlbum.Replace(" "c, "+"c) & "&media=music&entity=album&artistTerm=" & cArtist.Replace(" "c, "+"c))
-    End If
+    Select Case cTerm
+      Case Term.Title
+        appleURI = New Uri("http://itunes.apple.com/search?term=" & cSearch.Replace(" "c, "+"c) & "&media=music&entity=album&attribute=songTerm&limit=200")
+      Case Term.Artist
+        appleURI = New Uri("http://itunes.apple.com/search?term=" & cSearch.Replace(" "c, "+"c) & "&media=music&entity=album&attribute=artistTerm&limit=200")
+      Case Term.Album
+        appleURI = New Uri("http://itunes.apple.com/search?term=" & cSearch.Replace(" "c, "+"c) & "&media=music&entity=album&attribute=albumTerm&limit=200")
+      Case Else
+        appleURI = New Uri("http://itunes.apple.com/search?term=" & cSearch.Replace(" "c, "+"c) & "&media=music&entity=album&limit=200")
+    End Select
     wsApple.DownloadStringAsync(appleURI)
   End Sub
 
@@ -759,29 +786,59 @@ Friend Class AppleNet
       RaiseEvent Complete(Me, New CompleteEventArgs(e.Result))
     Else
       If cArtURL IsNot Nothing Then
-        Dim AttemptList() As String = {".600x600-75.", ".450x450-75.", ".400x400-75.", "225x225-75", ".200x200-75.", "150x150-65", ".100x100-75."}
-        If cArtTry < AttemptList.Length Then
-          wsApple.DownloadDataAsync(GetArtworkURI(cArtURL, AttemptList(cArtTry)))
+        Dim AttemptSizes() As Integer = {1500, 900, 600, 450, 400, 225, 200, 150, 100} '{".600x600-75.", ".450x450-75.", ".400x400-75.", "225x225-75", ".200x200-75.", "150x150-65", ".100x100-75."}
+        Dim AttemptQualities() As Integer = {100, 90, 85, 75, 65}
+        If cQualTry < AttemptQualities.Length - 1 Then
+          wsApple.DownloadDataAsync(GetArtworkURI(cArtURL, AttemptSizes(cArtTry), AttemptQualities(cQualTry)))
+          cQualTry += 1
         Else
-          RaiseEvent Failed(Me, New FailEventArgs(e.Error))
+          cQualTry = 0
+          cArtTry += 1
+          If cArtTry < AttemptSizes.Length - 1 Then
+            wsApple.DownloadDataAsync(GetArtworkURI(cArtURL, AttemptSizes(cArtTry), AttemptQualities(cQualTry)))
+            cQualTry += 1
+          Else
+            RaiseEvent Failed(Me, New FailEventArgs(e.Error))
+          End If
         End If
-        cArtTry += 1
       Else
         RaiseEvent Failed(Me, New FailEventArgs(e.Error))
       End If
     End If
   End Sub
 
-  Private Function GetArtworkURI(Row As Generic.Dictionary(Of String, Object), Optional ByVal SetSize As String = ".") As Uri
+  Private Function GetArtworkURI(Row As Generic.Dictionary(Of String, Object), Optional ByVal SetSize As Integer = 1500, Optional ByVal SetQuality As Integer = 100) As Uri
     Dim sURL As String = Row("artworkUrl100").ToString
     If String.IsNullOrEmpty(sURL) Then Return Nothing
-    If sURL.Contains(".100x100-75.") Then sURL = sURL.Replace(".100x100-75.", SetSize)
+    If sURL.Contains(".100x100-75.") Then
+      sURL = sURL.Replace(".100x100-75.", "." & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    ElseIf sURL.Contains("/100x100-85.") Then
+      sURL = sURL.Replace("/100x100-85.", "/" & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    ElseIf sURL.Contains("/100x100bb.") Then
+      sURL = sURL.Replace("/100x100bb.", "/" & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    ElseIf sURL.Contains("/100x100bb-85.") Then
+      sURL = sURL.Replace("/100x100bb-85.", "/" & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    Else
+      Debug.Print("Unknown Artwork URI Type: " & sURL)
+      Stop
+    End If
     Return New Uri(sURL)
   End Function
 
-  Private Function GetArtworkURI(sURL As String, Optional ByVal SetSize As String = ".") As Uri
+  Private Function GetArtworkURI(sURL As String, Optional ByVal SetSize As Integer = 1500, Optional ByVal SetQuality As Integer = 100) As Uri
     If String.IsNullOrEmpty(sURL) Then Return Nothing
-    If sURL.Contains(".100x100-75.") Then sURL = sURL.Replace(".100x100-75.", SetSize)
+    If sURL.Contains(".100x100-75.") Then
+      sURL = sURL.Replace(".100x100-75.", "." & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    ElseIf sURL.Contains("/100x100-85.") Then
+      sURL = sURL.Replace("/100x100-85.", "/" & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    ElseIf sURL.Contains("/100x100bb.") Then
+      sURL = sURL.Replace("/100x100bb.", "/" & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    ElseIf sURL.Contains("/100x100bb-85.") Then
+      sURL = sURL.Replace("/100x100bb-85.", "/" & SetSize & "x" & SetSize & "-" & SetQuality & ".")
+    Else
+      Debug.Print("Unknown Artwork URI Type: " & sURL)
+      Stop
+    End If
     Return New Uri(sURL)
   End Function
 
@@ -801,8 +858,16 @@ Friend Class AppleNet
   Public Sub ChooseRow(InfoLine As Generic.Dictionary(Of String, Object))
     If Not InfoLine("artworkUrl100") Is Nothing Then
       cArtURL = InfoLine("artworkUrl100").ToString
+      cArtTry = 0
+      cQualTry = 0
       wsApple.DownloadDataAsync(GetArtworkURI(InfoLine))
       RaiseEvent Infos(Me, New InfosEventArgs(GetDate(InfoLine), GetGenre(InfoLine)))
+    End If
+  End Sub
+
+  Private Sub wsApple_DownloadProgressChanged(sender As Object, e As System.Net.DownloadProgressChangedEventArgs) Handles wsApple.DownloadProgressChanged
+    If e.TotalBytesToReceive > 0 Then
+      RaiseEvent Progress(Me, e)
     End If
   End Sub
 
@@ -842,9 +907,13 @@ Friend Class CDDBNet
 
   Public Sub New()
     wsSocket = New TCPWrapper
-    wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, 8880)
-    lState = 0
-    wsSocket.Connect()
+    Try
+      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, 8880)
+      lState = 0
+      wsSocket.Connect()
+    Catch ex As Exception
+      RaiseEvent FindError("Unable to connect")
+    End Try
   End Sub
 
   Public Sub FindDisc(DiscID As String)
@@ -970,35 +1039,6 @@ Friend Class CDDBNet
                 Dim matches() As String = Split(sList, vbNewLine)
                 Dim chosen As Integer = 0
                 Debug.Print(sBuffer)
-                'Dim frmChoices As New Form
-                'Dim iPos As Integer = 16
-                'Dim I As Integer = 0
-                'For Each Item In matches
-                '  Dim itmVals() As String = Split(Item, " ", 3)
-                '  Dim itmCat As String = itmVals(0)
-                '  Dim itmdID As String = itmVals(1)
-                '  Dim itmTitle As String = Split(itmVals(2), " / ")(1)
-                '  Dim itmArtist As String = Split(itmVals(2), " / ")(0)
-                '  frmChoices.Controls.Add(New RadioButton With {.Text = itmTitle & " by " & itmArtist, .Left = 16, .Top = iPos, .Name = "rdoItem" & I, .Tag = I})
-                '  iPos += frmChoices.Controls(0).Height + 32
-                '  I += 1
-                'Next
-                'frmChoices.Height = iPos + 30
-                'frmChoices.Width = 150
-                'Dim cmdOK As New Button With {.Text = "OK", .Left = 25, .Top = iPos, .Width = 50}
-                'Dim cmdCancel As New Button With {.Text = "Cancel", .Left = 75, .Top = iPos, .Width = 50}
-                'frmChoices.Controls.Add(cmdOK)
-                'frmChoices.Controls.Add(cmdCancel)
-                'frmChoices.AcceptButton = cmdOK
-                'frmChoices.CancelButton = cmdCancel
-                'If frmChoices.ShowDialog = DialogResult.OK Then
-                '  For Each item As RadioButton In (From items In frmChoices.Controls Where items.GetType Is GetType(RadioButton))
-                '    If item.Checked Then
-                '      chosen = item.Tag
-                '      Exit For
-                '    End If
-                '  Next
-                'End If
                 sList = matches(chosen)
               End If
               Dim vals() As String = Split(sList, " ", 3)
@@ -1129,7 +1169,7 @@ Friend Class CDDBNet
 
   Private Sub SendData(Message As String)
     'Debug.Print(Message)
-    Dim bSend() As Byte = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(Message & vbCrLf)
+    Dim bSend As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(Message & vbCrLf)
     wsSocket.Send(bSend)
   End Sub
 End Class

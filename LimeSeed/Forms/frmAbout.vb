@@ -38,7 +38,17 @@
       Dim fileInfo = My.Computer.FileSystem.GetFileInfo(ffDshowPath)
       lblFFDShow.Text = String.Format("FFDshow rev{0}_{1}", verInfo.ProductBuildPart, fileInfo.LastWriteTime.ToString("yyyyMMdd"))
     Else
-      lblFFDShow.Text = "FFDshow not installed"
+      Dim regSoftware As Microsoft.Win32.RegistryKey
+      If Environment.Is64BitOperatingSystem Then
+        regSoftware = My.Computer.Registry.LocalMachine.OpenSubKey("Software").OpenSubKey("Wow6432Node")
+      Else
+        regSoftware = My.Computer.Registry.LocalMachine.OpenSubKey("Software")
+      End If
+      If regSoftware.GetSubKeyNames.Contains("KLCodecPack") Then
+        lblFFDShow.Text = "K-Lite Codec Pack " & regSoftware.OpenSubKey("KLCodecPack").GetValue("version", "(Unknown Version)") & " " & regSoftware.OpenSubKey("KLCodecPack").GetValue("type", "(Unknown Type)")
+      Else
+        lblFFDShow.Text = "FFDshow not installed"
+      End If
     End If
     ttInfo.SetToolTip(lblFFDShow, lblFFDShow.Text)
     txtDescription.Text = My.Application.Info.Description
@@ -183,10 +193,19 @@
   End Sub
 
   Private Sub cmdFFDshow_Click(sender As System.Object, e As System.EventArgs) Handles cmdFFDshow.Click
-    If Environment.Is64BitProcess Then
-      Diagnostics.Process.Start("http://sourceforge.net/projects/ffdshow-tryout/files/SVN%20builds%20by%20clsid/64-bit%20builds/")
+    If lblFFDShow.Text.StartsWith("K-Lite") Then
+      If lblFFDShow.Text.Contains("(Unknown Type)") Then
+        Diagnostics.Process.Start("http://www.codecguide.com/download_kl.htm")
+      Else
+        Dim klType As String = lblFFDShow.Text.Substring(lblFFDShow.Text.LastIndexOf(" ") + 1)
+        Diagnostics.Process.Start("http://www.codecguide.com/download_k-lite_codec_pack_" & klType & ".htm")
+      End If
     Else
-      Diagnostics.Process.Start("http://sourceforge.net/projects/ffdshow-tryout/files/SVN%20builds%20by%20clsid/generic%20builds/")
+      If Environment.Is64BitProcess Then
+        Diagnostics.Process.Start("http://sourceforge.net/projects/ffdshow-tryout/files/SVN%20builds%20by%20clsid/64-bit%20builds/")
+      Else
+        Diagnostics.Process.Start("http://sourceforge.net/projects/ffdshow-tryout/files/SVN%20builds%20by%20clsid/generic%20builds/")
+      End If
     End If
   End Sub
 

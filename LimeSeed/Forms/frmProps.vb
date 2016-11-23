@@ -1,6 +1,6 @@
 ﻿Public Class frmProps
   Private mpPreview As Seed.ctlSeed
-  Private sFile As String
+  Public sFile As String
 
   Private Sub lstFilters_DoubleClick(sender As Object, e As System.EventArgs) Handles lstFilters.DoubleClick
     cmdFilterProps.PerformClick()
@@ -38,6 +38,8 @@
     newCell.Items.AddRange(Items)
     If Not newCell.Items.Contains(Value) Then newCell.Items.Add(Value)
     newCell.Value = Value
+    newCell.FlatStyle = FlatStyle.Flat
+    newCell.DisplayStyle = DataGridViewComboBoxDisplayStyle.Nothing
     newRow.Cells.Add(newCell)
     newRow.Tag = Tag
     Return newRow
@@ -84,96 +86,143 @@
       If ID3v2Tags.HasID3v2Tag Then
         dgvID3v2.Rows.Add(GenerateComboRow("Version", ID3v2Tags.ID3v2Ver, {"2.2.0", "2.3.0", "2.4.0"}, Nothing))
         Dim bPic As Boolean = False
+        Dim sGenre As String = Nothing
         For I As Integer = 0 To ID3v2Tags.FrameCount - 1
           Dim sFName As String = ID3v2Tags.FrameName(I)
           Dim sFrame As String = Seed.clsID3v2.GetFrameName(sFName)
-          Dim fData() As Object = ID3v2Tags.ParseFrame(sFName, ID3v2Tags.FrameData(I))
-          If sFName.StartsWith("T") Or sFName.StartsWith("W") Then
-            For J As Integer = 0 To fData.Length - 1
-              fData(J) = fData(J).Replace(vbCr, vbNewLine)
-            Next
+          Dim fData As Seed.clsID3v2.ParseResponse = ID3v2Tags.ParseFrame(sFName, ID3v2Tags.FrameData(I))
+          If fData Is Nothing Then
+            Continue For
+          End If
+          If fData.GetType = GetType(Seed.clsID3v2.Parse_Failure) Then
+            Dim mData As Seed.clsID3v2.Parse_Failure = fData
+            Debug.Print("Failed to parse " & mData.Name & ": " & mData.Error)
+            Continue For
           End If
           Select Case sFName
-            Case "TXX", "TXXX"
-              If fData.Length = 2 Then
-                dgvID3v2.Rows.Add(GenerateRow(fData(0), fData(1), sFName))
-              Else
-                dgvID3v2.Rows.Add(GenerateRow(sFrame, fData(0), sFName))
-              End If
             Case "WXX", "WXXX"
-              If fData.Length = 2 Then
-                dgvID3v2.Rows.Add(GenerateLinkRow(fData(0), fData(1), fData(1), sFName))
+              Dim mData As Seed.clsID3v2.Parsed_TXXX = fData
+              If String.IsNullOrEmpty(mData.Description) Then
+                dgvID3v2.Rows.Add(GenerateLinkRow(sFrame, mData.Value, mData.Value, sFName))
               Else
-                dgvID3v2.Rows.Add(GenerateLinkRow(sFrame, fData(0), fData(0), sFName))
-              End If
-            Case "GEO", "GEOB"
-              dgvID3v2.Rows.Add(GenerateRow(sFrame, "MIME Type: " & fData(0) & vbNewLine & "File Name: " & fData(1) & vbNewLine & "Description: " & fData(2) & vbNewLine & "Content: " & fData(3), sFName))
-            Case "PIC", "APIC"
-              Dim picRow As New DataGridViewRow
-              picRow.Cells.Add(New DataGridViewTextBoxCell With {.Value = "Pictures:"})
-              Dim picButton As New DataGridViewButtonCell With {.Value = "View Pictures"}
-              picRow.Cells.Add(picButton)
-              dgvID3v2.Rows.Add(picRow)
-              Dim sTmpPath As String = IO.Path.GetTempFileName
-              My.Computer.FileSystem.WriteAllText(sTmpPath, fData(3), False, System.Text.Encoding.GetEncoding("latin1"))
-              Try
-                Using imgTmp As Drawing.Image = PathToImg(sTmpPath)
-                  pctPreview.Image = imgTmp.Clone
-                  picButton.Tag = {fData(0), fData(1), fData(2), imgTmp.Clone} 'MIME / Description / 0xID / Image
-                End Using
-                pctPreview.SizeMode = PictureBoxSizeMode.Zoom
-                txtVideoSize.Text = "No video"
-                bPic = True
-              Catch ex As Exception
-                Debug.Print("Image Error: " & ex.Message)
-                bPic = False
-              Finally
-                My.Computer.FileSystem.DeleteFile(sTmpPath)
-              End Try
-            Case "PRIV"
-              If fData(0).Contains(vbNullChar) Then
-                Dim sSplit() As String = Split(fData(0), vbNullChar, 2)
-                If String.IsNullOrEmpty(sSplit(0)) Then
-                  dgvID3v2.Rows.Add(GenerateRow(sFrame, sSplit(1), sFName))
-                Else
-                  If sSplit(0).StartsWith("WM/") Then
-                    If sSplit(0).EndsWith("ID") Then
-                      dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & sSplit(0) & "]", "{" & New Guid(System.Text.Encoding.GetEncoding("latin1").GetBytes(sSplit(1))).ToString & "}", sFName))
-                    Else
-                      Dim sUni As String = System.Text.Encoding.Unicode.GetString((System.Text.Encoding.GetEncoding("latin1").GetBytes(sSplit(1))))
-                      Do While sUni.EndsWith(vbNullChar)
-                        sUni = sUni.Substring(0, sUni.Length - 1)
-                      Loop
-                      dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & sSplit(0) & "]", sUni, sFName))
-                    End If
-                  Else
-                    dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & sSplit(0) & "]", BitConverter.ToString(System.Text.Encoding.GetEncoding("latin1").GetBytes(sSplit(1))), sFName))
-                  End If
-                End If
-              Else
-                dgvID3v2.Rows.Add(GenerateRow(sFrame, fData(0), sFName))
-              End If
-            Case "ULT", "USLT"
-              If fData.Length = 2 Then
-                dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & fData(0) & "]", fData(1).ToString.Replace(vbCr, vbNewLine), sFName))
-              Else
-                dgvID3v2.Rows.Add(GenerateRow(sFrame, fData(0).ToString.Replace(vbCr, vbNewLine), sFName))
+                dgvID3v2.Rows.Add(GenerateLinkRow(sFrame, mData.Description, mData.Value, sFName))
               End If
             Case Else
-              If sFName.StartsWith("T") Then
-                dgvID3v2.Rows.Add(GenerateRow(sFrame, fData(0), sFName))
-              ElseIf sFName.StartsWith("W") Then
-                dgvID3v2.Rows.Add(GenerateLinkRow(sFrame, fData(0), fData(0), sFName))
+              If sFName.StartsWith("W") Then
+                Dim mData As Seed.clsID3v2.Parsed_TZZZ = fData
+                dgvID3v2.Rows.Add(GenerateLinkRow(sFrame, mData.Value, mData.Value, sFName))
               Else
-                dgvID3v2.Rows.Add(GenerateRow(sFrame, fData(0), sFName))
+                Select Case fData.GetType
+                  Case GetType(Seed.clsID3v2.Parsed_APIC)
+                    Dim mData As Seed.clsID3v2.Parsed_APIC = fData
+                    Dim picRow As New DataGridViewRow
+                    picRow.Cells.Add(New DataGridViewTextBoxCell With {.Value = "Picture:"})
+                    Dim picButton As New DataGridViewButtonCell With {.Value = "View Picture"}
+                    picRow.Cells.Add(picButton)
+                    picRow.Tag = sFName
+                    dgvID3v2.Rows.Add(picRow)
+                    If mData.Picture IsNot Nothing Then
+                      pctPreview.Image = mData.Picture.Clone
+                      picButton.Tag = {mData.MIME, mData.Description, mData.Type, mData.Image} 'MIME / Description / 0xID / Image
+                      If String.IsNullOrWhiteSpace(mData.Description) Then
+                        If Not mData.Type = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then picButton.Value = "View " & Seed.clsID3v2.ImageID(mData.Type)
+                      Else
+                        picButton.Value = "View " & mData.Description
+                      End If
+                      pctPreview.SizeMode = PictureBoxSizeMode.Zoom
+                      txtVideoSize.Text = "No video"
+                      bPic = True
+                    Else
+                      bPic = False
+                    End If
+                  Case GetType(Seed.clsID3v2.Parsed_COMM)
+                    Dim mData As Seed.clsID3v2.Parsed_COMM = fData
+                    Dim sFrName As String = sFrame
+                    If Not String.IsNullOrEmpty(mData.Description) Then sFrame = mData.Description
+                    If Not String.IsNullOrEmpty(mData.Language) Then sFrame &= " [" & mData.Language & "]"
+                    dgvID3v2.Rows.Add(GenerateRow(sFrName, mData.Comment, sFName))
+                  Case GetType(Seed.clsID3v2.Parsed_GEOB)
+                    Dim mData As Seed.clsID3v2.Parsed_GEOB = fData
+                    Dim sMessage As String = Nothing
+                    If Not String.IsNullOrEmpty(mData.Filename) Then sMessage &= "File Name: " & mData.Filename & vbNewLine
+                    If Not String.IsNullOrEmpty(mData.MIME) Then sMessage &= "MIME Type: " & mData.MIME & vbNewLine
+                    If Not String.IsNullOrEmpty(mData.Description) Then sMessage &= "Description: " & mData.Description & vbNewLine
+                    sMessage &= "Content: " & mData.ContentString
+                    dgvID3v2.Rows.Add(GenerateRow(sFrame, sMessage, sFName))
+                  Case GetType(Seed.clsID3v2.Parsed_MCDI)
+                    Dim mData As Seed.clsID3v2.Parsed_MCDI = fData
+                    dgvID3v2.Rows.Add(GenerateRow(sFrame, mData.TOCString, sFName))
+                  Case GetType(Seed.clsID3v2.Parsed_TCON)
+                    Dim mData As Seed.clsID3v2.Parsed_TCON = fData
+                    If String.IsNullOrEmpty(sGenre) Then
+                      sGenre = Join(mData.GenreList, "; ")
+                    Else
+                      sGenre &= "; " & Join(mData.GenreList, "; ")
+                    End If
+                  Case GetType(Seed.clsID3v2.Parsed_TXXX)
+                    Dim mData As Seed.clsID3v2.Parsed_TXXX = fData
+                    If String.IsNullOrEmpty(mData.Description) Then
+                      dgvID3v2.Rows.Add(GenerateRow(sFrame, mData.Value, sFName))
+                    Else
+                      dgvID3v2.Rows.Add(GenerateRow(mData.Description, mData.Value, sFName))
+                    End If
+                  Case GetType(Seed.clsID3v2.Parsed_TZZZ)
+                    Dim mData As Seed.clsID3v2.Parsed_TZZZ = fData
+                    dgvID3v2.Rows.Add(GenerateRow(sFrame, mData.Value, sFName))
+                  Case GetType(Seed.clsID3v2.Parsed_UFID)
+                    Dim mData As Seed.clsID3v2.Parsed_UFID = fData
+                    If String.IsNullOrEmpty(mData.Owner) Then
+                      dgvID3v2.Rows.Add(GenerateRow(sFrame, mData.IdentString, sFName))
+                    Else
+                      If mData.Owner.StartsWith("WM/") Then
+                        If mData.Owner.EndsWith("ID") Then
+                          dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", "{" & New Guid(mData.Ident).ToString & "}", sFName))
+                        Else
+                          Dim sUni As String = System.Text.Encoding.Unicode.GetString(mData.Ident)
+                          Do While sUni.EndsWith(vbNullChar)
+                            sUni = sUni.Substring(0, sUni.Length - 1)
+                          Loop
+                          dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", sUni, sFName))
+                        End If
+                      Else
+                        If mData.Ident.Length = 16 Then
+                          dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", "{" & New Guid(mData.Ident).ToString & "}", sFName))
+                        ElseIf mData.Ident.Length = 4 Then
+                          If mData.Ident(2) = 0 And mData.Ident(3) = 0 Then
+                            Dim uiVal As UInt16 = Val("&H" & mData.Ident(1).ToString("x2") & mData.Ident(0).ToString("x2"))
+                            If uiVal <= Int16.MaxValue Then
+                              dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", FormatPercent(uiVal / Int16.MaxValue, 2, TriState.True, TriState.False, TriState.True) & " (" & BitConverter.ToString(mData.Ident) & ")", sFName))
+                            Else
+                              dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", FormatPercent(uiVal / UInt16.MaxValue, 2, TriState.True, TriState.False, TriState.True) & " (" & BitConverter.ToString(mData.Ident) & ")", sFName))
+                            End If
+                          Else
+                            dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", GetDWORD(mData.Ident), sFName))
+                          End If
+                          Else
+                            dgvID3v2.Rows.Add(GenerateRow(sFrame & " [" & mData.Owner & "]", mData.IdentString, sFName))
+                          End If
+                      End If
+                    End If
+                  Case GetType(Seed.clsID3v2.Parse_Unparsed)
+                    Dim mData As Seed.clsID3v2.Parse_Unparsed = fData
+                    dgvID3v2.Rows.Add(GenerateRow(sFrame, mData.DataString, sFName))
+                  Case Else
+                    dgvID3v2.Rows.Add(GenerateRow(sFrame, System.Text.Encoding.GetEncoding(LATIN_1).GetString(ID3v2Tags.FrameData(I)), sFName))
+                End Select
               End If
           End Select
+          dgvID3v2.Rows(dgvID3v2.Rows.Count - 1).Cells(0).ReadOnly = True
         Next
+        If Not String.IsNullOrEmpty(sGenre) Then dgvID3v2.Rows.Add(GenerateRow("Genre", sGenre, "TCON"))
         Dim iIndex As Integer = 1
-        For Each sItem As String In ({"Track:", "Title:", "Artist:", "Album:", "Genre:", "Year:"})
+        For Each sItem As String In ({"Track:", "Title:", "Subtitle:", "Artist:", "Original Artist:", "Album:", "Genre:", "Recording Date:", "Year:", "Disc Number:", "Set Title:", "Set Subtitle:", "Publisher:", "Encoded By:", "Author URL:", "Copyright Message:", "Copyright Information:", "Composer:", "Lyricist:", "Conductor:", "Band:"})
           For I As Integer = 0 To dgvID3v2.Rows.Count - 1
             Dim cellI As DataGridViewTextBoxCell = dgvID3v2.Rows(I).Cells(0)
             If CType(cellI.Value, String) = sItem Then
+              If I = iIndex Then
+                iIndex += 1
+                Continue For
+              End If
               Dim newRow As DataGridViewRow = dgvID3v2.Rows(I)
               dgvID3v2.Rows.Remove(newRow)
               dgvID3v2.Rows.Insert(iIndex, newRow)
@@ -184,8 +233,8 @@
         Next
 
         If Not bPic Then
-          If My.Computer.FileSystem.FileExists(txtFilePath.Text & "\Folder.jpg") Then
-            Using bmpTmp As Drawing.Bitmap = PathToImg(txtFilePath.Text & "\Folder.jpg")
+          If My.Computer.FileSystem.FileExists(IO.Path.Combine(txtFilePath.Text, "Folder.jpg")) Then
+            Using bmpTmp As Drawing.Bitmap = PathToImg(IO.Path.Combine(txtFilePath.Text, "Folder.jpg"))
               pctPreview.Image = bmpTmp.Clone
               pctPreview.SizeMode = PictureBoxSizeMode.Zoom
               txtVideoSize.Text = "No video"
@@ -194,8 +243,8 @@
         End If
         Return True
       Else
-        If My.Computer.FileSystem.FileExists(txtFilePath.Text & "\Folder.jpg") Then
-          Using bmpTmp As Drawing.Bitmap = PathToImg(txtFilePath.Text & "\Folder.jpg")
+        If My.Computer.FileSystem.FileExists(IO.Path.Combine(txtFilePath.Text, "Folder.jpg")) Then
+          Using bmpTmp As Drawing.Bitmap = PathToImg(IO.Path.Combine(txtFilePath.Text, "Folder.jpg"))
             pctPreview.Image = bmpTmp.Clone
             pctPreview.SizeMode = PictureBoxSizeMode.Zoom
             txtVideoSize.Text = "No video"
@@ -313,6 +362,7 @@
         End If
         dgvVorbis.Rows.Add({"- File Info -", ""})
         If cVorbis.File_Version > 0 Then dgvVorbis.Rows.Add({"   Version:", cVorbis.File_Version})
+        If cVorbis.File_Duration > 0.0 Then dgvVorbis.Rows.Add({"   Duration:", ConvertTimeVal(cVorbis.File_Duration)})
         If cVorbis.File_Channels > 0 Then
           Dim sChannel As String = cVorbis.File_Channels
           Select Case cVorbis.File_Channels
@@ -340,7 +390,7 @@
           For Each Pic In cVorbis.Pictures
             Dim picRow As New DataGridViewRow
             picRow.Cells.Add(New DataGridViewTextBoxCell With {.Value = "Pictures:"})
-            Dim picButton As New DataGridViewButtonCell With {.Value = "View Pictures"}
+            Dim picButton As New DataGridViewButtonCell With {.Value = "View Picture"}
             picRow.Cells.Add(picButton)
             dgvVorbis.Rows.Add(picRow)
             picButton.Tag = {Pic.MIME, Pic.Descr, Pic.PicType, Pic.Image} 'MIME / Description / 0xID / Image
@@ -893,7 +943,7 @@
           Dim v, a, m, t As Integer
           For I As Integer = 0 To cHeader.AVIStreamCount - 1
             Dim cStream As Seed.clsRIFF.AVISTREAMHEADER = cHeader.AVIStreamData(I)
-            Dim nodeAVIStream = nodeAVIMain.Nodes.Add(cStream.fccType.ToUpper & " Node")
+            Dim nodeAVIStream = nodeAVIMain.Nodes.Add(IIf(String.IsNullOrEmpty(cStream.StreamName), cStream.fccType.ToUpper & " Node", cStream.StreamName & " (" & cStream.fccType.ToUpper & " Node)"))
             If Not String.IsNullOrEmpty(cStream.fccHandler) Then nodeAVIStream.Nodes.Add("Handler: " & cStream.fccHandler)
             nodeAVIStream.Nodes.Add("Flags: " & cStream.dwFlags.ToString)
             nodeAVIStream.Nodes.Add("Priority: " & cStream.wPriority)
@@ -980,13 +1030,17 @@
     sFile = File
     mpPreview = New Seed.ctlSeed
     mpPreview.AudioDevice = My.Settings.Device
-    If String.IsNullOrEmpty(File) Then Exit Sub
+    If String.IsNullOrEmpty(File) Then Return
     If File.EndsWith("VIDEO_TS", True, Nothing) Then
       pctClipIcon.Image = Nothing
     Else
-      Using ico As Drawing.Icon = Drawing.Icon.ExtractAssociatedIcon(File)
-        pctClipIcon.Image = ico.ToBitmap
-      End Using
+      Try
+        Using ico As Drawing.Icon = Drawing.Icon.ExtractAssociatedIcon(File)
+          pctClipIcon.Image = ico.ToBitmap
+        End Using
+      Catch ex As Exception
+        pctClipIcon.Image = Nothing
+      End Try
     End If
 
     pctDetailsIcon.Image = pctClipIcon.Image
@@ -1001,6 +1055,30 @@
     txtAdvancedFileName.Text = txtClipFileName.Text
     txtFilePath.Text = IO.Path.GetDirectoryName(File)
     tbsTags.TabPages.Clear()
+
+    mpPreview.Mute = True
+    mpPreview.FileName = File
+    Dim genPreview As Boolean = False
+    If mpPreview.IsFlash Then
+      txtLength.Text = mpPreview.Duration & " frames"
+      pctPreview.Image = Nothing
+      pctPreview.SizeMode = PictureBoxSizeMode.Zoom
+      txtVideoSize.Text = mpPreview.VideoWidth & " x " & mpPreview.VideoHeight
+      genPreview = True
+    Else
+      txtLength.Text = ConvertTimeVal(mpPreview.Duration)
+      If mpPreview.HasVid Then
+        pctPreview.Image = Nothing
+        pctPreview.SizeMode = PictureBoxSizeMode.Zoom
+        txtVideoSize.Text = mpPreview.VideoWidth & " x " & mpPreview.VideoHeight
+        genPreview = True
+      Else
+        pctPreview.Image = Nothing
+        pctPreview.SizeMode = PictureBoxSizeMode.Zoom
+        txtVideoSize.Text = "No video"
+      End If
+    End If
+
     If File.EndsWith("VIDEO_TS", True, Nothing) Then
       txtType.Text = "Digital Video Disc"
       txtSize.Text = ByteSize(My.Computer.FileSystem.GetDriveInfo(File.Substring(0, 3)).TotalSize) & " (" & FormatNumber(My.Computer.FileSystem.GetDriveInfo(File.Substring(0, 3)).TotalSize, 0) & " bytes)"
@@ -1098,37 +1176,17 @@
         Case "wax" : txtType.Text = "Windows Media Audio Redirector"
         Case "wmv" : txtType.Text = "Windows Media Video File"
         Case "wvx" : txtType.Text = "Windows Media Video Redirector"
-        Case "m3u" : txtType.Text = "MP3 Playlist File"
-        Case "pls" : txtType.Text = "Generic Playlist File"
+        Case "m3u" : txtType.Text = "MP3 PlayList File"
+        Case "m3u8" : txtType.Text = "UTF-8 Encoded MP3 PlayList File"
+        Case "pls" : txtType.Text = "Generic PlayList File"
         Case "llpl" : txtType.Text = "Lime Light PlayList File"
         Case "gif" : txtType.Text = "Graphics Interchange Format Animated Image File"
         Case Else : txtType.Text = "Unknown File"
       End Select
       txtSize.Text = ByteSize(My.Computer.FileSystem.GetFileInfo(File).Length) & " (" & FormatNumber(My.Computer.FileSystem.GetFileInfo(File).Length, 0) & " bytes)"
     End If
-
-    mpPreview.Mute = True
-    mpPreview.FileName = File
     Dim Filters() As String = Nothing
     mpPreview.GetFilters(Filters)
-    If mpPreview.IsFlash Then
-      txtLength.Text = mpPreview.Duration & " frames"
-      pctPreview.Image = Nothing
-      pctPreview.SizeMode = PictureBoxSizeMode.Zoom
-      txtVideoSize.Text = mpPreview.VideoWidth & " x " & mpPreview.VideoHeight
-    Else
-      txtLength.Text = ConvertTimeVal(mpPreview.Duration)
-      If mpPreview.HasVid Then
-
-        pctPreview.Image = Nothing
-        pctPreview.SizeMode = PictureBoxSizeMode.Zoom
-        txtVideoSize.Text = mpPreview.VideoWidth & " x " & mpPreview.VideoHeight
-      Else
-        pctPreview.Image = Nothing
-        pctPreview.SizeMode = PictureBoxSizeMode.Zoom
-        txtVideoSize.Text = "No video"
-      End If
-    End If
     txtCreated.Text = My.Computer.FileSystem.GetFileInfo(File).CreationTime.ToString
     If Filters IsNot Nothing Then
       lstFilters.Enabled = True
@@ -1140,12 +1198,14 @@
       lstFilters.Enabled = False
       cmdFilterProps.Enabled = False
     End If
-    Me.Opacity = 0
     Me.Show(frmMain)
-    tmrGenPreview.Interval = 50
-    tmrGenPreview.Enabled = True
-    Application.DoEvents()
-    tabProps.SelectedIndex = 1
+    If genPreview Then
+      Me.Opacity = 0
+      tmrGenPreview.Interval = 50
+      tmrGenPreview.Enabled = True
+      Application.DoEvents()
+      tabProps.SelectedIndex = 1
+    End If
   End Sub
 
   Private Sub cmdOK_Click(sender As System.Object, e As System.EventArgs) Handles cmdOK.Click
@@ -1189,18 +1249,24 @@
   End Sub
 
   Private Sub cmdID3v2Add_Click(sender As System.Object, e As System.EventArgs) Handles cmdID3v2Add.Click
-    Using newTag As New frmNewID3v2Tag
-      If newTag.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
-        Dim TagID As frmNewID3v2Tag.ID3FrameList = CType(newTag.cmbType.SelectedItem, frmNewID3v2Tag.ID3FrameList)
-        Select Case TagID.ID.Substring(0, 1)
-          Case "W"
-            dgvID3v2.Rows.Add(GenerateLinkRow(TagID.Name, "http://", "http://", TagID.ID))
-          Case "T"
+    CreateUnsetID3v2Tag()
+  End Sub
 
-        End Select
-
+  Private Sub cmdID3v2Remove_Click(sender As System.Object, e As System.EventArgs) Handles cmdID3v2Remove.Click
+    If dgvID3v2.SelectedRows.Count = 1 Then
+      Dim selRow = dgvID3v2.SelectedRows(0)
+      If selRow.Cells(0).Value.ToString.EndsWith(":") Then
+        If MsgBox("Do you want to remove the " & selRow.Cells(0).Value.substring(0, selRow.Cells(0).Value.length - 1) & " row?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then dgvID3v2.Rows.Remove(selRow)
+      Else
+        dgvID3v2.Rows.Remove(selRow)
       End If
-    End Using
+    ElseIf dgvID3v2.SelectedRows.Count > 1 Then
+      If MsgBox("Do you want to remove all " & dgvID3v2.SelectedRows.Count & " selected rows?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+        For Each selRow In dgvID3v2.SelectedRows
+          dgvID3v2.Rows.Remove(selRow)
+        Next
+      End If
+    End If
   End Sub
 
   Private Sub cmdID3v2Reset_Click(sender As System.Object, e As System.EventArgs) Handles cmdID3v2Reset.Click
@@ -1210,32 +1276,158 @@
   Private Sub cmdID3v2Save_Click(sender As Object, e As System.EventArgs) Handles cmdID3v2Save.Click
     mpPreview.FileName = Nothing
     Using ID3v2Tags As New Seed.clsID3v2(sFile)
+      ID3v2Tags.RemoveAll()
       For Each row As DataGridViewRow In dgvID3v2.Rows
-        ID3v2Tags.SetFrame(row.Tag, row.Cells(1).Value)
-
+        If row.Tag Is Nothing Then
+          If Not ID3v2Tags.ID3v2Ver = row.Cells(1).Value Then ID3v2Tags.ID3v2Ver = row.Cells(1).Value
+          Continue For
+        End If
+        If row.Cells(1).GetType = GetType(DataGridViewTextBoxCell) Then
+          ID3v2Tags.AddTextFrame(row.Tag, New Seed.clsID3v2.EncodedText(row.Cells(1).Value))
+        ElseIf row.Cells(1).GetType = GetType(DataGridViewButtonCell) Then
+          Dim cellTags() As Object = row.Cells(1).Tag
+          ID3v2Tags.AddImageFrame(cellTags(3), cellTags(2), cellTags(0), New Seed.clsID3v2.EncodedText(cellTags(1)))
+        ElseIf row.Cells(1).GetType = GetType(DataGridViewLinkCell) Then
+          If row.Tag = "WXX" Or row.Tag = "WXXX" Then
+            ID3v2Tags.AddUserLinkFrame(New Seed.clsID3v2.EncodedText(row.Cells(1).Value), row.Cells(1).Tag)
+          Else
+            ID3v2Tags.AddTextFrame(row.Tag, New Seed.clsID3v2.EncodedText(row.Cells(1).Value))
+          End If
+        Else
+          MsgBox("Unable to handle " & row.Tag & " frames!" & vbNewLine & "Cell Type: " & row.Cells(1).GetType.ToString)
+        End If
       Next
       ID3v2Tags.Save()
       MsgBox("ID3v2 Tags for " & IO.Path.GetFileName(sFile) & " have been saved!", MsgBoxStyle.Information, "ID3v2 Tags Saved!")
     End Using
+    'MsgBox("Feature not implemented!")
   End Sub
+
+  Private Sub CreateUnsetID3v2Tag()
+    Dim dgrAdd As New DataGridViewRow
+    Dim dgcType As New DataGridViewComboBoxCell
+    dgcType.Items.Add("New Tag")
+    dgcType.Items.Add("Title")
+    dgcType.Items.Add("Subtitle")
+    dgcType.Items.Add("Artist")
+    dgcType.Items.Add("Album")
+    dgcType.Items.Add("Disc Number")
+    dgcType.Items.Add("Set Title")
+    dgcType.Items.Add("Set Subtitle")
+    dgcType.Items.Add("Track")
+    dgcType.Items.Add("Genre")
+    dgcType.Items.Add("Year")
+    dgcType.Items.Add("Comments")
+    dgcType.Items.Add("Picture")
+    dgcType.Items.Add("Play Counter")
+    dgcType.Items.Add("Lyricist")
+    dgcType.Items.Add("Composer")
+    dgcType.Items.Add("Conductor")
+    dgcType.Items.Add("Band")
+    dgcType.Items.Add("Original Artist")
+    dgcType.Items.Add("Original Lyricist")
+    dgcType.Items.Add("Original Album")
+    dgcType.Items.Add("Original Release Year")
+    dgcType.Items.Add("Musician Credits")
+    dgcType.Items.Add("Involved People List")
+    dgcType.Items.Add("Mix By")
+    dgcType.Items.Add("Lyrics")
+    dgcType.Items.Add("Song Webpage")
+    dgcType.Items.Add("Artist Webpage")
+    dgcType.Items.Add("Publisher Webpage")
+    dgcType.FlatStyle = FlatStyle.Flat
+    dgcType.DisplayStyle = DataGridViewComboBoxDisplayStyle.Nothing
+    dgcType.Value = "New Tag"
+    dgrAdd.Cells.Add(dgcType)
+    dgcType.ReadOnly = False
+    Dim dgcValue As New DataGridViewTextBoxCell
+    dgcValue.Value = "Select a Tag Type"
+    dgrAdd.Cells.Add(dgcValue)
+    dgcValue.ReadOnly = True
+    dgvID3v2.Rows.Add(dgrAdd)
+  End Sub
+
 
   Private Sub DataGrid_CellContentClick(sender As Object, e As System.Windows.Forms.DataGridViewCellEventArgs) Handles dgvID3v2.CellContentClick, dgvVorbis.CellContentClick
     If CType(sender, DataGridView).Rows(e.RowIndex).Cells(e.ColumnIndex).GetType Is GetType(DataGridViewButtonCell) Then
       Dim cmdPicture As DataGridViewButtonCell = CType(sender, DataGridView).Rows(e.RowIndex).Cells(e.ColumnIndex)
-      Dim sMIME As String = cmdPicture.Tag(0)
-      Dim sDesc As String = cmdPicture.Tag(1)
-      Dim bID As Byte = cmdPicture.Tag(2)
-      Dim iImg As Drawing.Image = cmdPicture.Tag(3)
-      Dim frmTmp As New Form With {.FormBorderStyle = Windows.Forms.FormBorderStyle.SizableToolWindow, .Text = "[" & Seed.clsID3v2.ImageID(bID) & "] " & sDesc, .Size = New Drawing.Size(300, 320), .StartPosition = FormStartPosition.CenterParent, .ShowInTaskbar = False, .BackColor = Drawing.Color.Black, .Margin = New Padding(0), .Padding = New Padding(0)}
-      Dim pctDisp As New PictureBox With {.Dock = DockStyle.Fill, .BorderStyle = BorderStyle.None, .SizeMode = PictureBoxSizeMode.Zoom, .Margin = New Padding(0), .Padding = New Padding(0)}
-      frmTmp.Controls.Add(pctDisp)
-      pctDisp.Image = iImg.Clone
-      frmTmp.Show(Me)
+      If cmdPicture.Value.ToString.StartsWith("View") Then
+        Dim sMIME As String = cmdPicture.Tag(0)
+        Dim sDesc As String = cmdPicture.Tag(1)
+        Dim bID As Seed.clsID3v2.ID3_PIC_TYPE = cmdPicture.Tag(2)
+        Dim iImg As Drawing.Image = Nothing
+        Try
+          Using ioImage As New IO.MemoryStream(CType(cmdPicture.Tag(3), Byte()))
+            iImg = Drawing.Image.FromStream(ioImage).Clone
+          End Using
+        Catch ex As Exception
+
+        End Try
+        Dim sTitle As String = Nothing
+        If String.IsNullOrEmpty(sDesc) Then
+          If bID = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then
+            sTitle = "Picture - " & iImg.Width & " x " & iImg.Height
+          Else
+            sTitle = Seed.clsID3v2.ImageID(bID) & " - " & iImg.Width & " x " & iImg.Height
+          End If
+        Else
+          If bID = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then
+            sTitle = sDesc & " - " & iImg.Width & " x " & iImg.Height
+          Else
+            sTitle = "[" & Seed.clsID3v2.ImageID(bID) & "] " & sDesc & " - " & iImg.Width & " x " & iImg.Height
+          End If
+        End If
+        Dim defaultSize As Integer = 300
+        Dim maximumSize As Integer = 500
+        Dim picDimensions As New Drawing.Size(defaultSize, defaultSize)
+        If iImg.Width > defaultSize Then picDimensions.Width = iImg.Width
+        If iImg.Height > defaultSize Then picDimensions.Height = iImg.Height
+        If picDimensions.Width > maximumSize Or picDimensions.Height > maximumSize Then
+          Dim newScale As Double = 0
+          If picDimensions.Width > picDimensions.Height Then
+            newScale = maximumSize / picDimensions.Width
+          Else
+            newScale = maximumSize / picDimensions.Height
+          End If
+          picDimensions.Width = picDimensions.Width * newScale
+          picDimensions.Height = picDimensions.Height * newScale
+        End If
+        Dim frmTmp As New Form With {.FormBorderStyle = Windows.Forms.FormBorderStyle.SizableToolWindow, .Text = sTitle, .Size = New Drawing.Size(picDimensions.Width, picDimensions.Height + 20), .MinimumSize = New Drawing.Size(defaultSize, defaultSize + 20), .StartPosition = FormStartPosition.CenterParent, .ShowInTaskbar = False, .BackColor = Drawing.Color.Black, .Margin = New Padding(0), .Padding = New Padding(0)}
+        Dim pctDisp As New PictureBox With {.Dock = DockStyle.Fill, .BorderStyle = BorderStyle.None, .SizeMode = PictureBoxSizeMode.Zoom, .Margin = New Padding(0), .Padding = New Padding(0)}
+        frmTmp.Controls.Add(pctDisp)
+        pctDisp.Image = iImg.Clone
+        frmTmp.Show(Me)
+      ElseIf cmdPicture.Value.ToString.StartsWith("Select") Then
+        Using cdlOpen As New OpenFileDialog
+          cdlOpen.Filter = "Image Files|*.bmp;*.gif;*.png;*.jpg;*.jpeg;*.jpe"
+          cdlOpen.Title = "Select a Picture"
+          If Not cdlOpen.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then Return
+          Dim sPicture As String = cdlOpen.FileName
+          If Not IO.File.Exists(sPicture) Then Return
+          cmdPicture.Tag = {Seed.clsID3v2.ExtToMIME(sPicture), Nothing, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Drawing.Image.FromFile(sPicture)}
+          cmdPicture.Value = "View Front Cover"
+        End Using
+      End If
     End If
   End Sub
 
   Private Sub dgvID3v2_CellLeave(sender As Object, e As System.Windows.Forms.DataGridViewCellEventArgs) Handles dgvID3v2.CellLeave
     If dgvID3v2.Rows(e.RowIndex).Height > 22 Then dgvID3v2.Rows(e.RowIndex).Height = 22
+  End Sub
+
+  Private Sub dgvID3v2_CellValueChanged(sender As Object, e As System.Windows.Forms.DataGridViewCellEventArgs) Handles dgvID3v2.CellValueChanged
+    If e.RowIndex < 0 Or e.ColumnIndex < 0 Then Return
+    Dim selRow As DataGridViewRow = dgvID3v2.Rows(e.RowIndex)
+    Dim sTag As String = selRow.Cells(0).Value
+    If e.ColumnIndex = 0 Then
+      'Tag Name Change
+      Debug.Print("New " & sTag & " tag!")
+
+    ElseIf e.ColumnIndex = 1 Then
+      'Tag Value Change
+      Debug.Print("New value for " & sTag & " (" & selRow.Cells(1).GetType.ToString & ")!")
+
+    End If
   End Sub
 
   Private Sub dgvID3v2_EditingControlShowing(sender As Object, e As System.Windows.Forms.DataGridViewEditingControlShowingEventArgs) Handles dgvID3v2.EditingControlShowing
@@ -1249,12 +1441,55 @@
         txt.ScrollBars = ScrollBars.Vertical
         dgvID3v2.SelectedRows(0).Height = 200
       End If
+    ElseIf e.Control.GetType Is GetType(DataGridViewComboBoxEditingControl) Then
+      Dim cmb As DataGridViewComboBoxEditingControl = e.Control
+      AddHandler cmb.SelectedIndexChanged, AddressOf id3v2Combo_SelectedIndexChanged
     End If
   End Sub
 
   Private Sub id3v2Button_Click(sender As Object, e As EventArgs)
     Stop
   End Sub
+
+  Private Sub id3v2Combo_SelectedIndexChanged(sender As Object, e As EventArgs)
+    Dim cmb As DataGridViewComboBoxEditingControl = sender
+    Select Case cmb.SelectedItem
+      Case "New Tag"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Select a Tag Type"
+      Case "Title", "Subtitle", "Artist", "Album", "Set Title", "Set Subtitle", "Lyricist", "Composer",
+           "Conductor", "Band", "Original Artist", "Original Lyricist", "Original Album", "Mix By",
+           "Song Webpage", "Artist Webpage", "Publisher Webpage"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Disc Number"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Track"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Genre"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Year"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Comments"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Picture"
+        dgvID3v2.SelectedRows(0).Cells(1) = New DataGridViewButtonCell With {.Value = "Select Picture"}
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Play Counter"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case "Lyrics"
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Cells(0).Value = cmb.SelectedItem & ":"
+      Case Else
+        'Debug.Print("Unknown: " & cmb.SelectedItem)
+    End Select
+  End Sub
+
 
   Private Sub dgvID3v1_CellLeave(sender As Object, e As System.Windows.Forms.DataGridViewCellEventArgs) Handles dgvID3v1.CellLeave
     If e.RowIndex = 0 Then
@@ -1301,4 +1536,6 @@
     End Select
     GenNum += 1
   End Sub
+
+
 End Class

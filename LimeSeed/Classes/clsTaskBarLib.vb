@@ -368,7 +368,8 @@ Public Class TaskbarController
   End Sub
 
   Public Sub CreatePreview(Obj As Drawing.Image)
-    If Not clsGlass.IsCompositionEnabled Then Exit Sub
+    If Obj Is Nothing Then Return
+    If Not clsGlass.IsCompositionEnabled Then Return
     If tmpObj Is Nothing Then
       RemovePreview()
       CreateTmpObj()
@@ -386,7 +387,7 @@ Public Class TaskbarController
   End Sub
 
   Public Sub CreatePreview(obj As Control)
-    If Not clsGlass.IsCompositionEnabled Then Exit Sub
+    If Not clsGlass.IsCompositionEnabled Then Return
     If TaskbarManager.IsPlatformSupported AndAlso obj IsNot Nothing Then
       If tmpObj IsNot Nothing Then RemovePreview()
       Dim loc As Drawing.Point = GetExactLoc(obj)
@@ -398,7 +399,11 @@ Public Class TaskbarController
 
         'End Try
       End If
-      TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, obj.Size))
+      Try
+        TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, obj.Size))
+      Catch ex As Exception
+
+      End Try
       Try
         taskThumb.Title = c_Title
       Catch ex As Exception
@@ -408,7 +413,7 @@ Public Class TaskbarController
           End If
           taskThumb.Title = c_Title
         Catch ex2 As Exception
-          Exit Sub
+          Return
         End Try
       End Try
       If c_Icon IsNot Nothing Then taskThumb.SetWindowIcon(c_Icon.Clone)
@@ -416,7 +421,7 @@ Public Class TaskbarController
   End Sub
 
   Public Sub UpdatePreview(obj As Control)
-    If Not clsGlass.IsCompositionEnabled Then Exit Sub
+    If Not clsGlass.IsCompositionEnabled Then Return
     If TaskbarManager.IsPlatformSupported AndAlso obj IsNot Nothing Then
       Dim loc As Drawing.Point = GetExactLoc(obj)
       TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, obj.Size))

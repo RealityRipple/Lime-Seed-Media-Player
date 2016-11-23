@@ -124,7 +124,7 @@
     udpBroadcast.Bind(New Net.IPEndPoint(Net.IPAddress.Any, 57942))
     Dim sOut As String = "LSMP(" & Net.Dns.GetHostName & ")"
     sOut = BufferHex(sOut.Length, 4) & sOut
-    Dim bOut() As Byte = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(sOut)
+    Dim bOut As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(sOut)
     udpBroadcast.SendTo(New Net.IPEndPoint(StrToLong(myIP.Substring(0, myIP.LastIndexOf(".") + 1) & "255"), 57941), bOut)
     tmrTry.Tag = TriState.False
     tmrTry.Start()
@@ -163,7 +163,7 @@
       Me.BeginInvoke(New EventHandler(AddressOf tcpRequest_SocketConnected))
     Else
       Debug.Print("TCP Request Connected")
-      Dim bOut() As Byte = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes("TRANSFER(" & Net.Dns.GetHostName & ")")
+      Dim bOut As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes("TRANSFER(" & Net.Dns.GetHostName & ")")
       tcpRequest.Send(bOut)
     End If
   End Sub
@@ -202,24 +202,26 @@
         Next
         sResponse &= CType(Me.Owner, frmMain).GetSelectedPlayListItem & vbLf & CType(Me.Owner, frmMain).mpPlayer.Position
         'current track and location in track should be in sResponse
-        Dim bOut() As Byte = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(sResponse)
+        Dim bOut As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(sResponse)
         tcpRequest.Send(bOut)
       ElseIf sState = "PLAYING" Then
         Me.DialogResult = Windows.Forms.DialogResult.Yes
         Me.Close()
+      ElseIf sState = "NOT_FOUND" Then
+        Failure("Remote Server " & sName & " (" & sIP & ") Could not find the files to play.")
       Else
         Failure("Remote Server " & sName & " (" & sIP & ") could not transfer: " & sState)
       End If
     End If
   End Sub
 
-  Private udpBuffer() As Byte
+  Private udpBuffer As Byte()
   Private Sub udpBroadcast_SocketReceived(sender As Object, e As SocketReceivedEventArgs) Handles udpBroadcast.SocketReceived
     If Me.InvokeRequired Then
       Me.BeginInvoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf udpBroadcast_SocketReceived), sender, e)
     Else
       Dim fromIP As Net.IPEndPoint = e.RemoteEndPoint
-      Dim bIn() As Byte = e.Data
+      Dim bIn As Byte() = e.Data
       If udpBuffer Is Nothing Then
         udpBuffer = bIn
       Else
@@ -240,7 +242,7 @@
           Dim sName As String = sIn.Substring(sIn.IndexOf("(") + 1, sIn.IndexOf(")") - (sIn.IndexOf("(") + 1))
           Dim sIP As String = fromIP.Address.ToString
           Dim myIP As Object = cmbIPs.SelectedItem
-          If sIP = myIP Then Exit Sub
+          If sIP = myIP Then Return
           If sState = "ACCEPT" Or sState = "ACTIVE" Or sState = "OCCUPIED" Then
             Dim lItem As New ListViewItem
             lItem.Text = sState

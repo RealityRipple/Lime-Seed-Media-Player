@@ -37,7 +37,7 @@
     Public SMPTEOffset As UInt64
     Public TrackTime As TimeSignature
     Public TrackSignature As KeySignature
-    Public SequencerInfo() As Byte
+    Public SequencerInfo As Byte()
     'Audio track data...
   End Structure
   Private bValid As Boolean
@@ -77,10 +77,10 @@
 
   Public Sub New(FilePath As String)
     bValid = False
-    If String.IsNullOrEmpty(FilePath) Then Exit Sub
-    If Not My.Computer.FileSystem.FileExists(FilePath) Then Exit Sub
-    If My.Computer.FileSystem.GetFileInfo(FilePath).Length >= 1024L * 1024L * 1024L * 2L Then Exit Sub
-    Dim bFile() As Byte = My.Computer.FileSystem.ReadAllBytes(FilePath)
+    If String.IsNullOrEmpty(FilePath) Then Return
+    If Not My.Computer.FileSystem.FileExists(FilePath) Then Return
+    If My.Computer.FileSystem.GetFileInfo(FilePath).Length >= 1024L * 1024L * 1024L * 2L Then Return
+    Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(FilePath)
     Dim lPos As Long = 0
     ReadHeader(bFile, lPos)
     ReDim mChunks(mHeader.TrackCount - 1)
@@ -90,7 +90,7 @@
     Next
   End Sub
 
-  Private Sub ReadHeader(ByRef bFile() As Byte, ByRef lPos As Long)
+  Private Sub ReadHeader(ByRef bFile As Byte(), ByRef lPos As Long)
     Select Case GetDWORD(bFile, lPos)
       Case &H4D546864
         lPos += 4
@@ -111,7 +111,7 @@
           lPos += 2
         Else
           bValid = False
-          Exit Sub
+          Return
         End If
       Case &H52494646
         Debug.Print("RMI")
@@ -120,11 +120,11 @@
       Case Else
         lPos += 4
         bValid = False
-        Exit Sub
+        Return
     End Select
   End Sub
 
-  Private Function ReadTrack(ByRef bFile() As Byte, ByRef lPos As Long) As TrackChunk
+  Private Function ReadTrack(ByRef bFile As Byte(), ByRef lPos As Long) As TrackChunk
     If GetDWORD(bFile, lPos) = &H4D54726B Then
       lPos += 4
       Dim newChunk As New TrackChunk
@@ -363,7 +363,7 @@
     End If
   End Function
 
-  Private Function ReadVar(ByRef bFile() As Byte, ByRef lPos As Long) As UInt64
+  Private Function ReadVar(ByRef bFile As Byte(), ByRef lPos As Long) As UInt64
     Dim val As UInt32
     Dim c As Byte
     val = bFile(lPos)
@@ -379,7 +379,7 @@
     Return val
   End Function
 
-  Private Function GetWORDandBYTE(bIn() As Byte, Optional ByVal lStart As Long = 0) As UInt32
+  Private Function GetWORDandBYTE(bIn As Byte(), Optional ByVal lStart As Long = 0) As UInt32
     Dim bTmp(3) As Byte
 
     If lStart + 2 >= bIn.Length Then
@@ -422,31 +422,15 @@
   End Function
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean 
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
-        ' TODO: dispose managed state (managed objects).
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
-
-  ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
-    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
     Dispose(True)
     GC.SuppressFinalize(Me)
   End Sub

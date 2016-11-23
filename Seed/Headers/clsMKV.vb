@@ -68,14 +68,14 @@
       End If
     End Function
 
-    Private Function BytesToSVal(bIn() As Byte) As Int64
+    Private Function BytesToSVal(bIn As Byte()) As Int64
       Dim bPad(7) As Byte
       Array.Reverse(bIn)
       Array.Copy(bIn, bPad, bIn.Length)
       Return BitConverter.ToInt64(bPad, 0)
     End Function
 
-    Private Function BytesToVal(bIn() As Byte) As UInt64
+    Private Function BytesToVal(bIn As Byte()) As UInt64
       Try
         Dim bPad(7) As Byte
         Array.Reverse(bIn)
@@ -86,7 +86,7 @@
       End Try
     End Function
 
-    Private Function BytesToFloat(bIn() As Byte) As Double
+    Private Function BytesToFloat(bIn As Byte()) As Double
       If bIn.Length <= 4 Then
         Dim bPad(3) As Byte
         Array.Reverse(bIn)
@@ -375,7 +375,7 @@
     Dim bReader As New MKVBinaryReader(Path)
     If Not ReadEBMLHeader(bReader) Then
       RaiseEvent Failure("No MKV Header Found!")
-      Exit Sub
+      Return
     End If
     Do
       Select Case ReadSegment(bReader)
@@ -383,7 +383,7 @@
           'OK
         Case TriState.False
           RaiseEvent Failure("Segment parse failure!")
-          Exit Sub
+          Return
         Case TriState.UseDefault
           'Supposed to be a failure, but fuck it for now
           Continue Do
@@ -393,7 +393,7 @@
     Loop Until bReader.EndOfStream
     If SeekHead.Contents Is Nothing Then
       RaiseEvent Failure("No seek data found!")
-      Exit Sub
+      Return
     End If
     'Gather all seek data, now!
     Dim Contents() As SeekContents
@@ -646,7 +646,7 @@
         Case &H4287 : EBMLHead.DocTypeVersion = rHead.GetValue
         Case &H4285 : EBMLHead.DocTypeReadVersion = rHead.GetValue
         Case &HEC
-          Dim bVoid() As Byte = rHead.GetBytes
+          Dim bVoid As Byte() = rHead.GetBytes
           'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
         Case Else : Debug.Print("Unrecognized Header Element ID: " & Hex(ElID) & ", Value: " & BitConverter.ToString(rHead.GetBytes))
       End Select
@@ -679,10 +679,10 @@
         bReader.BaseStream.Position += lLen
         Return True
       Case &HEC
-        Dim bVoid() As Byte = bReader.GetBytes
+        Dim bVoid As Byte() = bReader.GetBytes
         Return bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length))
       Case Else
-        Dim bSegData() As Byte = bReader.GetBytes
+        Dim bSegData As Byte() = bReader.GetBytes
         Debug.Print("Unrecognized Segment ID: " & Hex(ElID) & ", Length: " & bSegData.Length)
         Return TriState.True
     End Select
@@ -703,7 +703,7 @@
                 Case &H53AB : SeekHead.Contents(SeekI).SeekID = rSeekField.GetBytes
                 Case &H53AC : SeekHead.Contents(SeekI).SeekPosition = rSeekField.GetValue
                 Case &HEC
-                  Dim bVoid() As Byte = rSeekField.GetBytes
+                  Dim bVoid As Byte() = rSeekField.GetBytes
                   'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                 Case Else : Debug.Print("Unrecognized Seek Field: " & Hex(elID) & ", Value: " & BitConverter.ToString(rSeek.GetBytes))
               End Select
@@ -712,7 +712,7 @@
           End Using
           SeekI += 1
         ElseIf seID = &HEC Then
-          Dim bVoid() As Byte = rSeek.GetBytes
+          Dim bVoid As Byte() = rSeek.GetBytes
           'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
         Else
           Return False
@@ -765,7 +765,7 @@
                   Case &H69BF : SegmentInfo.ChapterTranslate(TransI).Codec = rChapterTranslate.GetValue
                   Case &H69A5 : SegmentInfo.ChapterTranslate(TransI).TrackID = rChapterTranslate.GetBytes
                   Case &HEC
-                    Dim bVoid() As Byte = rChapterTranslate.GetBytes
+                    Dim bVoid As Byte() = rChapterTranslate.GetBytes
                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                   Case Else : Debug.Print("Unrecognized Chapter Translate Field: " & Hex(chID) & ", Value: " & BitConverter.ToString(rChapterTranslate.GetBytes))
                 End Select
@@ -779,7 +779,7 @@
           Case &H4D80 : SegmentInfo.MuxingApp = rInfo.GetUTF8String
           Case &H5741 : SegmentInfo.WritingApp = rInfo.GetUTF8String
           Case &HEC
-            Dim bVoid() As Byte = rInfo.GetBytes
+            Dim bVoid As Byte() = rInfo.GetBytes
             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
           Case Else : Debug.Print("Unrecognized Segment Field: " & Hex(elID) & ", Value: " & BitConverter.ToString(rInfo.GetBytes))
         End Select
@@ -861,7 +861,7 @@
                           Case &H66BF : TrackEntries(TrackI).Translate(transI).Codec = rTranslate.GetValue
                           Case &H66A5 : TrackEntries(TrackI).Translate(transI).TrackID = rTranslate.GetBytes
                           Case &HEC
-                            Dim bVoid() As Byte = rTranslate.GetBytes
+                            Dim bVoid As Byte() = rTranslate.GetBytes
                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                           Case Else : Debug.Print("Unrecognized Track Translate Field: " & Hex(transID) & ", Value: " & BitConverter.ToString(rTranslate.GetBytes))
                         End Select
@@ -892,7 +892,7 @@
                           Case &H2FB523 : TrackEntries(TrackI).Video.GammaValue = rVideo.GetFloat
                           Case &H2383E3 : TrackEntries(TrackI).Video.FrameRate = rVideo.GetFloat
                           Case &HEC
-                            Dim bVoid() As Byte = rVideo.GetBytes
+                            Dim bVoid As Byte() = rVideo.GetBytes
                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                           Case Else : Debug.Print("Unrecognized Track Video Field: " & Hex(vidID) & ", Value: " & BitConverter.ToString(rVideo.GetBytes))
                         End Select
@@ -911,7 +911,7 @@
                           Case &H7D7B : TrackEntries(TrackI).Audio.ChannelPositions = rAudio.GetBytes
                           Case &H6264 : TrackEntries(TrackI).Audio.BitDepth = rAudio.GetValue
                           Case &HEC
-                            Dim bVoid() As Byte = rAudio.GetBytes
+                            Dim bVoid As Byte() = rAudio.GetBytes
                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                           Case Else : Debug.Print("Unrecognized Track Audio Field: " & Hex(audID) & ", Value: " & BitConverter.ToString(rAudio.GetBytes))
                         End Select
@@ -940,7 +940,7 @@
                                           Case &HE5 : TrackEntries(TrackI).TrackOperation.TrackCombinePlanes.TrackPlane(PlaneI).UID = rPlane.GetValue
                                           Case &HE6 : TrackEntries(TrackI).TrackOperation.TrackCombinePlanes.TrackPlane(PlaneI).PlaneType = rPlane.GetValue
                                           Case &HEC
-                                            Dim bVoid() As Byte = rPlane.GetBytes
+                                            Dim bVoid As Byte() = rPlane.GetBytes
                                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                                           Case Else : Debug.Print("Unrecognized Plane Field: " & Hex(planeID) & ", Value: " & BitConverter.ToString(rPlane.GetBytes))
                                         End Select
@@ -949,7 +949,7 @@
                                       rPlane.Close()
                                     End Using
                                   Case &HEC
-                                    Dim bVoid() As Byte = rCombinePlanes.GetBytes
+                                    Dim bVoid As Byte() = rCombinePlanes.GetBytes
                                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                                   Case Else : Debug.Print("Unrecognized Combine Plane Field: " & Hex(combPlaneID) & ", Value: " & BitConverter.ToString(rCombinePlanes.GetBytes))
                                 End Select
@@ -968,7 +968,7 @@
                                     TrackEntries(TrackI).TrackOperation.TrackJoinBlocks(BlockI).UID = rJoinBlocks.GetValue
                                     BlockI += 1
                                   Case &HEC
-                                    Dim bVoid() As Byte = rJoinBlocks.GetBytes
+                                    Dim bVoid As Byte() = rJoinBlocks.GetBytes
                                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                                   Case Else : Debug.Print("Unrecognized Join Block Field: " & Hex(joinBlockID) & ", Value: " & BitConverter.ToString(rJoinBlocks.GetBytes))
                                 End Select
@@ -976,7 +976,7 @@
                               rJoinBlocks.Close()
                             End Using
                           Case &HEC
-                            Dim bVoid() As Byte = rOperation.GetBytes
+                            Dim bVoid As Byte() = rOperation.GetBytes
                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                           Case Else : Debug.Print("Unrecognized Track Operation Field: " & Hex(opID) & ", Value: " & BitConverter.ToString(rOperation.GetBytes))
                         End Select
@@ -1012,7 +1012,7 @@
                                           Case &H4254 : TrackEntries(TrackI).ContentEncodings.ContentEncoding(EncodingI).ContentCompression.Algorithm = rCompression.GetValue
                                           Case &H4255 : TrackEntries(TrackI).ContentEncodings.ContentEncoding(EncodingI).ContentCompression.Settings = rCompression.GetBytes
                                           Case &HEC
-                                            Dim bVoid() As Byte = rCompression.GetBytes
+                                            Dim bVoid As Byte() = rCompression.GetBytes
                                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                                           Case Else : Debug.Print("Unrecognized Compression Field: " & Hex(compressionID) & ", Value: " & BitConverter.ToString(rCompression.GetBytes))
                                         End Select
@@ -1031,7 +1031,7 @@
                                           Case &H47E5 : TrackEntries(TrackI).ContentEncodings.ContentEncoding(EncodingI).ContentEncryption.SigAlgorithm = rEncryption.GetValue
                                           Case &H47E6 : TrackEntries(TrackI).ContentEncodings.ContentEncoding(EncodingI).ContentEncryption.SigHashAlgorithm = rEncryption.GetValue
                                           Case &HEC
-                                            Dim bVoid() As Byte = rEncryption.GetBytes
+                                            Dim bVoid As Byte() = rEncryption.GetBytes
                                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                                           Case Else : Debug.Print("Unrecognized Compression Field: " & Hex(encryptionID) & ", Value: " & BitConverter.ToString(rEncryption.GetBytes))
                                         End Select
@@ -1039,7 +1039,7 @@
                                       rEncryption.Close()
                                     End Using
                                   Case &HEC
-                                    Dim bVoid() As Byte = rEncoding.GetBytes
+                                    Dim bVoid As Byte() = rEncoding.GetBytes
                                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                                   Case 0 : Exit Do
                                   Case Else : Debug.Print("Unrecognized Encoding Field: " & Hex(encodingID) & ", Value: " & BitConverter.ToString(rEncoding.GetBytes))
@@ -1049,7 +1049,7 @@
                             End Using
                             EncodingI += 1
                           Case &HEC
-                            Dim bVoid() As Byte = rEncodings.GetBytes
+                            Dim bVoid As Byte() = rEncodings.GetBytes
                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                           Case Else : Debug.Print("Unrecognized Encodings Field: " & Hex(encodingsID) & ", Value: " & BitConverter.ToString(rEncodings.GetBytes))
                         End Select
@@ -1057,7 +1057,7 @@
                       rEncodings.Close()
                     End Using
                   Case &HEC
-                    Dim bVoid() As Byte = rEntry.GetBytes
+                    Dim bVoid As Byte() = rEntry.GetBytes
                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                   Case Else : Debug.Print("Unrecognized Track Field: " & Hex(elID) & ", Value: " & BitConverter.ToString(rEntry.GetBytes))
                 End Select
@@ -1066,7 +1066,7 @@
             End Using
             TrackI += 1
           Case &HEC
-            Dim bVoid() As Byte = rInfo.GetBytes
+            Dim bVoid As Byte() = rInfo.GetBytes
             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
           Case Else
             Debug.Print("Unrecognized Track Entry ID: " & Hex(TrackEntryID) & ", Value: " & BitConverter.ToString(rInfo.GetBytes))
@@ -1106,7 +1106,7 @@
                     End If
                     ReadChapterAtom(rChapter, ChapterInfo.Editions(ChapterI).Atoms)
                   Case &HEC
-                    Dim bVoid() As Byte = rChapter.GetBytes
+                    Dim bVoid As Byte() = rChapter.GetBytes
                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                   Case Else : Debug.Print("Unrecognized Chapter Edition Field: " & Hex(chID) & ", Value: " & BitConverter.ToString(rChapter.GetBytes))
                 End Select
@@ -1114,7 +1114,7 @@
               rChapter.Close()
             End Using
           Case &HEC
-            Dim bVoid() As Byte = rInfo.GetBytes
+            Dim bVoid As Byte() = rInfo.GetBytes
             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
           Case Else : Debug.Print("Unrecognized Chapter Info Field: " & Hex(elID) & ", Value: " & BitConverter.ToString(rInfo.GetBytes))
         End Select
@@ -1154,7 +1154,7 @@
                     AtomList(AtomI).Track.ChapterTrackNumber(TrackI) = rTrack.GetValue
                     TrackI += 1
                   Case &HEC
-                    Dim bVoid() As Byte = rTrack.GetBytes
+                    Dim bVoid As Byte() = rTrack.GetBytes
                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                   Case Else : Debug.Print("Unrecognized Chapter Edition Atom Track Field: " & Hex(trackID) & ", Value: " & BitConverter.ToString(rTrack.GetBytes))
                 End Select
@@ -1188,7 +1188,7 @@
                     End If
                     AtomList(AtomI).Display(DisplayI).Country(AtomList(AtomI).Display(DisplayI).Country.Length - 1) = rDisplay.GetASCIIString
                   Case &HEC
-                    Dim bVoid() As Byte = rDisplay.GetBytes
+                    Dim bVoid As Byte() = rDisplay.GetBytes
                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                   Case Else : Debug.Print("Unrecognized Chapter Edition Atom Display Field: " & Hex(trackID) & ", Value: " & BitConverter.ToString(rDisplay.GetBytes))
                 End Select
@@ -1222,7 +1222,7 @@
                           Case &H6922 : AtomList(AtomI).Process(ProcessI).Command(CommandI).Time = rCommand.GetValue
                           Case &H6933 : AtomList(AtomI).Process(ProcessI).Command(CommandI).Data = rCommand.GetBytes
                           Case &HEC
-                            Dim bVoid() As Byte = rProcess.GetBytes
+                            Dim bVoid As Byte() = rProcess.GetBytes
                             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                           Case Else : Debug.Print("Unrecognized Chapter Edition Atom  Display Command Field: " & Hex(commandID) & ", Value: " & BitConverter.ToString(rCommand.GetBytes))
                         End Select
@@ -1230,7 +1230,7 @@
                       rCommand.Close()
                     End Using
                   Case &HEC
-                    Dim bVoid() As Byte = rProcess.GetBytes
+                    Dim bVoid As Byte() = rProcess.GetBytes
                     'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
                   Case Else : Debug.Print("Unrecognized Chapter Edition Atom Display Field: " & Hex(processID) & ", Value: " & BitConverter.ToString(rProcess.GetBytes))
                 End Select
@@ -1240,7 +1240,7 @@
           Case &HB6
             ReadChapterAtom(rAtom, AtomList(AtomI).SubAtoms)
           Case &HEC
-            Dim bVoid() As Byte = rAtom.GetBytes
+            Dim bVoid As Byte() = rAtom.GetBytes
             'If Not bVoid.SequenceEqual(Array.CreateInstance(GetType(Byte), bVoid.Length)) Then Return False
           Case Else : Debug.Print("Unrecognized Chapter Edition Atom Field: " & Hex(atomID) & ", Value: " & BitConverter.ToString(rAtom.GetBytes))
         End Select
@@ -1251,31 +1251,15 @@
   End Function
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean 
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
-        ' TODO: dispose managed state (managed objects).
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
-
-  ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
-    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
     Dispose(True)
     GC.SuppressFinalize(Me)
   End Sub

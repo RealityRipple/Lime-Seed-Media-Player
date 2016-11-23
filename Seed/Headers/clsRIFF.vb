@@ -7,7 +7,7 @@
   End Structure
   Private Structure Chunk
     Public Header As ChunkHeader
-    Public Data() As Byte
+    Public Data As Byte()
   End Structure
   Private bValid As Boolean
   Private bDTS As Boolean
@@ -75,6 +75,7 @@
     Public dwQuality As UInt32
     Public dwSampleSize As UInt32
     Public rcFrame As AVISTREAMHEADERFRAME
+    Public StreamName As String
   End Structure
 
   <Flags()>
@@ -105,7 +106,7 @@
     Public Comment As String
     Public Genre As IDVX_GENRE
     Public Rating As IDVX_RATING
-    Public Extra() As Byte
+    Public Extra As Byte()
     Public FileID As String
   End Structure
 
@@ -167,7 +168,7 @@
     Public rgbGreen As Byte
     Public rgbRed As Byte
     Public rgbReserved As Byte
-    Public Sub New(data() As Byte)
+    Public Sub New(data As Byte())
       rgbBlue = data(0)
       rgbGreen = data(1)
       rgbRed = data(2)
@@ -821,19 +822,19 @@
 
   Public Sub New(FilePath As String)
     bValid = False
-    If String.IsNullOrEmpty(FilePath) Then Exit Sub
-    If Not My.Computer.FileSystem.FileExists(FilePath) Then Exit Sub
+    If String.IsNullOrEmpty(FilePath) Then Return
+    If Not My.Computer.FileSystem.FileExists(FilePath) Then Return
     Using ioFile As New IO.BinaryReader(New IO.FileStream(FilePath, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.Read))
-      Dim mChunk As Chunk
+      Dim mChunk As New Chunk
       mChunk.Header.ChunkID = ioFile.ReadChars(4)
-      If Not mChunk.Header.ChunkID = "RIFF" Then Exit Sub
+      If Not mChunk.Header.ChunkID = "RIFF" Then Return
       mChunk.Header.ChunkSize = ioFile.ReadUInt32
       mChunk.Header.Format = ioFile.ReadChars(4)
       Select Case mChunk.Header.Format
         Case "WAVE"
           'WAVEFORMAT
           Do While ioFile.BaseStream.Position < mChunk.Header.ChunkSize
-            Dim wavChunk As Chunk
+            Dim wavChunk As New Chunk
             wavChunk.Header.ChunkID = ioFile.ReadChars(4)
             wavChunk.Header.ChunkSize = ioFile.ReadUInt32
             wavChunk.Data = ioFile.ReadBytes(wavChunk.Header.ChunkSize)
@@ -875,10 +876,10 @@
                       bValid = True
                     Case Else
                       Debug.Print("Unkown Size " & wavChunk.Header.ChunkSize)
-                      Exit Sub
+                      Return
                   End Select
                 Case "data"
-                  Dim firstFour() As Byte = ioData.ReadBytes(4)
+                  Dim firstFour As Byte() = ioData.ReadBytes(4)
                   Do While firstFour(0) = 0
                     ioData.BaseStream.Position -= 3
                     firstFour = ioData.ReadBytes(4)
@@ -889,7 +890,7 @@
                     Case "1F-FF-E8-00" '14-bit Big Endian
                     Case "FF-1F-00-E8" '14-bit Little Endian
                       ioData.BaseStream.Position -= 4
-                      Dim bDTSa() As Byte = BytesTo14BitL(ioData.ReadBytes(24))
+                      Dim bDTSa As Byte() = BytesTo14BitL(ioData.ReadBytes(24))
                       If bDTSa(0) = &H7F And bDTSa(1) = &HFE And bDTSa(2) = &H80 And bDTSa(3) = &H1 Then
                         bDTS = True
                         sizeLeft = 8
@@ -932,11 +933,11 @@
                         End Select
                       Else
                         bDTS = False
-                        Exit Sub
+                        Return
                       End If
                     Case Else
                       ioData.BaseStream.Position -= 4
-                      Dim bDTSa() As Byte = BytesTo14BitL(ioData.ReadBytes(16))
+                      Dim bDTSa As Byte() = BytesTo14BitL(ioData.ReadBytes(16))
                       Debug.Print("Unknown Data ID: " & Hex(bDTSa(0)) & Hex(bDTSa(1)) & Hex(bDTSa(2)) & Hex(bDTSa(3)))
                   End Select
                   Exit Do
@@ -949,7 +950,7 @@
           'AVIFORMAT
           bAVI = True
           Do While ioFile.BaseStream.Position < mChunk.Header.ChunkSize
-            Dim aviChunk As Chunk
+            Dim aviChunk As New Chunk
             aviChunk.Header.ChunkID = ioFile.ReadChars(4)
             aviChunk.Header.ChunkSize = ioFile.ReadUInt32
             Dim aviOffset As Long = ioFile.BaseStream.Position
@@ -961,7 +962,7 @@
                 Select Case aviChunk.Header.Format
                   Case "hdrl"
                     Do While ioFile.BaseStream.Position - aviOffset < aviChunk.Header.ChunkSize
-                      Dim mainChunk As Chunk
+                      Dim mainChunk As New Chunk
                       mainChunk.Header.ChunkID = ioFile.ReadChars(4)
                       mainChunk.Header.ChunkSize = ioFile.ReadUInt32
                       mainChunk.Data = ioFile.ReadBytes(mainChunk.Header.ChunkSize)
@@ -991,7 +992,7 @@
                             Select Case mainChunk.Header.Format
                               Case "strl"
                                 Do While ioMain.BaseStream.Position < mainChunk.Header.ChunkSize
-                                  Dim streamChunk As Chunk
+                                  Dim streamChunk As New Chunk
                                   streamChunk.Header.ChunkID = ioMain.ReadChars(4)
                                   streamChunk.Header.ChunkSize = ioMain.ReadUInt32
                                   streamChunk.Data = ioMain.ReadBytes(streamChunk.Header.ChunkSize)
@@ -1024,7 +1025,7 @@
 
                                         Select Case streamHeader.fccType
                                           Case "vids"
-                                            Dim vidsChunk As Chunk
+                                            Dim vidsChunk As New Chunk
                                             vidsChunk.Header.ChunkID = ioMain.ReadChars(4)
                                             vidsChunk.Header.ChunkSize = ioMain.ReadUInt32
                                             vidsChunk.Data = ioMain.ReadBytes(vidsChunk.Header.ChunkSize)
@@ -1091,7 +1092,7 @@
                                               aviBMP.Add(bmpInfo)
                                             End Using
                                           Case "auds"
-                                            Dim audsChunk As Chunk
+                                            Dim audsChunk As New Chunk
                                             audsChunk.Header.ChunkID = ioMain.ReadChars(4)
                                             audsChunk.Header.ChunkSize = ioMain.ReadUInt32
                                             audsChunk.Data = ioMain.ReadBytes(audsChunk.Header.ChunkSize)
@@ -1110,34 +1111,45 @@
                                               aviWAV.Add(wavInfo)
                                             End Using
                                           Case "mids"
-                                            Dim midsChunk As Chunk
+                                            Dim midsChunk As New Chunk
                                             midsChunk.Header.ChunkID = ioMain.ReadChars(4)
                                             midsChunk.Header.ChunkSize = ioMain.ReadUInt32
                                             ioMain.BaseStream.Position += midsChunk.Header.ChunkSize
                                           Case "txts"
-                                            Dim txtsChunk As Chunk
+                                            Dim txtsChunk As New Chunk
                                             txtsChunk.Header.ChunkID = ioMain.ReadChars(4)
                                             txtsChunk.Header.ChunkSize = ioMain.ReadUInt32
                                             ioMain.BaseStream.Position += txtsChunk.Header.ChunkSize
                                           Case "JUNK"
                                             'Junk Data
-                                            Dim junkChunk As Chunk
+                                            Dim junkChunk As New Chunk
                                             junkChunk.Header.ChunkID = ioMain.ReadChars(4)
                                             junkChunk.Header.ChunkSize = ioMain.ReadUInt32
                                             ioMain.BaseStream.Position += junkChunk.Header.ChunkSize
                                           Case Else
                                             Debug.Print("Unknown AVI Stream Chunk ID: " & streamHeader.fccType)
-                                            Dim unknownChunk As Chunk
+                                            Dim unknownChunk As New Chunk
                                             unknownChunk.Header.ChunkID = ioMain.ReadChars(4)
                                             unknownChunk.Header.ChunkSize = ioMain.ReadUInt32
                                             ioMain.BaseStream.Position += unknownChunk.Header.ChunkSize
                                         End Select
+                                      Case "strn"
+                                        Dim aStream = aviStreams(aviStreams.Count - 1)
+                                        If Array.IndexOf(Of Byte)(streamChunk.Data, 0) = -1 Then
+                                          aStream.StreamName = GetString(streamChunk.Data, 0, streamChunk.Data.Length)
+                                        Else
+                                          aStream.StreamName = GetString(streamChunk.Data, 0, Array.IndexOf(Of Byte)(streamChunk.Data, 0))
+                                        End If
+                                        aviStreams(aviStreams.Count - 1) = aStream
+                                        If ioMain.PeekChar = 0 Then ioMain.ReadByte()
+                                      Case Else
+                                        If ioMain.PeekChar = 0 Then ioMain.ReadByte()
                                     End Select
                                   End Using
                                 Loop
                               Case "odml"
                                 Do While ioMain.BaseStream.Position < mainChunk.Header.ChunkSize
-                                  Dim dmlChunk As Chunk
+                                  Dim dmlChunk As New Chunk
                                   dmlChunk.Header.ChunkID = ioMain.ReadChars(4)
                                   dmlChunk.Header.ChunkSize = ioMain.ReadUInt32
                                   dmlChunk.Data = ioMain.ReadBytes(dmlChunk.Header.ChunkSize)
@@ -1165,10 +1177,12 @@
                   Case "INFO"
                     If aviINFO Is Nothing Then aviINFO = New Dictionary(Of String, String)
                     Do While ioFile.BaseStream.Position - aviOffset < aviChunk.Header.ChunkSize
-                      Dim infoChunk As Chunk
+                      Dim infoChunk As New Chunk
                       infoChunk.Header.ChunkID = ioFile.ReadChars(4)
                       infoChunk.Header.ChunkSize = ioFile.ReadUInt32
+                      If infoChunk.Header.ChunkSize = 0 Then Continue Do
                       infoChunk.Header.Format = ioFile.ReadChars(infoChunk.Header.ChunkSize)
+                      If infoChunk.Header.Format.Length = 0 Then Continue Do
                       If infoChunk.Header.Format.Substring(infoChunk.Header.Format.Length - 1, 1) = vbNullChar Then infoChunk.Header.Format = infoChunk.Header.Format.Substring(0, infoChunk.Header.Format.Length - 1)
                       aviINFO.Add(infoChunk.Header.ChunkID, infoChunk.Header.Format)
                       'IS THERE JUST ONE EXTRA BYTE AT THE END OF THIS CHUNK?
@@ -1195,7 +1209,7 @@
                     '  If ioFile.BaseStream.Position- aviOffset >= aviChunk.Header.ChunkSize Then Exit Do
                     '  ioFile.BaseStream.Position -= 1
 
-                    '  Dim moviChunk As Chunk
+                    '  Dim moviChunk as new chunk
                     '  moviChunk.Header.ChunkID = ioFile.ReadChars(4)
                     '  moviChunk.Header.ChunkSize = ioFile.ReadUInt32
                     '  If moviChunk.Header.ChunkSize > ioFile.BaseStream.Length - ioFile.BaseStream.Position Then Exit Do
@@ -1235,10 +1249,10 @@
           Loop
         Case Else
           Debug.Print("Unknown RIFF Format: " & mChunk.Header.Format)
-          Exit Sub
+          Return
       End Select
       If ioFile.BaseStream.Position < ioFile.BaseStream.Length Then
-        Dim idvxChunk As Chunk
+        Dim idvxChunk As New Chunk
         idvxChunk.Header.ChunkID = ioFile.ReadChars(4)
         idvxChunk.Header.ChunkSize = ioFile.ReadUInt32
         idvxChunk.Data = ioFile.ReadBytes(idvxChunk.Header.ChunkSize)
@@ -1284,8 +1298,8 @@
     End Get
   End Property
 
-  Private Function BytesTo14BitL(inBytes() As Byte) As Byte()
-    Dim bitPairs() As Byte = Nothing
+  Private Function BytesTo14BitL(inBytes As Byte()) As Byte()
+    Dim bitPairs As Byte() = Nothing
     Dim j As Integer = 0
     For I As Integer = 0 To inBytes.Count - 1 Step 2
       Dim b1 As Byte = inBytes(I)
@@ -1312,7 +1326,7 @@
   Private sizeLeft As Integer
   Private currentByte As Byte
   Private idx As Integer
-  Private Function ReadBits(bData() As Byte, size As Integer) As UInt32
+  Private Function ReadBits(bData As Byte(), size As Integer) As UInt32
     Dim ret As UInt32 = 0
     If (size <= sizeLeft) Then
       sizeLeft -= size
@@ -1331,29 +1345,15 @@
   End Function
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean 
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
-        ' TODO: dispose managed state (managed objects).
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
 
-  ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
     ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
     Dispose(True)

@@ -256,7 +256,7 @@ Public Class clsJoyDetection
   End Sub
 
   Private Sub tmrCheck_Tick(sender As Object, e As System.EventArgs) Handles tmrCheck.Tick
-    If cJoy.JoyNull Then Exit Sub
+    If cJoy.JoyNull Then Return
 
     Select Case cJoy.JoyX
       Case Is < 16384

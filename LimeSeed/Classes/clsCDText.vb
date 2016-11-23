@@ -201,7 +201,7 @@ Friend Structure SCSI_PASS_THROUGH_DIRECT                           ' x86   x64
   Public DataBuffer As IntPtr                                     ' 20     24
   Public SenseInfoOffset As Integer                               ' 24     32
   <MarshalAs(UnmanagedType.ByValArray, SizeConst:=16)>
-  Public cdb() As Byte                                            ' 28     36
+  Public cdb As Byte()                                            ' 28     36
   '                                                        Size     44     56
   Public Shared Function GetSize() As Integer
     Return Marshal.SizeOf(GetType(SCSI_PASS_THROUGH_DIRECT))
@@ -214,7 +214,7 @@ Friend Structure SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER
   Public ScsiPassThroughDirect As SCSI_PASS_THROUGH_DIRECT    ' 0    0
   Public Filler As Integer                                    ' 44  56
   <MarshalAs(UnmanagedType.ByValArray, sizeconst:=32)>
-  Public SenseBuffer() As Byte                                ' 48  60
+  Public SenseBuffer As Byte()                                ' 48  60
   '                                                           = 80  96
 End Structure
 
@@ -229,7 +229,7 @@ Friend Class BlockInfo
     Me.BlockNumber = blockNo
     Me.PackCounts = New Dictionary(Of PackType, Integer)
   End Sub
-  Private Shared Function GetBlockNo(bytes() As Byte, index As Integer) As Integer
+  Private Shared Function GetBlockNo(bytes As Byte(), index As Integer) As Integer
     Return (bytes(index + 3) >> 4) And &H7
   End Function
 End Class
@@ -270,13 +270,14 @@ Public Class CdTextRetriever
     Const FILE_SHARE_WRITE As UInteger = 2
     Const OPEN_EXISTING As UInteger = 3
     Using hDevice As SafeFileHandle = NativeMethods.CreateFile(devicePath, GENERIC_READ Or GENERIC_WRITE, FILE_SHARE_READ Or FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero)
-      If hDevice.IsInvalid OrElse hDevice.IsClosed Then Throw New Win32Exception
+      If hDevice.IsInvalid OrElse hDevice.IsClosed Then Return Nothing
       Return ReadCdText(hDevice)
     End Using
   End Function
 
   Private Shared Function ReadCdText(hDevice As SafeFileHandle) As CdText
     Dim address As SCSI_ADDRESS = GetScsiAddress(hDevice)
+    If address.Length = 0 And address.Lun = 0 And address.PathId = 0 And address.PortNumber = 0 And address.TargetId = 0 Then Return Nothing
     Dim bytes(1) As Byte
     GetCdTextBytes(hDevice, address, bytes)
     bytes = New Byte((CType(bytes(0), Integer) << 8) Or bytes(1) + 1) {}
@@ -289,12 +290,16 @@ Public Class CdTextRetriever
     Dim address As New SCSI_ADDRESS
     Dim bytesReturned As Integer
     Const IOCTL_SCSI_GET_ADDRESS As Integer = &H41018
-    Dim result As Boolean = NativeMethods.DeviceIoControl(hDevice, IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0, address, SCSI_ADDRESS.GetSize, bytesReturned, IntPtr.Zero)
-    If result = False Then Throw New Win32Exception
+    Try
+      Dim result As Boolean = NativeMethods.DeviceIoControl(hDevice, IOCTL_SCSI_GET_ADDRESS, IntPtr.Zero, 0, address, SCSI_ADDRESS.GetSize, bytesReturned, IntPtr.Zero)
+      If result = False Then Return Nothing
+    Catch ex As Exception
+      Return Nothing
+    End Try
     Return address
   End Function
 
-  Private Shared Sub GetCdTextBytes(hDevice As SafeFileHandle, address As SCSI_ADDRESS, bytes() As Byte)
+  Private Shared Sub GetCdTextBytes(hDevice As SafeFileHandle, address As SCSI_ADDRESS, bytes As Byte())
     Dim bytesReturned As Integer
     Dim sptdwb As New SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER
     Dim pinnedBytesHandle As GCHandle = GCHandle.Alloc(bytes, GCHandleType.Pinned)
@@ -350,7 +355,7 @@ Friend Class Crc
     Next
   End Sub
 
-  Private Shared Function GetCrc(bytes() As Byte, index As Integer) As UShort
+  Private Shared Function GetCrc(bytes As Byte(), index As Integer) As UShort
     Dim crc As UShort = 0
     For i As Integer = index To index + 15
       crc = (crc << 8) Xor table((crc >> 8) Xor bytes(i))
@@ -358,11 +363,11 @@ Friend Class Crc
     Return Not crc
   End Function
 
-  Private Shared Function GetCrcFromPackData(bytes() As Byte, index As Integer) As UShort
+  Private Shared Function GetCrcFromPackData(bytes As Byte(), index As Integer) As UShort
     Return (CUShort(bytes(index + 16)) << 8) Or bytes(index + 17)
   End Function
 
-  Public Shared Function CrcIsOk(bytes() As Byte, index As Integer) As Boolean
+  Public Shared Function CrcIsOk(bytes As Byte(), index As Integer) As Boolean
     Dim crcCalculated As UShort = Crc.GetCrc(bytes, index)
     Dim crcStored As UShort = GetCrcFromPackData(bytes, index)
     Return crcCalculated = crcStored
@@ -373,7 +378,7 @@ Public Class DataPacketParser
   Private blockInfos As BlockInfoCollection
   Private cdText As CdText
 
-  Public Function ReadCtText(bytes() As Byte) As CdText
+  Public Function ReadCtText(bytes As Byte()) As CdText
     blockInfos = New BlockInfoCollection
     cdText = New CdText
     Pass1(bytes)
@@ -381,7 +386,7 @@ Public Class DataPacketParser
     Return cdText
   End Function
 
-  Private Sub Pass1(bytes() As Byte)
+  Private Sub Pass1(bytes As Byte())
     Dim languageCodes(7) As Language
     Dim discInfoBuilder As New StringBuilder
     Dim genreBuilder As New StringBuilder
@@ -431,7 +436,7 @@ Public Class DataPacketParser
     cdText.Genre = genreBuilder.ToString
   End Sub
 
-  Private Sub Pass2(bytes() As Byte)
+  Private Sub Pass2(bytes As Byte())
     Dim dt As DataTable = GetDataTable()
     For index As Integer = 4 To bytes.Length - 19 Step 18
       Dim packType As PackType = CType(bytes(index), PackType)
@@ -516,15 +521,15 @@ Public Class DataPacketParser
     Return dt
   End Function
 
-  Private Shared Function GetBlockNo(bytes() As Byte, index As Integer) As Integer
+  Private Shared Function GetBlockNo(bytes As Byte(), index As Integer) As Integer
     Return (bytes(index + 3) >> 4) And &H7
   End Function
 
-  Private Shared Function GetTrackNo(bytes() As Byte, index As Integer) As Integer
+  Private Shared Function GetTrackNo(bytes As Byte(), index As Integer) As Integer
     Return bytes(index + 1) And &H7F
   End Function
 
-  Private Shared Function GetIsDoubleByte(bytes() As Byte, index As Integer) As Boolean
+  Private Shared Function GetIsDoubleByte(bytes As Byte(), index As Integer) As Boolean
     Return (bytes(index + 3) And &H80) = &H80
   End Function
 End Class
@@ -625,7 +630,7 @@ Public Class IoctlResult
     m_scsiStatus = scsiStatus
   End Sub
 
-  Public Shared Function FromSenseBuffer(sense() As Byte, scsiStatus As Integer) As IoctlResult
+  Public Shared Function FromSenseBuffer(sense As Byte(), scsiStatus As Integer) As IoctlResult
     Dim sk As Integer = sense(2)
     Dim asc As Integer = sense(12)
     Dim ascq As Integer = sense(13)
@@ -727,7 +732,11 @@ Friend Class ReadCdTextWorker
     If driveInfo.IsReady Then
       Try
         result.CDText = CdTextRetriever.GetCdText(driveInfo)
-        result.Success = True
+        If result.CDText Is Nothing Then
+          result.Success = False
+        Else
+          result.Success = True
+        End If
       Catch ex As Exception
         result.Success = False
       End Try

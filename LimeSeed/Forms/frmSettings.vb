@@ -108,7 +108,20 @@
       cmbLocale.SelectedIndex = iDefault
     End If
     chkSubtitles.Checked = My.Settings.Subtitles
+    chkCaptions.Checked = My.Settings.Captions
     'cmbLocale.Sorted = True
+
+    chkTags.Checked = My.Settings.ID3_Modify
+    chkArt.Checked = My.Settings.ID3_Art
+    chkCleanup.Checked = My.Settings.ID3_Clean
+    If My.Settings.ID3_Ver = 0 Then
+      chkID3v2.Checked = False
+      cmbID3v2.SelectedIndex = 1
+    Else
+      chkID3v2.Checked = True
+      cmbID3v2.SelectedIndex = My.Settings.ID3_Ver - 2
+    End If
+    chkTags_CheckedChanged(chkTags, New EventArgs)
 
     lstVis.Items.Clear()
     lstVis.Items.Add("None")
@@ -152,7 +165,7 @@
     txtKeyRepeatTrack.Text = My.Settings.Keyboard_RepeatTrack
     txtKeyRepeatPL.Text = My.Settings.Keyboard_RepeatPL
     txtKeyRenamePL.Text = My.Settings.Keyboard_RenamePL
-    chkKeyboard_CheckedChanged(chkKeyboard, New EventArgs())
+    chkKeyboard_CheckedChanged(chkKeyboard, New EventArgs)
 
     chkGamepad.Checked = My.Settings.Gamepad
     txtPadOpen.Text = My.Settings.Gamepad_Open
@@ -202,7 +215,6 @@
     Return p.IsInRole(Security.Principal.WindowsBuiltInRole.Administrator)
   End Function
 
-
   Private Sub ChildTags(Node As TreeNode, ByRef List As String)
     If Node.Nodes.Count > 0 Then
       For Each Item As TreeNode In Node.Nodes
@@ -226,8 +238,9 @@
   End Function
 
   Private Sub CheckAssociations()
-    chkThumbnails.Checked = My.Computer.Registry.ClassesRoot.OpenSubKey("CLSID").GetSubKeyNames.Contains("{F0DAFCE8-5D35-4609-B0BE-48CBF0FC21DB}")
-
+    'TODO: Enable if you ever get a thumbnail and property generator working better than K-Lite
+    chkThumbnails.Enabled = False
+    'chkThumbnails.Checked = My.Computer.Registry.ClassesRoot.OpenSubKey("CLSID").GetSubKeyNames.Contains("{F0DAFCE8-5D35-4609-B0BE-48CBF0FC21DB}")
     FindNode(tvAssoc.Nodes(0), "nodeMPC").Checked = CheckType(FileTypes.File_MPC)
     FindNode(tvAssoc.Nodes(0), "nodeAC3").Checked = CheckType(FileTypes.File_AC3)
     FindNode(tvAssoc.Nodes(0), "nodeAIF").Checked = CheckType(FileTypes.File_AIF)
@@ -479,7 +492,8 @@
   Private Sub cmdAssociate_Click(sender As System.Object, e As System.EventArgs) Handles cmdAssociate.Click
     Dim assocList As String = String.Empty
     ChildTags(tvAssoc.Nodes(0), assocList)
-    If chkThumbnails.Checked Then assocList &= " THUMB "
+    'TODO: Enable if you ever get a thumbnail and property generator working better than K-Lite
+    'If chkThumbnails.Checked Then assocList &= " THUMB "
     If My.Computer.FileSystem.FileExists(Application.StartupPath & "\LSFA.exe") Then
       Dim X As New Process
       X.StartInfo = New ProcessStartInfo(Application.StartupPath & "\LSFA.exe", "Associate:" & assocList & " ")
@@ -570,7 +584,7 @@
   End Sub
 
   Private Sub txtKey_KeyUp(sender As Object, e As System.Windows.Forms.KeyEventArgs) Handles txtKeyOpen.KeyUp, txtKeyClose.KeyUp, txtKeyFileProperties.KeyUp, txtKeySettings.KeyUp, txtKeyWebpage.KeyUp, txtKeyAbout.KeyUp, txtKeyPlayPause.KeyUp, txtKeyStop.KeyUp, txtKeyLast.KeyUp, txtKeyNext.KeyUp, txtKeyMute.KeyUp, txtKeyFullScreen.KeyUp, txtKeyVolUp.KeyUp, txtKeyVolDown.KeyUp, txtKeySkipBack.KeyUp, txtKeySkipFwd.KeyUp, txtKeyAddToPL.KeyUp, txtKeyRemoveFromPL.KeyUp, txtKeyClearPL.KeyUp, txtKeySavePL.KeyUp, txtKeyOpenPL.KeyUp, txtKeyShuffle.KeyUp, txtKeyRepeatTrack.KeyUp, txtKeyRepeatPL.KeyUp, txtKeyRenamePL.KeyUp
-    If String.IsNullOrEmpty(KeyToStr(e.KeyCode)) Then Exit Sub
+    If String.IsNullOrEmpty(KeyToStr(e.KeyCode)) Then Return
     sender.Text = String.Empty
     'If sender.SelectionLength > 0 Then sender.SelectedText = vbNullString
     If (e.Modifiers And Keys.Control) = Keys.Control Then sender.SelectedText = "Ctrl"
@@ -1105,6 +1119,26 @@
 
   Private Sub txtRate_ValueChanged(sender As System.Object, e As System.EventArgs) Handles txtRate.ValueChanged
     tmrVis.Interval = Int(1000 / txtRate.Value)
+  End Sub
+
+  Private Sub chkID3v2_CheckedChanged(sender As System.Object, e As System.EventArgs) Handles chkID3v2.CheckedChanged
+    cmbID3v2.Enabled = IIf(chkTags.Checked, chkID3v2.Checked, False)
+  End Sub
+
+  Private Sub cmbID3v2_SelectedIndexChanged(sender As System.Object, e As System.EventArgs) Handles cmbID3v2.SelectedIndexChanged
+    If Me.Tag = "LOAD" Then Return
+    If cmbID3v2.SelectedIndex = 2 Then
+      If MsgBox("ID3v2.4.0 can not be read by Windows Explorer. Are you sure you want to convert tags to this version?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo) = MsgBoxResult.No Then
+        cmbID3v2.SelectedIndex = 1
+      End If
+    End If
+  End Sub
+
+  Private Sub chkTags_CheckedChanged(sender As System.Object, e As System.EventArgs) Handles chkTags.CheckedChanged
+    chkArt.Enabled = chkTags.Checked
+    chkCleanup.Enabled = chkTags.Checked
+    chkID3v2.Enabled = chkTags.Checked
+    cmbID3v2.Enabled = IIf(chkTags.Checked, chkID3v2.Checked, False)
   End Sub
 End Class
 

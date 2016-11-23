@@ -37,6 +37,7 @@ Partial Class ctlArtList
     Me.pnlProgress = New System.Windows.Forms.TableLayoutPanel()
     Me.pbProgress = New System.Windows.Forms.ProgressBar()
     Me.lblProgress = New System.Windows.Forms.Label()
+    Me.ttArtwork = New System.Windows.Forms.ToolTip(Me.components)
     Me.pnlSearch.SuspendLayout()
     Me.grpArtwork.SuspendLayout()
     Me.pnlArtList.SuspendLayout()
@@ -215,6 +216,10 @@ Partial Class ctlArtList
     Me.lblProgress.Text = "0%"
     Me.lblProgress.UseMnemonic = False
     '
+    'ttArtwork
+    '
+    Me.ttArtwork.AutomaticDelay = 6000
+    '
     'ctlArtList
     '
     Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -247,5 +252,6 @@ Partial Class ctlArtList
   Friend WithEvents pnlProgress As System.Windows.Forms.TableLayoutPanel
   Friend WithEvents pbProgress As System.Windows.Forms.ProgressBar
   Friend WithEvents lblProgress As System.Windows.Forms.Label
+  Friend WithEvents ttArtwork As System.Windows.Forms.ToolTip
 
 End Class

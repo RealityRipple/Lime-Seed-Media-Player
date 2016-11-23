@@ -69,10 +69,12 @@ Public Class ctlSeed
   Private bFading As Byte
   Private lFadePos As Long
   Private CleanupItems As New ArrayList
+  Private WithEvents sckDownload As SocketWrapper
   Private WithEvents swfVideo As AxShockwaveFlashObjects.AxShockwaveFlash
   Private swfTemplate As AxShockwaveFlashObjects.AxShockwaveFlash
   Event VidDoubleClick(sender As Object, e As EventArgs)
   Event VidClick(sender As Object, e As MouseEventArgs)
+  Event NetDownload(sender As Object, e As DownloadChangedEventArgs)
   Public Class MediaErrorEventArgs
     Inherits System.EventArgs
     Private mErr As Exception
@@ -92,10 +94,80 @@ Public Class ctlSeed
       End Get
     End Property
   End Class
+  Public Class DownloadChangedEventArgs
+    Inherits System.ComponentModel.ProgressChangedEventArgs
+    Private m_Done As ULong
+    Private m_Total As ULong
+    Public ReadOnly Property BytesReceived As ULong
+      Get
+        Return m_Done
+      End Get
+    End Property
+    Public ReadOnly Property TotalBytesToReceive As ULong
+      Get
+        Return m_Total
+      End Get
+    End Property
+    Public ReadOnly Property BytesToReceive As ULong
+      Get
+        Return m_Total - m_Done
+      End Get
+    End Property
+    Public Sub New()
+      MyBase.New(0, Nothing)
+    End Sub
+    Public Sub New(done As Long, total As Long)
+      MyBase.New(Math.Floor(done / total * 100), Nothing)
+      m_Done = CULng(done)
+      m_Total = CULng(total)
+    End Sub
+    Public Sub New(done As ULong, total As ULong)
+      MyBase.New(Math.Floor(done / total * 100), Nothing)
+      m_Done = done
+      m_Total = total
+    End Sub
+    Public Sub New(done As Long, total As Long, UserState As Object)
+      MyBase.New(Math.Floor(done / total * 100), UserState)
+      m_Done = CULng(done)
+      m_Total = CULng(total)
+    End Sub
+    Public Sub New(done As ULong, total As ULong, UserState As Object)
+      MyBase.New(Math.Floor(done / total * 100), UserState)
+      m_Done = done
+      m_Total = total
+    End Sub
+  End Class
 
   Public Event EndOfFile(Status As Integer)
   Public Event CantOpen(Reason As String)
   Public Event MediaError(e As MediaErrorEventArgs)
+
+  Public Class StreamInformation
+    Private c_title As String
+    Private c_artist As String
+    Private c_album As String
+    Public ReadOnly Property Title As String
+      Get
+        Return c_title
+      End Get
+    End Property
+    Public ReadOnly Property Artist As String
+      Get
+        Return c_artist
+      End Get
+    End Property
+    Public ReadOnly Property Album As String
+      Get
+        Return c_album
+      End Get
+    End Property
+    Public Sub New(sTitle As String, sArtist As String, sAlbum As String)
+      c_title = sTitle
+      c_artist = sArtist
+      c_album = sAlbum
+    End Sub
+  End Class
+  Public StreamInfo As StreamInformation
 
   Public Property AudioDevice As String
     Get
@@ -204,6 +276,13 @@ Public Class ctlSeed
     End Get
   End Property
 
+  Public ReadOnly Property IsStreaming As Boolean
+    Get
+      If String.IsNullOrEmpty(CFm_Filename) Then Return False
+      Return CFm_Filename.Contains(IO.Path.Combine(IO.Path.GetTempPath, "seedTemp"))
+    End Get
+  End Property
+
   Public Property FileName As String
     Get
       Return CFm_Filename
@@ -214,7 +293,17 @@ Public Class ctlSeed
         If ret < 0 Then
           Select Case ret
             Case -1 : CFm_Filename = "Unable to create graph manager."
-            Case -2 : If Not String.IsNullOrEmpty(value) Then CFm_Filename = "File not found."
+            Case -2
+              If Not String.IsNullOrEmpty(value) Then CFm_Filename = "File not found."
+              If sckDownload IsNot Nothing Then
+                sckDownload.Disconnect()
+                sckDownload.Dispose()
+                sckDownload = Nothing
+              End If
+              If StreamInfo IsNot Nothing Then StreamInfo = Nothing
+            Case -3 : CFm_Filename = "Failed to download file."
+            Case -4 : CFm_Filename = CFm_Filename
+            Case -5 : CFm_Filename = Nothing
             Case Else : CFm_Filename = "Unable to create graph manager: " & DShowError(ret)
           End Select
         Else
@@ -259,7 +348,7 @@ Public Class ctlSeed
     If Not My.Computer.FileSystem.FileExists(Path) Then Return Nothing
     If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
       If My.Computer.FileSystem.GetFileInfo(Path).Length >= 1024L * 1024L * 1024L * 4L Then Return Nothing
-      Dim bFile() As Byte = My.Computer.FileSystem.ReadAllBytes(Path)
+      Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(Path)
       Dim lFrameStart As Integer = 0
       Do
         lFrameStart = GetBytePos(bFile, &HFF, lFrameStart)
@@ -420,7 +509,7 @@ Public Class ctlSeed
           Marshal.FreeHGlobal(dibImage)
           dibImage = IntPtr.Zero
           newBmp.RotateFlip(Drawing.RotateFlipType.RotateNoneFlipY)
-          Dim bBmp() As Byte = BtBA(newBmp)
+          Dim bBmp As Byte() = BtBA(newBmp)
           Dim lastA, lastR, lastG, lastB As Int16
           lastB = bBmp(&H36)
           lastG = bBmp(&H37)
@@ -488,7 +577,7 @@ Public Class ctlSeed
   End Function
 
   Private Function BtBA(img As Bitmap) As Byte()
-    Dim bData() As Byte
+    Dim bData As Byte()
     Using ms As New IO.MemoryStream
       img.Save(ms, Imaging.ImageFormat.Bmp)
       bData = ms.ToArray
@@ -504,6 +593,7 @@ Public Class ctlSeed
   ''' <param name="changePosition">Toggles setting the position to a specific location in the file.</param>
   ''' <returns>Thumbnail as Bitmap.</returns>
   Public Function GetFileThumbnail(Optional FilePath As String = Nothing, Optional failMessage As Boolean = False, Optional changePosition As Boolean = True) As Drawing.Bitmap
+    If Not String.IsNullOrEmpty(FilePath) Then ResetFFResize()
     Dim posTry As Double = -1
     If changePosition = False Then posTry = Position
     Dim MediaCtl As IMediaControl = Nothing
@@ -841,7 +931,7 @@ Public Class ctlSeed
 
   Public Sub mpPause()
     Try
-      If Me.State = MediaState.mPaused Then Exit Sub
+      If Me.State = MediaState.mPaused Then Return
       If IsSTA() AndAlso obj_mpControl IsNot Nothing Then
         If CFm_HasVid Or (Not CFm_StateFade) Then
           obj_mpControl.Pause()
@@ -852,7 +942,7 @@ Public Class ctlSeed
           Dim lStartVol As Long = Me.LogVolume
           Dim lTic As Long = Environment.TickCount + (lStartVol * 0.0025)
           Do Until Me.LogVolume <= 1
-            If Not bFading = 2 Then Exit Sub
+            If Not bFading = 2 Then Return
             Dim lTmpVol As Long = (lTic - Environment.TickCount) / 0.0025
             If lTmpVol < 0 Or lTmpVol > lStartVol Then
               Me.LogVolume = 0
@@ -875,7 +965,7 @@ Public Class ctlSeed
 
   Public Sub mpPlay()
     Try
-      If Me.State = MediaState.mPlaying Then Exit Sub
+      If Me.State = MediaState.mPlaying Then Return
       If IsSTA() AndAlso obj_mpControl IsNot Nothing Then
         Dim lCurPos As Double = Me.Position
         If Not CFm_StateFade OrElse CFm_HasVid OrElse lCurPos <= CFm_PadStart Then
@@ -889,7 +979,7 @@ Public Class ctlSeed
           obj_mpControl.Run()
           Dim lTic As Long = Environment.TickCount + (lStartVol * 0.0025)
           Do Until Me.LogVolume >= lStartVol
-            If Not bFading = 1 Then Exit Sub
+            If Not bFading = 1 Then Return
             Dim lTmpVol As Long = (((Environment.TickCount - lTic) + (lStartVol * 0.0025)) / 0.0025)
             If lTmpVol > lStartVol Or lTmpVol < 0 Then
               Me.LogVolume = lStartVol
@@ -910,7 +1000,7 @@ Public Class ctlSeed
 
   Public Sub mpStop()
     On Error GoTo Erred
-    If Me.State = MediaState.mStopped Then Exit Sub
+    If Me.State = MediaState.mStopped Then Return
     If IsSTA() AndAlso obj_mpControl IsNot Nothing Then
       If CFm_HasVid Or (Not CFm_StateFade) Then
         obj_mpControl.Stop()
@@ -929,7 +1019,7 @@ Public Class ctlSeed
           Dim lStartVol As Long = Me.LogVolume
           Dim lTic As Long = Environment.TickCount + (lStartVol * 0.05)
           Do Until Me.LogVolume <= 1
-            If Not bFading = 3 Then Exit Sub
+            If Not bFading = 3 Then Return
             Dim lTmpVol As Long = (lTic - Environment.TickCount) / 0.05
             If lTmpVol < 0 Or lTmpVol > lStartVol Then
               Me.LogVolume = 0
@@ -947,7 +1037,7 @@ Public Class ctlSeed
       swfVideo.Playing = False
       swfVideo.GotoFrame(0)
     End If
-    Exit Sub
+    Return
 Erred:
     RaiseEvent MediaError(New MediaErrorEventArgs(Err.GetException, "mpStop"))
     Resume Next
@@ -958,13 +1048,15 @@ Erred:
       Mute = CFm_Mute
     End Get
     Set(value As Boolean)
-      CFm_Mute = value
-      If IsSTA() AndAlso obj_mpAudio IsNot Nothing Then
-        If CFm_Mute Then
-          obj_mpAudio.get_Volume(CFm_Volume)
-          obj_mpAudio.put_Volume(-10000)
-        Else
-          obj_mpAudio.put_Volume(CFm_Volume)
+      If Not CFm_Mute = value Then
+        CFm_Mute = value
+        If IsSTA() AndAlso obj_mpAudio IsNot Nothing Then
+          If CFm_Mute Then
+            obj_mpAudio.get_Volume(CFm_Volume)
+            obj_mpAudio.put_Volume(-10000)
+          Else
+            obj_mpAudio.put_Volume(CFm_Volume)
+          End If
         End If
       End If
     End Set
@@ -1545,7 +1637,7 @@ Erred:
             End Select
           End If
         Case WM_ERASEBKGND
-          'Exit Sub
+          'return
         Case &H200 'WM_MOUSEMOVE
           If (MouseButtons And Windows.Forms.MouseButtons.Left) = Windows.Forms.MouseButtons.Left Then
             'bah
@@ -1576,7 +1668,7 @@ Erred:
   End Function
 
   Public Sub SelectButton(lParam As IntPtr, Activate As Boolean)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     Dim pt As Point = Int64ToPoint(lParam.ToInt64)
     If Activate Then
       obj_dvdControl.ActivateAtPosition(pt)
@@ -1658,6 +1750,7 @@ Erred:
   End Sub
 
   Private Sub UserControl_Disposed() Handles Me.Disposed
+    DownloadingState = "CLOSE"
     tmrJustBefore.Enabled = False
     FileClose()
     For Each Item In CleanupItems
@@ -1714,57 +1807,461 @@ Erred:
   '0 = ok
   '-1 = failed to open
   '-2 = doesn't exist
+  '-3 = Download Error
+  '-4 = Other Error
   'else = error code
 
   Private Function FileOpen(FilePath As String) As Integer
-    On Error GoTo Erred
-    FileClose()
-    If String.IsNullOrEmpty(FilePath) Then Return -2
-    If (My.Computer.FileSystem.FileExists(FilePath) AndAlso My.Computer.FileSystem.GetFileInfo(FilePath).Length > 0) Or (FilePath.EndsWith("VIDEO_TS", True, Nothing) And My.Computer.FileSystem.DirectoryExists(FilePath)) Then
-      Select Case IO.Path.GetExtension(FilePath).ToLower
-        Case ".swf", ".spl"
-          swfVideo = New AxShockwaveFlashObjects.AxShockwaveFlash
-          swfVideo.BeginInit()
-          Me.SuspendLayout()
-          swfVideo.Location = New Point(0, 0)
-          swfVideo.Name = "swfVideo"
-          Dim swR As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(ctlSeed))
-          swfVideo.OcxState = swR.GetObject("swfTemplate.OcxState")
-          swfVideo.Dock = DockStyle.Fill
-          swfVideo.TabIndex = 0
-          Me.Controls.Add(swfVideo)
-          swfVideo.EndInit()
-          Me.ResumeLayout(False)
-          swfVideo.Visible = True
-          imgLogo.Visible = False
-          swfVideo.LoadMovie(0, FilePath)
-          swfVideo.Menu = False
-          swfVideo.Loop = CFm_Loop
-          CFm_Filename = FilePath
-          CFm_HasAud = False
-          CFm_HasVid = True
-          CFm_VideoHeight = swfVideo.TGetPropertyAsNumber("/", 9)
-          CFm_VideoWidth = swfVideo.TGetPropertyAsNumber("/", 8)
-          Return 0
-        Case Else
-          Dim Ret As Integer = OpenMedia(FilePath)
-          Select Case Ret
-            Case 0
-              SpreadManagement(obj_mpControl, FilePath)
-              If CFm_HasVid Then SetFullScreen()
-              Return 0
-            Case Else
-              Return Ret
-          End Select
-      End Select
-    Else
-      Return -2
-    End If
-    Exit Function
-Erred:
-    RaiseEvent MediaError(New MediaErrorEventArgs(Err.GetException, "FileOpen"))
-    Resume Next
+    Try
+      FileClose()
+      If String.IsNullOrEmpty(FilePath) Then Return -2
+      If (My.Computer.FileSystem.FileExists(FilePath) AndAlso My.Computer.FileSystem.GetFileInfo(FilePath).Length > 0) Or (FilePath.EndsWith("VIDEO_TS", True, Nothing) And My.Computer.FileSystem.DirectoryExists(FilePath)) Then
+        Select Case IO.Path.GetExtension(FilePath).ToLower
+          Case ".swf", ".spl"
+            swfVideo = New AxShockwaveFlashObjects.AxShockwaveFlash
+            swfVideo.BeginInit()
+            Me.SuspendLayout()
+            swfVideo.Location = New Point(0, 0)
+            swfVideo.Name = "swfVideo"
+            Dim swR As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(ctlSeed))
+            swfVideo.OcxState = swR.GetObject("swfTemplate.OcxState")
+            swfVideo.Dock = DockStyle.Fill
+            swfVideo.TabIndex = 0
+            Me.Controls.Add(swfVideo)
+            swfVideo.EndInit()
+            Me.ResumeLayout(False)
+            swfVideo.Visible = True
+            imgLogo.Visible = False
+            swfVideo.LoadMovie(0, FilePath)
+            swfVideo.Menu = False
+            swfVideo.Loop = CFm_Loop
+            CFm_Filename = FilePath
+            CFm_HasAud = False
+            CFm_HasVid = True
+            CFm_VideoHeight = swfVideo.TGetPropertyAsNumber("/", 9)
+            CFm_VideoWidth = swfVideo.TGetPropertyAsNumber("/", 8)
+            Return 0
+          Case Else
+            Dim Ret As Integer = OpenMedia(FilePath)
+            Select Case Ret
+              Case 0
+                SpreadManagement(obj_mpControl, FilePath)
+                If CFm_HasVid Then SetFullScreen()
+                Return 0
+              Case Else
+                Return Ret
+            End Select
+        End Select
+      ElseIf FilePath.ToLower.StartsWith("http://") Then
+        Try
+          Dim tmpURI As New Uri(FilePath)
+          Dim tmpFile As String = IO.Path.Combine(IO.Path.GetTempPath, "seedTemp", IO.Path.GetFileName(tmpURI.LocalPath))
+          If Not IO.Directory.Exists(IO.Path.Combine(IO.Path.GetTempPath, "seedTemp")) Then IO.Directory.CreateDirectory(IO.Path.Combine(IO.Path.GetTempPath, "seedTemp"))
+          If IO.File.Exists(tmpFile) Then IO.File.Delete(tmpFile)
+          sckDownload = New SocketWrapper
+          downloadURL = tmpURI
+          downloadDest = tmpFile
+          downloadType = 0
+          downloadHeader = False
+          cacheHeader = Nothing
+          sckDownload.RemoteEndPoint = New Net.DnsEndPoint(tmpURI.Host, tmpURI.Port)
+          sckDownload.Connect()
+          DownloadingState = Nothing
+          Do While String.IsNullOrEmpty(DownloadingState)
+            Application.DoEvents()
+            Threading.Thread.Sleep(0)
+          Loop
+          If sckDownload IsNot Nothing And downloadType = 0 Then sckDownload.Dispose()
+          If DownloadingState = "CLOSE" Then Return -4
+          If DownloadingState = "DONE" Then
+            Return FileOpen(tmpFile)
+          ElseIf downloadType = 1 Then
+            Return FileOpen(DownloadingState)
+          Else
+            CFm_Filename = DownloadingState
+            Return -4
+          End If
+        Catch ex As Exception
+          Return -3
+        End Try
+      Else
+        Return -2
+      End If
+    Catch ex As Exception
+      CFm_Filename = ex.Message
+      Return -4
+    End Try
   End Function
+
+  Private DownloadingState As String
+  Private downloadURL As Uri
+  Private downloadDid As ULong
+  Private downloadSize As ULong
+  Private downloadDest As String
+
+  Private downloadType As Byte
+  Private downloadHeader As Boolean
+  Private streamFile(2) As String
+  Private streamSave As Byte
+  Private icyStation As String
+  Private icyBitRate As UShort
+  Private icyMetaInt As UInteger
+  Private icyLoopVal As UInteger
+
+  Private Sub sckDownload_SocketConnected(sender As Object, e As EventArgs) Handles sckDownload.SocketConnected
+    If Me.InvokeRequired Then
+      Try
+        Me.Invoke(New EventHandler(AddressOf sckDownload_SocketConnected), sender, e)
+      Catch ex As Exception
+
+      End Try
+    Else
+      Dim sSend As String = "GET " & downloadURL.LocalPath & " HTTP/1.1" & vbCrLf
+      sSend &= "Host: " & downloadURL.Host & vbCrLf
+      sSend &= "Accept: */*" & vbCrLf
+      sSend &= "Icy-MetaData:1" & vbCrLf
+      sSend &= vbCrLf
+      Dim bSend As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(sSend)
+      sckDownload.Send(bSend)
+    End If
+  End Sub
+
+  Private cacheHeader As String
+  Private Sub sckDownload_SocketReceived(sender As Object, e As SocketReceivedEventArgs) Handles sckDownload.SocketReceived
+    If Me.InvokeRequired Then
+      Try
+        Me.Invoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf sckDownload_SocketReceived), sender, e)
+      Catch ex As Exception
+
+      End Try
+    Else
+      If sckDownload Is Nothing Then Return
+      If Not sckDownload.IsConnected Then Return
+      If downloadType = 0 Then
+        'direct
+        If Not downloadHeader Then
+          Dim sData As String = System.Text.Encoding.GetEncoding(LATIN_1).GetString(e.Data)
+          Dim sNewLine As String = Nothing
+          If sData.Contains(vbCrLf) Then
+            sNewLine = vbCrLf
+          ElseIf sData.Contains(vbLf) Then
+            sNewLine = vbLf
+          ElseIf sData.Contains(vbCr) Then
+            sNewLine = vbCr
+          End If
+          If Not String.IsNullOrEmpty(sNewLine) Then
+            Dim bData As Byte() = Nothing
+            If sData.Contains(sNewLine & sNewLine) Then
+              sData = sData.Substring(0, sData.IndexOf(sNewLine & sNewLine))
+              ReDim bData(e.Data.Length - (sData.Length + 4) - 1)
+              Array.ConstrainedCopy(e.Data, sData.Length + 4, bData, 0, e.Data.Length - (sData.Length + 4))
+            Else
+              cacheHeader &= sData
+              Return
+            End If
+            If Not String.IsNullOrEmpty(cacheHeader) Then sData = cacheHeader & sData
+            Dim sHeader() As String = Split(sData, sNewLine)
+            If sHeader(0).Contains("200") Then
+              'Stop
+              icyMetaInt = 0
+              For Each sH As String In sHeader
+                If downloadType = 0 Then
+                  If sH.ToLower.StartsWith("content-length:") Then
+                    downloadSize = ULong.Parse(sH.Substring(sH.IndexOf(":") + 1).Trim)
+                    Exit For
+                  End If
+                End If
+                If sH.ToLower.StartsWith("icy-") Then
+                  downloadType = 1
+                  If sH.ToLower.StartsWith("icy-metaint") Then
+                    icyMetaInt = UInteger.Parse(sH.Substring(sH.IndexOf(":") + 1).Trim)
+                  ElseIf sH.ToLower.StartsWith("icy-name") Then
+                    icyStation = sH.Substring(sH.IndexOf(":") + 1).Trim
+                    StreamInfo = New StreamInformation(icyStation, Nothing, Nothing)
+                  ElseIf sH.ToLower.StartsWith("icy-br") Then
+                    icyBitRate = UShort.Parse(sH.Substring(sH.IndexOf(":") + 1).Trim)
+                  End If
+                End If
+              Next
+              If downloadType = 1 Then
+                Dim sExt As String = "mp3"
+                streamSave = 0
+                streamFile(0) = IO.Path.Combine(IO.Path.GetTempPath, "seedTemp", "stream1." & sExt)
+                streamFile(1) = IO.Path.Combine(IO.Path.GetTempPath, "seedTemp", "stream2." & sExt)
+                streamFile(2) = IO.Path.Combine(IO.Path.GetTempPath, "seedTemp", "stream3." & sExt)
+                Try
+                  For I As Integer = 0 To 2
+                    If IO.File.Exists(streamFile(I)) Then IO.File.Delete(streamFile(I))
+                  Next
+                Catch ex As Exception
+
+                End Try
+                If bData IsNot Nothing AndAlso bData.Count > 0 Then
+                  If icyMetaInt > 0 AndAlso icyLoopVal + bData.Length >= icyMetaInt Then
+                    PullMetaDataFromStream(bData)
+                  Else
+                    icyLoopVal += bData.Length
+                  End If
+                  My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), bData, True)
+
+                End If
+              Else
+                If bData IsNot Nothing AndAlso bData.Count > 0 Then
+                  My.Computer.FileSystem.WriteAllBytes(downloadDest, bData, True)
+                  downloadDid += bData.Length
+                  RaiseEvent NetDownload(Me, New DownloadChangedEventArgs(downloadDid, downloadSize, "BUFFER"))
+                End If
+              End If
+              downloadHeader = True
+              Return
+            Else
+              DownloadingState = sHeader(0)
+              Return
+            End If
+          End If
+        End If
+        If e.Data IsNot Nothing AndAlso e.Data.Count > 0 Then
+          My.Computer.FileSystem.WriteAllBytes(downloadDest, e.Data, True)
+          downloadDid += e.Data.Length
+          RaiseEvent NetDownload(Me, New DownloadChangedEventArgs(downloadDid, downloadSize, "DOWNLOAD"))
+          If downloadDid >= downloadSize Then
+            DownloadingState = "DONE"
+          End If
+        End If
+      ElseIf downloadType = 1 Then
+        'streaming
+        Dim packetData As Byte() = e.Data
+        If icyMetaInt > 0 AndAlso icyLoopVal + packetData.Length >= icyMetaInt Then
+          PullMetaDataFromStream(packetData)
+        Else
+          icyLoopVal += packetData.Length
+        End If
+
+        Dim minSize As Long = 128 * icyBitRate * 10
+        Dim firstSize As Long = Math.Floor(minSize * 1.5)
+        Dim streamNext As Byte = streamSave + 1
+        If streamNext = 3 Then streamNext = 0
+        Dim streamPrevious As Byte = streamNext + 1
+        If streamPrevious = 3 Then streamPrevious = 0
+        If IO.File.Exists(streamFile(streamSave)) Then
+          Dim curSize As Long = My.Computer.FileSystem.GetFileInfo(streamFile(streamSave)).Length
+          If curSize >= firstSize And String.IsNullOrEmpty(CFm_Filename) Then
+            If CFm_Filename = streamFile(streamPrevious) Then
+              'duplicate of "buffered enough" below somehow
+              For I As Integer = packetData.Length - 2 To 0 Step -1
+                If packetData(I) = 255 Then
+                  Dim possibleHeader As UInteger = GetDWORD(packetData, I)
+                  Dim possibleMPEG As New clsMPEG(possibleHeader)
+                  If possibleMPEG.CheckValidity Then
+                    If possibleMPEG.GetMPEGLayer = 3 Then
+                      Dim topHalf(I - 2) As Byte
+                      Dim bottomHalf(packetData.Length - I - 1) As Byte
+                      Array.ConstrainedCopy(packetData, 0, topHalf, 0, I - 1)
+                      Array.ConstrainedCopy(packetData, I, bottomHalf, 0, packetData.Length - I)
+                      My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), topHalf, True)
+                      If IO.File.Exists(streamFile(streamNext)) Then IO.File.Delete(streamFile(streamNext))
+                      If State = MediaState.mPlaying Then
+                        FileQueue(streamFile(streamSave))
+                      Else
+                        FileOpen(streamFile(streamSave))
+                        mpPlay()
+                      End If
+                      streamSave = streamNext
+                      My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), bottomHalf, True)
+                      Exit For
+                    End If
+                  End If
+                End If
+              Next
+            ElseIf Not My.Computer.FileSystem.FileExists(streamFile(streamNext)) And Not My.Computer.FileSystem.FileExists(streamFile(streamPrevious)) Then
+              'No Next/After files, fresh stream
+
+              For I As Integer = packetData.Length - 2 To 0 Step -1
+                If packetData(I) = 255 Then
+                  Dim possibleHeader As UInteger = GetDWORD(packetData, I)
+                  Dim possibleMPEG As New clsMPEG(possibleHeader)
+                  If possibleMPEG.CheckValidity Then
+                    If possibleMPEG.GetMPEGLayer = 3 Then
+                      Dim topHalf(I - 2) As Byte
+                      Dim bottomHalf(packetData.Length - I - 1) As Byte
+                      Array.ConstrainedCopy(packetData, 0, topHalf, 0, I - 1)
+                      Array.ConstrainedCopy(packetData, I, bottomHalf, 0, packetData.Length - I)
+                      My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), topHalf, True)
+                      DownloadingState = streamFile(streamSave)
+                      If IO.File.Exists(streamFile(streamNext)) Then IO.File.Delete(streamFile(streamNext))
+                      streamSave = streamNext
+                      My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), bottomHalf, True)
+                      Exit For
+                    End If
+                  End If
+                End If
+              Next
+            Else
+              My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), packetData, True)
+            End If
+          ElseIf curSize >= minSize And CFm_Filename = streamFile(streamPrevious) Then
+            'buffered enough
+            For I As Integer = packetData.Length - 2 To 0 Step -1
+              If packetData(I) = 255 Then
+                Dim possibleHeader As UInteger = GetDWORD(packetData, I)
+                Dim possibleMPEG As New clsMPEG(possibleHeader)
+                If possibleMPEG.CheckValidity Then
+                  If possibleMPEG.GetMPEGLayer = 3 Then
+                    Dim topHalf(I - 2) As Byte
+                    Dim bottomHalf(packetData.Length - I - 1) As Byte
+                    Array.ConstrainedCopy(packetData, 0, topHalf, 0, I - 1)
+                    Array.ConstrainedCopy(packetData, I, bottomHalf, 0, packetData.Length - I)
+                    My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), topHalf, True)
+                    If IO.File.Exists(streamFile(streamNext)) Then IO.File.Delete(streamFile(streamNext))
+                    If State = MediaState.mPlaying Then
+                      FileQueue(streamFile(streamSave))
+                    Else
+                      FileOpen(streamFile(streamSave))
+                      mpPlay()
+                    End If
+                    streamSave = streamNext
+                    My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), bottomHalf, True)
+                    Exit For
+                  End If
+                End If
+              End If
+            Next
+          Else
+            My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), packetData, True)
+            If State = MediaState.mStopped Or Not IsStreaming Then
+              curSize += packetData.Length
+              Dim maxSize As Long = firstSize
+              If CFm_Filename = streamFile(streamPrevious) Then maxSize = minSize
+              RaiseEvent NetDownload(Me, New DownloadChangedEventArgs(curSize, maxSize, "BUFFER"))
+            End If
+          End If
+        Else
+          My.Computer.FileSystem.WriteAllBytes(streamFile(streamSave), packetData, True)
+          If State = MediaState.mStopped Or Not IsStreaming Then
+            Dim curSize As Long = packetData.Length
+            Dim maxSize As Long = firstSize
+            If CFm_Filename = streamFile(streamPrevious) Then maxSize = minSize
+            RaiseEvent NetDownload(Me, New DownloadChangedEventArgs(curSize, maxSize, "BUFFER"))
+          End If
+        End If
+      End If
+    End If
+  End Sub
+
+  Private Sub PullMetaDataFromStream(ByRef packetData As Byte())
+    Dim icyPos As Integer = -1
+    For I As Integer = 0 To packetData.Length - 1
+      icyLoopVal += 1
+      If icyLoopVal > icyMetaInt Then
+        icyPos = I
+        Exit For
+      End If
+    Next
+    If icyPos = -1 Then Return
+    Dim topHalf(icyPos - 1) As Byte
+    Array.ConstrainedCopy(packetData, 0, topHalf, 0, icyPos)
+    Dim totalLen As Integer = packetData(icyPos) * 16
+    If icyPos + totalLen > packetData.Length Then
+      Return
+    End If
+    Dim endPos As Integer = icyPos + totalLen
+    If totalLen > 0 Then
+      Dim endLoc As Integer = icyPos
+      For I As Integer = icyPos + 1 To endPos
+        If packetData(I) = 0 Then
+          endLoc = I
+          Exit For
+        End If
+      Next
+      If endLoc = icyPos Then endLoc = endPos
+      If endLoc > 0 Then
+        Dim icyMetaData(endLoc - (icyPos + 1) - 1) As Byte
+        Array.ConstrainedCopy(packetData, icyPos + 1, icyMetaData, 0, endLoc - (icyPos + 1))
+        Dim sMetaData As String = System.Text.Encoding.GetEncoding(LATIN_1).GetString(icyMetaData)
+        Dim sTitle As String = Nothing
+        Dim sArtist As String = Nothing
+        Dim sAlbum As String = Nothing
+        Dim MetaTags As New Collections.Generic.Dictionary(Of String, String)
+        If sMetaData.Contains(";") Then
+          Dim mdN As Integer = 0
+          Dim sMetaDatas() As String = Split(sMetaData, ";")
+          For Each sData In sMetaDatas
+            If String.IsNullOrEmpty(sData) Then Continue For
+            If sData.Contains("=") Then
+              Dim sMetaName As String = sData.Substring(0, sData.IndexOf("="))
+              Dim sMetaVal As String = sData.Substring(sData.IndexOf("=") + 1)
+              If sMetaVal.StartsWith("'") Then
+                sMetaVal = sMetaVal.Substring(1)
+                If sMetaVal.EndsWith("'") Then sMetaVal = sMetaVal.Substring(0, sMetaVal.Length - 1)
+              ElseIf sMetaVal.StartsWith("""") Then
+                sMetaVal = sMetaVal.Substring(1)
+                If sMetaVal.EndsWith("""") Then sMetaVal = sMetaVal.Substring(0, sMetaVal.Length - 1)
+              End If
+              MetaTags.Add(sMetaName, sMetaVal)
+            Else
+              mdN += 1
+              MetaTags.Add("MetaData" & mdN, sData)
+            End If
+          Next
+        Else
+          If sMetaData.Contains("=") Then
+            Dim sMetaName As String = sMetaData.Substring(0, sMetaData.IndexOf("="))
+            Dim sMetaVal As String = sMetaData.Substring(sMetaData.IndexOf("=") + 1)
+            If sMetaVal.StartsWith("'") Then
+              sMetaVal = sMetaVal.Substring(1)
+              If sMetaVal.EndsWith("'") Then sMetaVal = sMetaVal.Substring(0, sMetaVal.Length - 1)
+            ElseIf sMetaVal.StartsWith("""") Then
+              sMetaVal = sMetaVal.Substring(1)
+              If sMetaVal.EndsWith("""") Then sMetaVal = sMetaVal.Substring(0, sMetaVal.Length - 1)
+            End If
+            If sMetaName.Contains("&amp;") Then sMetaName = sMetaName.Replace("&amp;", "&")
+            If sMetaVal.Contains("&amp;") Then sMetaVal = sMetaVal.Replace("&amp;", "&")
+            MetaTags.Add(sMetaName, sMetaVal)
+          Else
+            MetaTags.Add("MetaData", sMetaData)
+          End If
+        End If
+        If MetaTags.ContainsKey("StreamTitle") Then
+          If MetaTags("StreamTitle").Contains(" - ") Then
+            sArtist = MetaTags("StreamTitle").Substring(0, MetaTags("StreamTitle").IndexOf(" - "))
+            sTitle = MetaTags("StreamTitle").Substring(MetaTags("StreamTitle").IndexOf(" - ") + 3)
+          ElseIf MetaTags("StreamTitle").Contains("-") Then
+            sArtist = MetaTags("StreamTitle").Substring(0, MetaTags("StreamTitle").IndexOf("-"))
+            sTitle = MetaTags("StreamTitle").Substring(MetaTags("StreamTitle").IndexOf("-") + 1)
+          Else
+            sTitle = MetaTags("StreamTitle")
+          End If
+        Else
+          sTitle = sMetaData
+        End If
+        If String.IsNullOrEmpty(sAlbum) And Not String.IsNullOrEmpty(icyStation) Then sAlbum = icyStation
+        StreamInfo = New StreamInformation(sTitle, sArtist, sAlbum)
+      End If
+    End If
+    icyLoopVal = 0
+    Dim bottomHalf(packetData.Length - endPos - 2) As Byte
+    Array.ConstrainedCopy(packetData, endPos + 1, bottomHalf, 0, packetData.Length - endPos - 1)
+    PullMetaDataFromStream(bottomHalf)
+    ReDim packetData(topHalf.Length + bottomHalf.Length - 1)
+    Array.ConstrainedCopy(topHalf, 0, packetData, 0, topHalf.Length)
+    Array.ConstrainedCopy(bottomHalf, 0, packetData, topHalf.Length, bottomHalf.Length)
+  End Sub
+
+  Private Sub sckDownload_SocketDisconnected(sender As Object, e As SocketErrorEventArgs) Handles sckDownload.SocketDisconnected
+    If Me.InvokeRequired Then
+      Try
+        Me.Invoke(New EventHandler(Of SocketErrorEventArgs)(AddressOf sckDownload_SocketDisconnected), sender, e)
+      Catch ex As Exception
+
+      End Try
+    Else
+      If String.IsNullOrEmpty(e.ErrorDetails) Then
+        DownloadingState = "Disconnected"
+      Else
+        DownloadingState = e.ErrorDetails
+      End If
+    End If
+  End Sub
 
   Public Sub SetNoQueue()
     tmrJustBefore.Enabled = False
@@ -1776,53 +2273,58 @@ Erred:
     CFm_queuedTempName = String.Empty
   End Sub
 
+  Private Delegate Function FileQueueInvoker(FilePath As String) As Boolean
   Public Function FileQueue(FilePath As String) As Boolean
-    Try
-      If String.IsNullOrEmpty(FilePath) Then Return False
-      If My.Computer.FileSystem.FileExists(FilePath) And My.Computer.FileSystem.GetFileInfo(FilePath).Length > 0 Then
-        If IO.Path.GetExtension(FilePath).ToLower = ".swf" Or IO.Path.GetExtension(FilePath).ToLower = ".spl" Then Return False
-        CFm_queuedFilename = FilePath
-        tmrJustBefore.Enabled = True
-        Dim ret As Integer
-        obj_queuedControl = CreateManager(FilePath, CFm_queuedTempName, ret)
-        If ret <> 0 Or obj_queuedControl IsNot Nothing Then
-          Dim qPosition As IMediaPosition = obj_queuedControl
-          Try
-            Dim qAudio As IBasicAudio = obj_queuedControl
-            Dim qVidWindow As IVideoWindow = obj_queuedControl
-            qAudio.put_Volume(-10000)
-            qVidWindow.put_AutoShow(OABool.False)
-            obj_queuedControl.Run()
-            obj_queuedControl.Pause()
-            qPosition.put_CurrentPosition(0.0)
-            If CFm_Mute Then
+    If Me.InvokeRequired Then
+      Return Me.Invoke(New FileQueueInvoker(AddressOf FileQueue), FilePath)
+    Else
+      Try
+        If String.IsNullOrEmpty(FilePath) Then Return False
+        If My.Computer.FileSystem.FileExists(FilePath) And My.Computer.FileSystem.GetFileInfo(FilePath).Length > 0 Then
+          If IO.Path.GetExtension(FilePath).ToLower = ".swf" Or IO.Path.GetExtension(FilePath).ToLower = ".spl" Then Return False
+          CFm_queuedFilename = FilePath
+          tmrJustBefore.Enabled = True
+          Dim ret As Integer
+          obj_queuedControl = CreateManager(FilePath, CFm_queuedTempName, ret)
+          If ret <> 0 Or obj_queuedControl IsNot Nothing Then
+            Dim qPosition As IMediaPosition = obj_queuedControl
+            Try
+              Dim qAudio As IBasicAudio = obj_queuedControl
+              Dim qVidWindow As IVideoWindow = obj_queuedControl
               qAudio.put_Volume(-10000)
-            Else
-              qAudio.put_Volume(CFm_Volume)
-            End If
-            qAudio.put_Balance(CFm_Balance)
-            qPosition.put_Rate(1)
-            qPosition = Nothing
-            qAudio = Nothing
-            qVidWindow = Nothing
-            Return True
-          Catch ex As Exception
+              qVidWindow.put_AutoShow(OABool.False)
+              obj_queuedControl.Run()
+              obj_queuedControl.Pause()
+              qPosition.put_CurrentPosition(0.0)
+              If CFm_Mute Then
+                qAudio.put_Volume(-10000)
+              Else
+                qAudio.put_Volume(CFm_Volume)
+              End If
+              qAudio.put_Balance(CFm_Balance)
+              qPosition.put_Rate(1)
+              qPosition = Nothing
+              qAudio = Nothing
+              qVidWindow = Nothing
+              Return True
+            Catch ex As Exception
+              SetNoQueue()
+              Return False
+            End Try
+          Else
+            Debug.Print("Could not queue: " & Hex(ret))
             SetNoQueue()
             Return False
-          End Try
+          End If
         Else
-          Debug.Print("Could not queue: " & Hex(ret))
           SetNoQueue()
           Return False
         End If
-      Else
+      Catch
         SetNoQueue()
         Return False
-      End If
-    Catch
-      SetNoQueue()
-      Return False
-    End Try
+      End Try
+    End If
   End Function
 
   Private Function GetFilterList(ByRef manager As IMediaControl) As IBaseFilter()
@@ -1846,10 +2348,29 @@ Erred:
     Return fFilters
   End Function
 
+  Private Sub ResetFFResize()
+    If My.Computer.Registry.CurrentUser.OpenSubKey("Software").GetSubKeyNames.Contains("GNU") Then
+      If My.Computer.Registry.CurrentUser.OpenSubKey("Software").OpenSubKey("GNU").GetSubKeyNames.Contains("ffdshow") Then
+        If My.Computer.Registry.CurrentUser.OpenSubKey("Software").OpenSubKey("GNU").OpenSubKey("ffdshow").GetSubKeyNames.Contains("default") Then
+          My.Computer.Registry.CurrentUser.OpenSubKey("Software", True).OpenSubKey("GNU", True).OpenSubKey("ffdshow", True).OpenSubKey("default", True).SetValue("isResize", 0, Microsoft.Win32.RegistryValueKind.DWord)
+          My.Computer.Registry.CurrentUser.OpenSubKey("Software", True).OpenSubKey("GNU", True).OpenSubKey("ffdshow", True).OpenSubKey("default", True).SetValue("resizeDx", 320, Microsoft.Win32.RegistryValueKind.DWord)
+          My.Computer.Registry.CurrentUser.OpenSubKey("Software", True).OpenSubKey("GNU", True).OpenSubKey("ffdshow", True).OpenSubKey("default", True).SetValue("resizeDy", 240, Microsoft.Win32.RegistryValueKind.DWord)
+        End If
+      End If
+      If My.Computer.Registry.CurrentUser.OpenSubKey("Software").OpenSubKey("GNU").GetSubKeyNames.Contains("ffdshow64") Then
+        If My.Computer.Registry.CurrentUser.OpenSubKey("Software").OpenSubKey("GNU").OpenSubKey("ffdshow64").GetSubKeyNames.Contains("default") Then
+          My.Computer.Registry.CurrentUser.OpenSubKey("Software", True).OpenSubKey("GNU", True).OpenSubKey("ffdshow64", True).OpenSubKey("default", True).SetValue("isResize", 0, Microsoft.Win32.RegistryValueKind.DWord)
+          My.Computer.Registry.CurrentUser.OpenSubKey("Software", True).OpenSubKey("GNU", True).OpenSubKey("ffdshow64", True).OpenSubKey("default", True).SetValue("resizeDx", 320, Microsoft.Win32.RegistryValueKind.DWord)
+          My.Computer.Registry.CurrentUser.OpenSubKey("Software", True).OpenSubKey("GNU", True).OpenSubKey("ffdshow64", True).OpenSubKey("default", True).SetValue("resizeDy", 240, Microsoft.Win32.RegistryValueKind.DWord)
+        End If
+      End If
+    End If
+  End Sub
+
   Private Sub SpreadManagement(ByRef Manager As IMediaControl, ByVal FilePath As String)
     If Not IsSTA() Then
       RaiseEvent CantOpen("Not STA")
-      Exit Sub
+      Return
     End If
     Dim fList() As FilterInfo = Nothing
     Dim fVal As Integer = 0
@@ -1904,6 +2425,7 @@ Erred:
     CFm_HasAud = obj_mpAudio IsNot Nothing
     If obj_mpVideo IsNot Nothing Then
       Try
+        ResetFFResize()
         Dim VidW, VidH As Long
         obj_mpVideo.GetVideoSize(VidW, VidH)
         CFm_HasVid = True
@@ -1957,12 +2479,20 @@ Erred:
   End Sub
 
   Private Sub FileClose()
+    DownloadingState = "CLOSE"
     Try
       CloseMedia()
       imgLogo.Visible = True
       CFm_HasVid = False
       CFm_VideoWidth = 320
       CFm_VideoHeight = 240
+      ResetFFResize()
+      Try
+        If Not String.IsNullOrEmpty(CFm_Filename) Then
+          If CFm_Filename.StartsWith(IO.Path.Combine(IO.Path.GetTempPath, "seedTemp")) Then IO.File.Delete(CFm_Filename)
+        End If
+      Catch ex As Exception
+      End Try
       CFm_Filename = vbNullString
     Catch e As Exception
       RaiseEvent MediaError(New MediaErrorEventArgs(e, "FileClose"))
@@ -1970,8 +2500,8 @@ Erred:
   End Sub
 
   Private Sub tmrJustBefore_Tick(sender As System.Object, e As System.EventArgs) Handles tmrJustBefore.Tick
-    If CFm_Loop Then Exit Sub
-    If Not IsSTA() Or obj_mpPosition Is Nothing Or obj_queuedControl Is Nothing Then Exit Sub
+    If CFm_Loop Then Return
+    If Not IsSTA() Or obj_mpPosition Is Nothing Or obj_queuedControl Is Nothing Then Return
     If Me.Position >= Me.Duration - CFm_queueTime Then
       Dim fState As FilterState
       Dim qAudio As IBasicAudio = obj_queuedControl
@@ -1986,7 +2516,7 @@ Erred:
         bWait = 0
         obj_queuedControl.Run()
       Else
-        If Me.Position >= Me.Duration Then
+        If Me.Position >= Me.Duration OrElse (Me.Duration - Me.Position) < 1 Then
           If bWait = 0 Then
             bWait = Environment.TickCount + (CFm_queueTime * 1000)
           ElseIf bWait <= Environment.TickCount Then
@@ -2077,7 +2607,7 @@ Erred:
   End Function
 
   Public Sub SetDVDCurrentAudioStream(Index As Integer)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.SelectAudioStream(Index, Dvd.DvdCmdFlags.None, Nothing)
   End Sub
 
@@ -2103,7 +2633,7 @@ Erred:
   End Function
 
   Public Sub SetDVDCurrentSubStream(Index As Integer)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     Dim hr As Integer = 0
     If Index = -1 Then
       hr = obj_dvdControl.SetSubpictureState(False, Dvd.DvdCmdFlags.None, Nothing)
@@ -2187,12 +2717,12 @@ Erred:
   End Function
 
   Public Sub SetDVDCurrentTitle(Index As Integer)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.PlayTitle(Index, Dvd.DvdCmdFlags.None, Nothing)
   End Sub
 
   Public Sub SetDVDCurrentChapter(Index As Integer)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.PlayChapter(Index, Dvd.DvdCmdFlags.None, Nothing)
   End Sub
 
@@ -2234,32 +2764,32 @@ Erred:
   End Sub
 
   Public Sub DVDPrevious()
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.PlayPrevChapter(Dvd.DvdCmdFlags.None, Nothing)
   End Sub
 
   Public Sub DVDNext()
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.PlayNextChapter(Dvd.DvdCmdFlags.None, Nothing)
   End Sub
 
   Public Sub DVDMenu(ID As Dvd.DvdMenuId)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.ShowMenu(ID, Dvd.DvdCmdFlags.None, Nothing)
   End Sub
 
   Public Sub DVDSelectButton(Direction As Dvd.DvdRelativeButton)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.SelectRelativeButton(Direction)
   End Sub
 
   Public Sub DVDActivateButton()
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.ActivateButton()
   End Sub
 
   Public Sub DVDSetPreferredRatio(Ratio As Dvd.DvdPreferredDisplayMode)
-    If obj_dvdControl Is Nothing Then Exit Sub
+    If obj_dvdControl Is Nothing Then Return
     obj_dvdControl.SelectVideoModePreference(Ratio)
   End Sub
 #End Region

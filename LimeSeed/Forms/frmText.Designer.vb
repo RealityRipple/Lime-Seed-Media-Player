@@ -31,17 +31,18 @@ Partial Class frmText
     '
     Me.lblText.AutoSize = True
     Me.lblText.BackColor = System.Drawing.Color.Transparent
-    Me.lblText.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+    Me.lblText.Font = New System.Drawing.Font("Segoe UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
     Me.lblText.ForeColor = System.Drawing.Color.Navy
     Me.lblText.Location = New System.Drawing.Point(0, 0)
     Me.lblText.Margin = New System.Windows.Forms.Padding(0)
     Me.lblText.MaximumSize = New System.Drawing.Size(300, 0)
     Me.lblText.Name = "lblText"
-    Me.lblText.Padding = New System.Windows.Forms.Padding(3)
-    Me.lblText.Size = New System.Drawing.Size(89, 21)
+    Me.lblText.Padding = New System.Windows.Forms.Padding(1)
+    Me.lblText.Size = New System.Drawing.Size(82, 17)
     Me.lblText.TabIndex = 0
     Me.lblText.Text = "[No Message]"
     Me.lblText.UseMnemonic = False
+    Me.lblText.Visible = False
     '
     'tmrHide
     '

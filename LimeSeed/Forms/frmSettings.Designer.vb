@@ -103,8 +103,17 @@ Partial Class frmSettings
     Me.lblAudioOutput = New System.Windows.Forms.Label()
     Me.cmbAudioOutput = New System.Windows.Forms.ComboBox()
     Me.lblLocale = New System.Windows.Forms.Label()
+    Me.chkTags = New System.Windows.Forms.CheckBox()
+    Me.pnlGapless = New System.Windows.Forms.TableLayoutPanel()
+    Me.pnlLocale = New System.Windows.Forms.TableLayoutPanel()
     Me.cmbLocale = New System.Windows.Forms.ComboBox()
     Me.chkSubtitles = New System.Windows.Forms.CheckBox()
+    Me.chkCaptions = New System.Windows.Forms.CheckBox()
+    Me.pnlTags = New System.Windows.Forms.TableLayoutPanel()
+    Me.chkArt = New System.Windows.Forms.CheckBox()
+    Me.chkID3v2 = New System.Windows.Forms.CheckBox()
+    Me.cmbID3v2 = New System.Windows.Forms.ComboBox()
+    Me.chkCleanup = New System.Windows.Forms.CheckBox()
     Me.pnlMain = New System.Windows.Forms.TableLayoutPanel()
     Me.tbsSettings = New System.Windows.Forms.TabControl()
     Me.tabOptions = New System.Windows.Forms.TabPage()
@@ -250,6 +259,9 @@ Partial Class frmSettings
     Me.tmrVis = New System.Windows.Forms.Timer(Me.components)
     CType(Me.numGapless, System.ComponentModel.ISupportInitialize).BeginInit()
     Me.pnlOptions.SuspendLayout()
+    Me.pnlGapless.SuspendLayout()
+    Me.pnlLocale.SuspendLayout()
+    Me.pnlTags.SuspendLayout()
     Me.pnlMain.SuspendLayout()
     Me.tbsSettings.SuspendLayout()
     Me.tabOptions.SuspendLayout()
@@ -273,32 +285,33 @@ Partial Class frmSettings
     '
     Me.lblAssoc.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.lblAssoc.AutoSize = True
-    Me.lblAssoc.Location = New System.Drawing.Point(3, 106)
+    Me.lblAssoc.Location = New System.Drawing.Point(3, 137)
+    Me.lblAssoc.Margin = New System.Windows.Forms.Padding(3, 6, 3, 6)
     Me.lblAssoc.Name = "lblAssoc"
     Me.lblAssoc.Size = New System.Drawing.Size(88, 13)
-    Me.lblAssoc.TabIndex = 10
+    Me.lblAssoc.TabIndex = 9
     Me.lblAssoc.Text = "File Associations:"
     '
     'lblGaplessMS
     '
-    Me.lblGaplessMS.Anchor = CType((System.Windows.Forms.AnchorStyles.Left Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+    Me.lblGaplessMS.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.lblGaplessMS.AutoEllipsis = True
-    Me.pnlOptions.SetColumnSpan(Me.lblGaplessMS, 2)
-    Me.lblGaplessMS.Location = New System.Drawing.Point(187, 31)
+    Me.lblGaplessMS.AutoSize = True
+    Me.lblGaplessMS.Location = New System.Drawing.Point(65, 6)
     Me.lblGaplessMS.Name = "lblGaplessMS"
-    Me.lblGaplessMS.Size = New System.Drawing.Size(294, 13)
-    Me.lblGaplessMS.TabIndex = 9
+    Me.lblGaplessMS.Size = New System.Drawing.Size(260, 13)
+    Me.lblGaplessMS.TabIndex = 1
     Me.lblGaplessMS.Text = "ms (set higher to remove gaps, lower if tracks overlap)"
     Me.lblGaplessMS.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
     '
     'numGapless
     '
     Me.numGapless.Anchor = System.Windows.Forms.AnchorStyles.Right
-    Me.numGapless.Location = New System.Drawing.Point(125, 28)
+    Me.numGapless.Location = New System.Drawing.Point(3, 3)
     Me.numGapless.Maximum = New Decimal(New Integer() {1000, 0, 0, 0})
     Me.numGapless.Name = "numGapless"
     Me.numGapless.Size = New System.Drawing.Size(56, 20)
-    Me.numGapless.TabIndex = 1
+    Me.numGapless.TabIndex = 0
     Me.numGapless.TextAlign = System.Windows.Forms.HorizontalAlignment.Right
     Me.numGapless.Value = New Decimal(New Integer() {110, 0, 0, 0})
     '
@@ -330,52 +343,52 @@ Partial Class frmSettings
     '
     Me.lblGapless.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.lblGapless.AutoSize = True
-    Me.lblGapless.Location = New System.Drawing.Point(3, 31)
+    Me.lblGapless.Location = New System.Drawing.Point(3, 33)
+    Me.lblGapless.Margin = New System.Windows.Forms.Padding(3, 6, 3, 6)
     Me.lblGapless.Name = "lblGapless"
     Me.lblGapless.Size = New System.Drawing.Size(101, 13)
-    Me.lblGapless.TabIndex = 0
+    Me.lblGapless.TabIndex = 2
     Me.lblGapless.Text = "Gapless Load Time:"
     '
     'pnlOptions
     '
-    Me.pnlOptions.ColumnCount = 4
-    Me.pnlOptions.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlOptions.ColumnCount = 2
     Me.pnlOptions.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
     Me.pnlOptions.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
-    Me.pnlOptions.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
     Me.pnlOptions.Controls.Add(Me.lblGapless, 0, 1)
-    Me.pnlOptions.Controls.Add(Me.numGapless, 1, 1)
-    Me.pnlOptions.Controls.Add(Me.lblGaplessMS, 2, 1)
-    Me.pnlOptions.Controls.Add(Me.lblAssoc, 0, 4)
-    Me.pnlOptions.Controls.Add(Me.tvAssoc, 1, 4)
-    Me.pnlOptions.Controls.Add(Me.cmdAssociate, 0, 6)
-    Me.pnlOptions.Controls.Add(Me.chkSingleInstance, 1, 3)
-    Me.pnlOptions.Controls.Add(Me.chkThumbnails, 0, 5)
+    Me.pnlOptions.Controls.Add(Me.lblAssoc, 0, 5)
+    Me.pnlOptions.Controls.Add(Me.tvAssoc, 1, 5)
+    Me.pnlOptions.Controls.Add(Me.cmdAssociate, 0, 7)
+    Me.pnlOptions.Controls.Add(Me.chkSingleInstance, 1, 4)
+    Me.pnlOptions.Controls.Add(Me.chkThumbnails, 0, 6)
     Me.pnlOptions.Controls.Add(Me.lblAudioOutput, 0, 0)
     Me.pnlOptions.Controls.Add(Me.cmbAudioOutput, 1, 0)
     Me.pnlOptions.Controls.Add(Me.lblLocale, 0, 2)
-    Me.pnlOptions.Controls.Add(Me.cmbLocale, 1, 2)
-    Me.pnlOptions.Controls.Add(Me.chkSubtitles, 3, 2)
+    Me.pnlOptions.Controls.Add(Me.pnlGapless, 1, 1)
+    Me.pnlOptions.Controls.Add(Me.pnlLocale, 1, 2)
+    Me.pnlOptions.Controls.Add(Me.pnlTags, 1, 3)
+    Me.pnlOptions.Controls.Add(Me.chkTags, 0, 3)
     Me.pnlOptions.Dock = System.Windows.Forms.DockStyle.Fill
     Me.pnlOptions.Location = New System.Drawing.Point(3, 3)
     Me.pnlOptions.Name = "pnlOptions"
-    Me.pnlOptions.RowCount = 7
-    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25.0!))
-    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25.0!))
-    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25.0!))
-    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25.0!))
-    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25.0!))
-    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25.0!))
+    Me.pnlOptions.RowCount = 8
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle())
     Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+    Me.pnlOptions.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20.0!))
     Me.pnlOptions.Size = New System.Drawing.Size(484, 288)
     Me.pnlOptions.TabIndex = 0
     '
     'tvAssoc
     '
     Me.tvAssoc.CheckBoxes = True
-    Me.pnlOptions.SetColumnSpan(Me.tvAssoc, 3)
     Me.tvAssoc.Dock = System.Windows.Forms.DockStyle.Fill
-    Me.tvAssoc.Location = New System.Drawing.Point(125, 103)
+    Me.tvAssoc.Location = New System.Drawing.Point(125, 134)
     Me.tvAssoc.Name = "tvAssoc"
     TreeNode1.Name = "nodeMPC"
     TreeNode1.Tag = "MPC"
@@ -565,17 +578,17 @@ Partial Class frmSettings
     Me.pnlOptions.SetRowSpan(Me.tvAssoc, 3)
     Me.tvAssoc.ShowLines = False
     Me.tvAssoc.ShowRootLines = False
-    Me.tvAssoc.Size = New System.Drawing.Size(356, 182)
-    Me.tvAssoc.TabIndex = 13
+    Me.tvAssoc.Size = New System.Drawing.Size(356, 151)
+    Me.tvAssoc.TabIndex = 10
     '
     'cmdAssociate
     '
     Me.cmdAssociate.Anchor = System.Windows.Forms.AnchorStyles.None
     Me.cmdAssociate.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.cmdAssociate.Location = New System.Drawing.Point(16, 206)
+    Me.cmdAssociate.Location = New System.Drawing.Point(16, 221)
     Me.cmdAssociate.Name = "cmdAssociate"
     Me.cmdAssociate.Size = New System.Drawing.Size(90, 25)
-    Me.cmdAssociate.TabIndex = 14
+    Me.cmdAssociate.TabIndex = 12
     Me.cmdAssociate.Text = " Associate"
     Me.cmdAssociate.UseVisualStyleBackColor = True
     '
@@ -583,12 +596,11 @@ Partial Class frmSettings
     '
     Me.chkSingleInstance.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.chkSingleInstance.AutoSize = True
-    Me.pnlOptions.SetColumnSpan(Me.chkSingleInstance, 3)
     Me.chkSingleInstance.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.chkSingleInstance.Location = New System.Drawing.Point(125, 78)
+    Me.chkSingleInstance.Location = New System.Drawing.Point(125, 110)
     Me.chkSingleInstance.Name = "chkSingleInstance"
     Me.chkSingleInstance.Size = New System.Drawing.Size(192, 18)
-    Me.chkSingleInstance.TabIndex = 15
+    Me.chkSingleInstance.TabIndex = 8
     Me.chkSingleInstance.Text = "Allow Only One Instance of Player"
     Me.chkSingleInstance.UseVisualStyleBackColor = True
     '
@@ -597,10 +609,10 @@ Partial Class frmSettings
     Me.chkThumbnails.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.chkThumbnails.AutoSize = True
     Me.chkThumbnails.FlatStyle = System.Windows.Forms.FlatStyle.System
-    Me.chkThumbnails.Location = New System.Drawing.Point(3, 128)
+    Me.chkThumbnails.Location = New System.Drawing.Point(3, 159)
     Me.chkThumbnails.Name = "chkThumbnails"
     Me.chkThumbnails.Size = New System.Drawing.Size(116, 18)
-    Me.chkThumbnails.TabIndex = 16
+    Me.chkThumbnails.TabIndex = 11
     Me.chkThumbnails.Text = "Video Thumbnails"
     Me.chkThumbnails.UseVisualStyleBackColor = True
     '
@@ -608,56 +620,189 @@ Partial Class frmSettings
     '
     Me.lblAudioOutput.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.lblAudioOutput.AutoSize = True
-    Me.lblAudioOutput.Location = New System.Drawing.Point(3, 6)
+    Me.lblAudioOutput.Location = New System.Drawing.Point(3, 7)
+    Me.lblAudioOutput.Margin = New System.Windows.Forms.Padding(3, 6, 3, 6)
     Me.lblAudioOutput.Name = "lblAudioOutput"
     Me.lblAudioOutput.Size = New System.Drawing.Size(109, 13)
-    Me.lblAudioOutput.TabIndex = 17
+    Me.lblAudioOutput.TabIndex = 0
     Me.lblAudioOutput.Text = "Audio Output Device:"
     '
     'cmbAudioOutput
     '
     Me.cmbAudioOutput.Anchor = CType((System.Windows.Forms.AnchorStyles.Left Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-    Me.pnlOptions.SetColumnSpan(Me.cmbAudioOutput, 3)
     Me.cmbAudioOutput.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
     Me.cmbAudioOutput.FlatStyle = System.Windows.Forms.FlatStyle.System
     Me.cmbAudioOutput.FormattingEnabled = True
     Me.cmbAudioOutput.Location = New System.Drawing.Point(125, 3)
     Me.cmbAudioOutput.Name = "cmbAudioOutput"
     Me.cmbAudioOutput.Size = New System.Drawing.Size(356, 21)
-    Me.cmbAudioOutput.TabIndex = 18
+    Me.cmbAudioOutput.TabIndex = 1
     '
     'lblLocale
     '
     Me.lblLocale.Anchor = System.Windows.Forms.AnchorStyles.Left
     Me.lblLocale.AutoSize = True
-    Me.lblLocale.Location = New System.Drawing.Point(3, 56)
+    Me.lblLocale.Location = New System.Drawing.Point(3, 60)
+    Me.lblLocale.Margin = New System.Windows.Forms.Padding(3, 6, 3, 6)
     Me.lblLocale.Name = "lblLocale"
     Me.lblLocale.Size = New System.Drawing.Size(109, 13)
-    Me.lblLocale.TabIndex = 19
+    Me.lblLocale.TabIndex = 4
     Me.lblLocale.Text = "Default Audio Locale:"
+    '
+    'chkTags
+    '
+    Me.chkTags.Anchor = System.Windows.Forms.AnchorStyles.Left
+    Me.chkTags.AutoSize = True
+    Me.chkTags.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.chkTags.Location = New System.Drawing.Point(3, 84)
+    Me.chkTags.Name = "chkTags"
+    Me.chkTags.Size = New System.Drawing.Size(113, 18)
+    Me.chkTags.TabIndex = 6
+    Me.chkTags.Text = "Modify ID3 Tags:"
+    Me.chkTags.UseVisualStyleBackColor = True
+    '
+    'pnlGapless
+    '
+    Me.pnlGapless.AutoSize = True
+    Me.pnlGapless.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
+    Me.pnlGapless.ColumnCount = 2
+    Me.pnlGapless.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlGapless.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+    Me.pnlGapless.Controls.Add(Me.numGapless, 0, 0)
+    Me.pnlGapless.Controls.Add(Me.lblGaplessMS, 1, 0)
+    Me.pnlGapless.Dock = System.Windows.Forms.DockStyle.Fill
+    Me.pnlGapless.Location = New System.Drawing.Point(122, 27)
+    Me.pnlGapless.Margin = New System.Windows.Forms.Padding(0)
+    Me.pnlGapless.Name = "pnlGapless"
+    Me.pnlGapless.RowCount = 1
+    Me.pnlGapless.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlGapless.Size = New System.Drawing.Size(362, 26)
+    Me.pnlGapless.TabIndex = 3
+    '
+    'pnlLocale
+    '
+    Me.pnlLocale.AutoSize = True
+    Me.pnlLocale.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
+    Me.pnlLocale.ColumnCount = 3
+    Me.pnlLocale.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+    Me.pnlLocale.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlLocale.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlLocale.Controls.Add(Me.cmbLocale, 0, 0)
+    Me.pnlLocale.Controls.Add(Me.chkSubtitles, 2, 0)
+    Me.pnlLocale.Controls.Add(Me.chkCaptions, 1, 0)
+    Me.pnlLocale.Dock = System.Windows.Forms.DockStyle.Fill
+    Me.pnlLocale.Location = New System.Drawing.Point(122, 53)
+    Me.pnlLocale.Margin = New System.Windows.Forms.Padding(0)
+    Me.pnlLocale.Name = "pnlLocale"
+    Me.pnlLocale.RowCount = 1
+    Me.pnlLocale.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlLocale.Size = New System.Drawing.Size(362, 27)
+    Me.pnlLocale.TabIndex = 5
     '
     'cmbLocale
     '
     Me.cmbLocale.Anchor = CType((System.Windows.Forms.AnchorStyles.Left Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-    Me.pnlOptions.SetColumnSpan(Me.cmbLocale, 2)
     Me.cmbLocale.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
     Me.cmbLocale.FlatStyle = System.Windows.Forms.FlatStyle.System
     Me.cmbLocale.FormattingEnabled = True
-    Me.cmbLocale.Location = New System.Drawing.Point(125, 53)
+    Me.cmbLocale.Location = New System.Drawing.Point(3, 3)
     Me.cmbLocale.Name = "cmbLocale"
-    Me.cmbLocale.Size = New System.Drawing.Size(284, 21)
-    Me.cmbLocale.TabIndex = 20
+    Me.cmbLocale.Size = New System.Drawing.Size(199, 21)
+    Me.cmbLocale.TabIndex = 0
     '
     'chkSubtitles
     '
     Me.chkSubtitles.Anchor = System.Windows.Forms.AnchorStyles.Right
     Me.chkSubtitles.AutoSize = True
-    Me.chkSubtitles.Location = New System.Drawing.Point(415, 54)
+    Me.chkSubtitles.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.chkSubtitles.Location = New System.Drawing.Point(287, 4)
     Me.chkSubtitles.Name = "chkSubtitles"
-    Me.chkSubtitles.Size = New System.Drawing.Size(66, 17)
-    Me.chkSubtitles.TabIndex = 21
+    Me.chkSubtitles.Size = New System.Drawing.Size(72, 18)
+    Me.chkSubtitles.TabIndex = 2
     Me.chkSubtitles.Text = "Subtitles"
     Me.chkSubtitles.UseVisualStyleBackColor = True
+    '
+    'chkCaptions
+    '
+    Me.chkCaptions.Anchor = System.Windows.Forms.AnchorStyles.Right
+    Me.chkCaptions.AutoSize = True
+    Me.chkCaptions.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.chkCaptions.Location = New System.Drawing.Point(208, 4)
+    Me.chkCaptions.Name = "chkCaptions"
+    Me.chkCaptions.Size = New System.Drawing.Size(73, 18)
+    Me.chkCaptions.TabIndex = 1
+    Me.chkCaptions.Text = "Captions"
+    Me.chkCaptions.UseVisualStyleBackColor = True
+    '
+    'pnlTags
+    '
+    Me.pnlTags.AutoSize = True
+    Me.pnlTags.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
+    Me.pnlTags.ColumnCount = 4
+    Me.pnlTags.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlTags.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlTags.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+    Me.pnlTags.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+    Me.pnlTags.Controls.Add(Me.chkArt, 0, 0)
+    Me.pnlTags.Controls.Add(Me.chkID3v2, 2, 0)
+    Me.pnlTags.Controls.Add(Me.cmbID3v2, 3, 0)
+    Me.pnlTags.Controls.Add(Me.chkCleanup, 1, 0)
+    Me.pnlTags.Dock = System.Windows.Forms.DockStyle.Fill
+    Me.pnlTags.Location = New System.Drawing.Point(122, 80)
+    Me.pnlTags.Margin = New System.Windows.Forms.Padding(0)
+    Me.pnlTags.Name = "pnlTags"
+    Me.pnlTags.RowCount = 1
+    Me.pnlTags.RowStyles.Add(New System.Windows.Forms.RowStyle())
+    Me.pnlTags.Size = New System.Drawing.Size(362, 27)
+    Me.pnlTags.TabIndex = 7
+    '
+    'chkArt
+    '
+    Me.chkArt.Anchor = System.Windows.Forms.AnchorStyles.Left
+    Me.chkArt.AutoSize = True
+    Me.chkArt.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.chkArt.Location = New System.Drawing.Point(3, 4)
+    Me.chkArt.Name = "chkArt"
+    Me.chkArt.Size = New System.Drawing.Size(77, 18)
+    Me.chkArt.TabIndex = 0
+    Me.chkArt.Text = "Album Art"
+    Me.chkArt.UseVisualStyleBackColor = True
+    '
+    'chkID3v2
+    '
+    Me.chkID3v2.Anchor = System.Windows.Forms.AnchorStyles.Left
+    Me.chkID3v2.AutoSize = True
+    Me.chkID3v2.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.chkID3v2.Location = New System.Drawing.Point(168, 4)
+    Me.chkID3v2.Name = "chkID3v2"
+    Me.chkID3v2.Size = New System.Drawing.Size(85, 18)
+    Me.chkID3v2.TabIndex = 2
+    Me.chkID3v2.Text = "v2 Version:"
+    Me.chkID3v2.UseVisualStyleBackColor = True
+    '
+    'cmbID3v2
+    '
+    Me.cmbID3v2.Anchor = CType((System.Windows.Forms.AnchorStyles.Left Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+    Me.cmbID3v2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+    Me.cmbID3v2.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.cmbID3v2.FormattingEnabled = True
+    Me.cmbID3v2.Items.AddRange(New Object() {"2.2.0", "2.3.0", "2.4.0"})
+    Me.cmbID3v2.Location = New System.Drawing.Point(259, 3)
+    Me.cmbID3v2.Name = "cmbID3v2"
+    Me.cmbID3v2.Size = New System.Drawing.Size(100, 21)
+    Me.cmbID3v2.TabIndex = 3
+    '
+    'chkCleanup
+    '
+    Me.chkCleanup.Anchor = System.Windows.Forms.AnchorStyles.Left
+    Me.chkCleanup.AutoSize = True
+    Me.chkCleanup.FlatStyle = System.Windows.Forms.FlatStyle.System
+    Me.chkCleanup.Location = New System.Drawing.Point(86, 4)
+    Me.chkCleanup.Name = "chkCleanup"
+    Me.chkCleanup.Size = New System.Drawing.Size(76, 18)
+    Me.chkCleanup.TabIndex = 1
+    Me.chkCleanup.Text = "Clean Up"
+    Me.chkCleanup.UseVisualStyleBackColor = True
     '
     'pnlMain
     '
@@ -2460,6 +2605,12 @@ Partial Class frmSettings
     CType(Me.numGapless, System.ComponentModel.ISupportInitialize).EndInit()
     Me.pnlOptions.ResumeLayout(False)
     Me.pnlOptions.PerformLayout()
+    Me.pnlGapless.ResumeLayout(False)
+    Me.pnlGapless.PerformLayout()
+    Me.pnlLocale.ResumeLayout(False)
+    Me.pnlLocale.PerformLayout()
+    Me.pnlTags.ResumeLayout(False)
+    Me.pnlTags.PerformLayout()
     Me.pnlMain.ResumeLayout(False)
     Me.tbsSettings.ResumeLayout(False)
     Me.tabOptions.ResumeLayout(False)
@@ -2645,4 +2796,13 @@ Partial Class frmSettings
   Friend WithEvents lblLocale As System.Windows.Forms.Label
   Friend WithEvents cmbLocale As System.Windows.Forms.ComboBox
   Friend WithEvents chkSubtitles As System.Windows.Forms.CheckBox
+  Friend WithEvents chkCaptions As System.Windows.Forms.CheckBox
+  Friend WithEvents chkTags As System.Windows.Forms.CheckBox
+  Friend WithEvents pnlGapless As System.Windows.Forms.TableLayoutPanel
+  Friend WithEvents pnlLocale As System.Windows.Forms.TableLayoutPanel
+  Friend WithEvents pnlTags As System.Windows.Forms.TableLayoutPanel
+  Friend WithEvents chkArt As System.Windows.Forms.CheckBox
+  Friend WithEvents chkID3v2 As System.Windows.Forms.CheckBox
+  Friend WithEvents cmbID3v2 As System.Windows.Forms.ComboBox
+  Friend WithEvents chkCleanup As System.Windows.Forms.CheckBox
 End Class

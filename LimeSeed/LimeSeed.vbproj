@@ -39,7 +39,8 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>LSMP.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
@@ -49,7 +50,8 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>LSMP.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -72,7 +74,8 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>LSMP.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -86,7 +89,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>LSMP.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <Optimize>true</Optimize>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <DebugType>pdbonly</DebugType>
@@ -122,10 +126,6 @@
     <Reference Include="Dotnetrix.TabControl, Version=1.0.1.7, Culture=neutral, PublicKeyToken=ddb3299291faa03f, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Components\Dotnetrix.TabControl.dll</HintPath>
-    </Reference>
-    <Reference Include="FFDShowAPI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Components\FFDShowAPI.dll</HintPath>
     </Reference>
     <Reference Include="Interop.ShockwaveFlashObjects, Version=1.0.0.0, Culture=neutral, PublicKeyToken=70aa87cd79aab75c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -216,12 +216,6 @@
       <DependentUpon>frmMain.vb</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\frmNewID3v2Tag.Designer.vb">
-      <DependentUpon>frmNewID3v2Tag.vb</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\frmNewID3v2Tag.vb">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Include="Forms\frmOpen.Designer.vb">
       <DependentUpon>frmOpen.vb</DependentUpon>
     </Compile>
@@ -298,9 +292,6 @@
       <DependentUpon>frmMain.vb</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\frmNewID3v2Tag.resx">
-      <DependentUpon>frmNewID3v2Tag.vb</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Forms\frmOpen.resx">
       <DependentUpon>frmOpen.vb</DependentUpon>
     </EmbeddedResource>
@@ -321,9 +312,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -359,6 +350,10 @@
     <None Include="Resources\fs.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\tt_move.png" />
+    <None Include="Resources\tt_link.png" />
+    <None Include="Resources\tt_copy.png" />
+    <None Include="Resources\UnknownAlbum.png" />
     <None Include="Resources\subtitles.png" />
     <None Include="Resources\visualization.png" />
     <None Include="Resources\web.png" />
@@ -376,6 +371,8 @@
     <None Include="Resources\chapters.png" />
     <None Include="Resources\open.png" />
     <None Include="Resources\open_disc.png" />
+    <None Include="Resources\loadingart.png" />
+    <None Include="Resources\loadingartlarge.png" />
     <Content Include="Resources\pl\add.png" />
     <Content Include="Resources\pl\clr.png" />
     <Content Include="Resources\pl\del.png" />
@@ -445,6 +442,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\FFAPI\FFDShowAPI_2010.csproj">
+      <Project>{69CF2FFC-CB08-42F8-8DE9-E5C32F3FE8BA}</Project>
+      <Name>FFDShowAPI_2010</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Seed\Seed.vbproj">
       <Project>{102C8DB0-8D4F-4307-B73E-A77CB977DF11}</Project>
       <Name>Seed</Name>

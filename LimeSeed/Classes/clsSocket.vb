@@ -21,15 +21,15 @@ Public Class SocketErrorEventArgs
 End Class
 Public Class SocketReceivedEventArgs
   Inherits EventArgs
-  Private c_Data() As Byte
+  Private c_Data As Byte()
   Private c_RemoteEndPoint As IPEndPoint
   Public Sub New()
     c_Data = Nothing
   End Sub
-  Public Sub New(bData() As Byte)
+  Public Sub New(bData As Byte())
     c_Data = bData
   End Sub
-  Public Sub New(bData() As Byte, remoteEP As IPEndPoint)
+  Public Sub New(bData As Byte(), remoteEP As IPEndPoint)
     c_Data = bData
     c_RemoteEndPoint = remoteEP
   End Sub
@@ -265,7 +265,7 @@ Public MustInherit Class Connection
     End If
   End Sub
   Protected Sub ReceiveNoLock(length As Integer, token As Object)
-    If token Is Nothing Then Exit Sub
+    If token Is Nothing Then Return
     If IsConnected Then
       Dim receiveAsyncEventArgs = transmitPool.Pull()
       receiveAsyncEventArgs.RemoteEndPoint = RemoteEndPoint
@@ -325,7 +325,7 @@ Public MustInherit Class Connection
               Else
                 Disconnect(ErrorDetails(e))
               End If
-              Exit Sub
+              Return
             Else
               ReceivedData(e)
             End If
@@ -341,7 +341,7 @@ Public MustInherit Class Connection
               Else
                 Disconnect(ErrorDetails(e))
               End If
-              Exit Sub
+              Return
             Else
               ReceivedData(e)
             End If

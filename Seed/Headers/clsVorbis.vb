@@ -3,7 +3,7 @@
 
   Private Class BitReader
     Implements IDisposable
-    Private bIn() As Byte
+    Private bIn As Byte()
     Private lPos As ULong
     Private bitData As BitArray
 
@@ -16,7 +16,7 @@
       End Set
     End Property
 
-    Public ReadOnly Property GetAllData() As Byte()
+    Public ReadOnly Property GetAllData As Byte()
       Get
         Return bIn
       End Get
@@ -28,7 +28,7 @@
       lPos = 0
     End Sub
 
-    Private Function FlipBits(Bytes() As Byte) As BitArray
+    Private Function FlipBits(Bytes As Byte()) As BitArray
       Dim bTmp(Bytes.Length - 1) As Byte
       For I As Integer = 0 To Bytes.Length - 1
         For J As Integer = 0 To 7
@@ -82,12 +82,12 @@
     End Function
 
     Public Function ReadChars(Chars As Integer) As String
-      Dim bTmp() As Byte = ReadBytes(Chars)
+      Dim bTmp As Byte() = ReadBytes(Chars)
       Return System.Text.Encoding.ASCII.GetString(bTmp)
     End Function
 
     Public Function ReadChars(Chars As Integer, CodePage As Integer) As String
-      Dim bTmp() As Byte = ReadBytes(Chars)
+      Dim bTmp As Byte() = ReadBytes(Chars)
       Return System.Text.Encoding.GetEncoding(CodePage).GetString(bTmp)
     End Function
 
@@ -115,31 +115,15 @@
     End Function
 
 #Region "IDisposable Support"
-    Private disposedValue As Boolean ' To detect redundant calls
-
-    ' IDisposable
+    Private disposedValue As Boolean
     Protected Overridable Sub Dispose(disposing As Boolean)
       If Not Me.disposedValue Then
         If disposing Then
-          ' TODO: dispose managed state (managed objects).
         End If
-
-        ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-        ' TODO: set large fields to null.
       End If
       Me.disposedValue = True
     End Sub
-
-    ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
-    'Protected Overrides Sub Finalize()
-    '    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-    '    Dispose(False)
-    '    MyBase.Finalize()
-    'End Sub
-
-    ' This code added by Visual Basic to correctly implement the disposable pattern.
     Public Sub Dispose() Implements IDisposable.Dispose
-      ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
       Dispose(True)
       GC.SuppressFinalize(Me)
     End Sub
@@ -148,7 +132,7 @@
 
   Private crcLookup() As UInt32 = {&H0UI, &H4C11DB7UI, &H9823B6EUI, &HD4326D9UI, &H130476DCUI, &H17C56B6BUI, &H1A864DB2UI, &H1E475005UI, &H2608EDB8UI, &H22C9F00FUI, &H2F8AD6D6UI, &H2B4BCB61UI, &H350C9B64UI, &H31CD86D3UI, &H3C8EA00AUI, &H384FBDBDUI, &H4C11DB70UI, &H48D0C6C7UI, &H4593E01EUI, &H4152FDA9UI, &H5F15ADACUI, &H5BD4B01BUI, &H569796C2UI, &H52568B75UI, &H6A1936C8UI, &H6ED82B7FUI, &H639B0DA6UI, &H675A1011UI, &H791D4014UI, &H7DDC5DA3UI, &H709F7B7AUI, &H745E66CDUI, &H9823B6E0UI, &H9CE2AB57UI, &H91A18D8EUI, &H95609039UI, &H8B27C03CUI, &H8FE6DD8BUI, &H82A5FB52UI, &H8664E6E5UI, &HBE2B5B58UI, &HBAEA46EFUI, &HB7A96036UI, &HB3687D81UI, &HAD2F2D84UI, &HA9EE3033UI, &HA4AD16EAUI, &HA06C0B5DUI, &HD4326D90UI, &HD0F37027UI, &HDDB056FEUI, &HD9714B49UI, &HC7361B4CUI, &HC3F706FBUI, &HCEB42022UI, &HCA753D95UI, &HF23A8028UI, &HF6FB9D9FUI, &HFBB8BB46UI, &HFF79A6F1UI, &HE13EF6F4UI, &HE5FFEB43UI, &HE8BCCD9AUI, &HEC7DD02DUI, &H34867077UI, &H30476DC0UI, &H3D044B19UI, &H39C556AEUI, &H278206ABUI, &H23431B1CUI, &H2E003DC5UI, &H2AC12072UI, &H128E9DCFUI, &H164F8078UI, &H1B0CA6A1UI, &H1FCDBB16UI, &H18AEB13UI, &H54BF6A4UI, &H808D07DUI, &HCC9CDCAUI, &H7897AB07UI, &H7C56B6B0UI, &H71159069UI, &H75D48DDEUI, &H6B93DDDBUI, &H6F52C06CUI, &H6211E6B5UI, &H66D0FB02UI, &H5E9F46BFUI, &H5A5E5B08UI, &H571D7DD1UI, &H53DC6066UI, &H4D9B3063UI, &H495A2DD4UI, &H44190B0DUI, &H40D816BAUI, &HACA5C697UI, &HA864DB20UI, &HA527FDF9UI, &HA1E6E04EUI, &HBFA1B04BUI, &HBB60ADFCUI, &HB6238B25UI, &HB2E29692UI, &H8AAD2B2FUI, &H8E6C3698UI, &H832F1041UI, &H87EE0DF6UI, &H99A95DF3UI, &H9D684044UI, &H902B669DUI, &H94EA7B2AUI, &HE0B41DE7UI, &HE4750050UI, &HE9362689UI, &HEDF73B3EUI, &HF3B06B3BUI, &HF771768CUI, &HFA325055UI, &HFEF34DE2UI, &HC6BCF05FUI, &HC27DEDE8UI, &HCF3ECB31UI, &HCBFFD686UI, &HD5B88683UI, &HD1799B34UI, &HDC3ABDEDUI, &HD8FBA05AUI, &H690CE0EEUI, &H6DCDFD59UI, &H608EDB80UI, &H644FC637UI, &H7A089632UI, &H7EC98B85UI, &H738AAD5CUI, &H774BB0EBUI, &H4F040D56UI, &H4BC510E1UI, &H46863638UI, &H42472B8FUI, &H5C007B8AUI, &H58C1663DUI, &H558240E4UI, &H51435D53UI, &H251D3B9EUI, &H21DC2629UI, &H2C9F00F0UI, &H285E1D47UI, &H36194D42UI, &H32D850F5UI, &H3F9B762CUI, &H3B5A6B9BUI, &H315D626UI, &H7D4CB91UI, &HA97ED48UI, &HE56F0FFUI, &H1011A0FAUI, &H14D0BD4DUI, &H19939B94UI, &H1D528623UI, &HF12F560EUI, &HF5EE4BB9UI, &HF8AD6D60UI, &HFC6C70D7UI, &HE22B20D2UI, &HE6EA3D65UI, &HEBA91BBCUI, &HEF68060BUI, &HD727BBB6UI, &HD3E6A601UI, &HDEA580D8UI, &HDA649D6FUI, &HC423CD6AUI, &HC0E2D0DDUI, &HCDA1F604UI, &HC960EBB3UI, &HBD3E8D7EUI, &HB9FF90C9UI, &HB4BCB610UI, &HB07DABA7UI, &HAE3AFBA2UI, &HAAFBE615UI, &HA7B8C0CCUI, &HA379DD7BUI, &H9B3660C6UI, &H9FF77D71UI, &H92B45BA8UI, &H9675461FUI, &H8832161AUI, &H8CF30BADUI, &H81B02D74UI, &H857130C3UI, &H5D8A9099UI, &H594B8D2EUI, &H5408ABF7UI, &H50C9B640UI, &H4E8EE645UI, &H4A4FFBF2UI, &H470CDD2BUI, &H43CDC09CUI, &H7B827D21UI, &H7F436096UI, &H7200464FUI, &H76C15BF8UI, &H68860BFDUI, &H6C47164AUI, &H61043093UI, &H65C52D24UI, &H119B4BE9UI, &H155A565EUI, &H18197087UI, &H1CD86D30UI, &H29F3D35UI, &H65E2082UI, &HB1D065BUI, &HFDC1BECUI, &H3793A651UI, &H3352BBE6UI, &H3E119D3FUI, &H3AD08088UI, &H2497D08DUI, &H2056CD3AUI, &H2D15EBE3UI, &H29D4F654UI, &HC5A92679UI, &HC1683BCEUI, &HCC2B1D17UI, &HC8EA00A0UI, &HD6AD50A5UI, &HD26C4D12UI, &HDF2F6BCBUI, &HDBEE767CUI, &HE3A1CBC1UI, &HE760D676UI, &HEA23F0AFUI, &HEEE2ED18UI, &HF0A5BD1DUI, &HF464A0AAUI, &HF9278673UI, &HFDE69BC4UI, &H89B8FD09UI, &H8D79E0BEUI, &H803AC667UI, &H84FBDBD0UI, &H9ABC8BD5UI, &H9E7D9662UI, &H933EB0BBUI, &H97FFAD0CUI, &HAFB010B1UI, &HAB710D06UI, &HA6322BDFUI, &HA2F33668UI, &HBCB4666DUI, &HB8757BDAUI, &HB5365D03UI, &HB1F740B4UI}
 
-  Private Function CRC32(inData() As Byte) As UInt32
+  Private Function CRC32(inData As Byte()) As UInt32
     Dim crc_reg As UInt32 = 0
     For I As Integer = 0 To inData.Length - 1
       Dim b As Byte = inData(I)
@@ -184,10 +168,11 @@
   Private pctImages() As FLAC_PIC
   Private lHeaderLength As Long
 
+
   Public Structure FLAC_PIC
     Public MIME As String
     Public Descr As String
-    Public PicType As Byte
+    Public PicType As clsID3v2.ID3_PIC_TYPE
     Public Size As Drawing.Size
     Public ColorDepth As UInt32
     Public ColorIndexes As UInt32
@@ -220,7 +205,7 @@
     Public Sequence As Long
     Public Checksum As Long
     Public Segments As Byte
-    Public Segs() As Byte
+    Public Segs As Byte()
     Public HeadLen As Long
     Public Length As Long
   End Structure
@@ -255,7 +240,7 @@
     End Get
   End Property
 
-  Public ReadOnly Property File_Channels() As Byte
+  Public ReadOnly Property File_Channels As Byte
     Get
       Return bVorbChannels
     End Get
@@ -480,6 +465,7 @@
           Do
             dHeader = ReadLONG(ioFile)
             ioFile.Position -= 4
+            Dim chunkLen As Long = 0
             If dHeader = H_OggS Then
               Dim PageChunk As Page = ReadPage(ioFile)
               Dim bPage(PageChunk.Length - 1) As Byte
@@ -495,6 +481,10 @@
                 Debug.Print("Checksum Mismatch!")
                 Stop
               End If
+              chunkLen = PageChunk.Length - PageChunk.HeadLen - 1
+            Else
+              Debug.Print("Unknown Page Chunk Header: " & Hex(dHeader))
+              chunkLen = 0
             End If
             Dim bChunkType As Byte = ioFile.ReadByte
             Select Case bChunkType
@@ -602,11 +592,21 @@
                   End If
                 Loop Until ioFile.Position >= ioFile.Length
                 Exit Do
+                'Case 72
+                '  Do
+                '    Debug.Print(ioFile.ReadByte)
+                '  Loop Until ioFile.Position >= ioFile.Length
               Case 0 'Padding
                 Continue Do
               Case Else
-                Debug.Print("Unknown Chunk Type: " & bChunkType)
-                Exit Do
+                If chunkLen > 0 Then
+                  Debug.Print("Unknown Chunk Type: " & bChunkType & ". Reading anyway...")
+                  Dim bPage(chunkLen - 1) As Byte
+                  ioFile.Read(bPage, 0, chunkLen)
+                Else
+                  Debug.Print("Unknown Chunk Type: " & bChunkType & ". Unable to read!")
+                  Exit Do
+                End If
             End Select
           Loop While ioFile.Position < ioFile.Length
         Case H_fLaC
@@ -632,7 +632,7 @@
                   bVorbChannels = Channels
                   Dim BitsPerSample As Byte = bRead.ReadNumber(5) + 1
                   Dim SamplesInStream As UInt64 = bRead.ReadNumber(36)
-                  Dim MD5Sig() As Byte = bRead.ReadBytes(16)
+                  Dim MD5Sig As Byte() = bRead.ReadBytes(16)
                 Case 1 'padding
                   Debug.Print(BitConverter.ToString(bRead.GetAllData))
                   Stop
@@ -671,7 +671,7 @@
                   Dim Depth As UInt32 = bRead.ReadNumber(32)
                   Dim ColorIndex As UInt32 = bRead.ReadNumber(32)
                   Dim PicLen As UInt32 = bRead.ReadNumber(32)
-                  Dim bPic() As Byte = bRead.ReadBytes(PicLen)
+                  Dim bPic As Byte() = bRead.ReadBytes(PicLen)
                   Dim imgPic As Drawing.Image = Nothing
                   Dim sTmpPath As String = IO.Path.GetTempFileName
                   My.Computer.FileSystem.WriteAllBytes(sTmpPath, bPic, False)
@@ -954,32 +954,16 @@
   End Function
 
 #Region "IDisposable Support"
-  Private disposedValue As Boolean ' To detect redundant calls
-
-  ' IDisposable
+  Private disposedValue As Boolean 
   Protected Overridable Sub Dispose(disposing As Boolean)
     If Not Me.disposedValue Then
       If disposing Then
-        ' TODO: dispose managed state (managed objects).
         ResetData()
       End If
-
-      ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-      ' TODO: set large fields to null.
     End If
     Me.disposedValue = True
   End Sub
-
-  ' TODO: override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
-  'Protected Overrides Sub Finalize()
-  '    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-  '    Dispose(False)
-  '    MyBase.Finalize()
-  'End Sub
-
-  ' This code added by Visual Basic to correctly implement the disposable pattern.
   Public Sub Dispose() Implements IDisposable.Dispose
-    ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
     Dispose(True)
     GC.SuppressFinalize(Me)
   End Sub

@@ -8,7 +8,7 @@
       tmrHide.Enabled = False
       tmrHide.Tag = 2
       SetVisuals(False)
-      Exit Sub
+      Return
     End If
     If Me.DesktopBounds.Contains(MousePosition) Then
       If lastTime = 0 Or (Math.Abs(MousePosition.X - lastPosition.X) > 3 Or Math.Abs(MousePosition.Y - lastPosition.Y) > 3) Then
@@ -69,7 +69,7 @@
       If Hide Then
         If ParentPlayer.mpPlayer.State <> Seed.ctlSeed.MediaState.mPlaying Then
           If Me.Visible Then EnableHide()
-          Exit Sub
+          Return
         End If
         If Me.Visible Then SetCursor(False)
       Else
@@ -253,7 +253,7 @@
         pbProgress.Refresh()
         bpgVolume.Refresh()
         EnableHide()
-        Exit Sub
+        Return
       End If
       If cmdPlayPause.Top > pctVideo.Height Then
         tmrScroll.Stop()
@@ -285,7 +285,7 @@
         pbProgress.Refresh()
         bpgVolume.Refresh()
         EnableHide()
-        Exit Sub
+        Return
       End If
       If cmdPlayPause.Top <= pctVideo.Height - cmdPlayPause.Height - 2 Then
         tmrScroll.Stop()
@@ -299,7 +299,7 @@
       End If
       pctVideo.Invalidate()
       pbProgress.Invalidate()
-      End If
+    End If
   End Sub
 
   Private Sub pctVideo_DragDrop(sender As Object, e As System.Windows.Forms.DragEventArgs) Handles pctVideo.DragDrop

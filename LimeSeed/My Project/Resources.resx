@@ -322,4 +322,22 @@
   <data name="open_disc" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\open_disc.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="loadingart" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\loadingart.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="loadingartlarge" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\loadingartlarge.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="UnknownAlbum" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\UnknownAlbum.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tt_copy" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tt_copy.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tt_link" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tt_link.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tt_move" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tt_move.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>

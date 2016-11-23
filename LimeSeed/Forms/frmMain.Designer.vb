@@ -46,6 +46,7 @@ Partial Class frmMain
     Me.pctBeat = New System.Windows.Forms.PictureBox()
     Me.tbsView = New Dotnetrix.Controls.TabControl()
     Me.tabArt = New System.Windows.Forms.TabPage()
+    Me.pbArt = New System.Windows.Forms.ProgressBar()
     Me.pctAlbumArt = New System.Windows.Forms.PictureBox()
     Me.mnuAlbumArt = New System.Windows.Forms.ContextMenuStrip(Me.components)
     Me.mnuArtShow = New System.Windows.Forms.ToolStripMenuItem()
@@ -80,8 +81,8 @@ Partial Class frmMain
     Me.mnuFile = New System.Windows.Forms.ToolStripMenuItem()
     Me.mnuOpenFile = New System.Windows.Forms.ToolStripMenuItem()
     Me.mnuCloseFile = New System.Windows.Forms.ToolStripMenuItem()
-    Me.mnuTransferFile = New System.Windows.Forms.ToolStripMenuItem()
     Me.mnuSpace1 = New System.Windows.Forms.ToolStripSeparator()
+    Me.mnuTransferFile = New System.Windows.Forms.ToolStripMenuItem()
     Me.mnuProperties = New System.Windows.Forms.ToolStripMenuItem()
     Me.mnuSpace2 = New System.Windows.Forms.ToolStripSeparator()
     Me.mnuExit = New System.Windows.Forms.ToolStripMenuItem()
@@ -172,7 +173,7 @@ Partial Class frmMain
     Me.pnlMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
     Me.pnlMain.RowStyles.Add(New System.Windows.Forms.RowStyle())
     Me.pnlMain.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20.0!))
-    Me.pnlMain.Size = New System.Drawing.Size(872, 301)
+    Me.pnlMain.Size = New System.Drawing.Size(940, 377)
     Me.pnlMain.TabIndex = 0
     '
     'pnlControls
@@ -203,12 +204,12 @@ Partial Class frmMain
     Me.pnlControls.Controls.Add(Me.cmdMenu, 4, 0)
     Me.pnlControls.Controls.Add(Me.pctBeat, 9, 0)
     Me.pnlControls.Dock = System.Windows.Forms.DockStyle.Fill
-    Me.pnlControls.Location = New System.Drawing.Point(0, 271)
+    Me.pnlControls.Location = New System.Drawing.Point(0, 347)
     Me.pnlControls.Margin = New System.Windows.Forms.Padding(0)
     Me.pnlControls.Name = "pnlControls"
     Me.pnlControls.RowCount = 1
     Me.pnlControls.RowStyles.Add(New System.Windows.Forms.RowStyle())
-    Me.pnlControls.Size = New System.Drawing.Size(872, 30)
+    Me.pnlControls.Size = New System.Drawing.Size(940, 30)
     Me.pnlControls.TabIndex = 0
     '
     'cmdPlayPause
@@ -254,12 +255,13 @@ Partial Class frmMain
     Me.bpgVolume.BarBorder = System.Drawing.SystemColors.ActiveBorder
     Me.bpgVolume.BarForeground = System.Drawing.Color.Gray
     Me.bpgVolume.BarStyle = LimeSeed.BetterProgress.BetterProgressStyle.CustomColorsSlanted
-    Me.bpgVolume.Location = New System.Drawing.Point(798, 4)
+    Me.bpgVolume.Location = New System.Drawing.Point(866, 4)
     Me.bpgVolume.Margin = New System.Windows.Forms.Padding(1, 0, 2, 0)
     Me.bpgVolume.Maximum = 100.0R
     Me.bpgVolume.Minimum = 0.0R
     Me.bpgVolume.Name = "bpgVolume"
     Me.bpgVolume.Size = New System.Drawing.Size(72, 24)
+    Me.bpgVolume.Style = System.Windows.Forms.ProgressBarStyle.Continuous
     Me.bpgVolume.TabIndex = 7
     Me.bpgVolume.TabStop = False
     Me.bpgVolume.Value = 100.0R
@@ -281,7 +283,7 @@ Partial Class frmMain
     Me.pnlVidOpts.Name = "pnlVidOpts"
     Me.pnlVidOpts.RowCount = 1
     Me.pnlVidOpts.RowStyles.Add(New System.Windows.Forms.RowStyle())
-    Me.pnlVidOpts.Size = New System.Drawing.Size(533, 33)
+    Me.pnlVidOpts.Size = New System.Drawing.Size(601, 33)
     Me.pnlVidOpts.TabIndex = 5
     '
     'cmbVidTrack
@@ -329,12 +331,12 @@ Partial Class frmMain
     Me.cmbSubtitles.Location = New System.Drawing.Point(308, 5)
     Me.cmbSubtitles.Margin = New System.Windows.Forms.Padding(2, 5, 2, 4)
     Me.cmbSubtitles.Name = "cmbSubtitles"
-    Me.cmbSubtitles.Size = New System.Drawing.Size(223, 21)
+    Me.cmbSubtitles.Size = New System.Drawing.Size(291, 21)
     Me.cmbSubtitles.TabIndex = 3
     '
     'pctChannels
     '
-    Me.pctChannels.Location = New System.Drawing.Point(725, 7)
+    Me.pctChannels.Location = New System.Drawing.Point(793, 7)
     Me.pctChannels.Margin = New System.Windows.Forms.Padding(2, 7, 2, 7)
     Me.pctChannels.Name = "pctChannels"
     Me.pctChannels.Size = New System.Drawing.Size(16, 16)
@@ -343,7 +345,7 @@ Partial Class frmMain
     '
     'pctBitrate
     '
-    Me.pctBitrate.Location = New System.Drawing.Point(705, 7)
+    Me.pctBitrate.Location = New System.Drawing.Point(773, 7)
     Me.pctBitrate.Margin = New System.Windows.Forms.Padding(2, 7, 2, 7)
     Me.pctBitrate.Name = "pctBitrate"
     Me.pctBitrate.Size = New System.Drawing.Size(16, 16)
@@ -366,7 +368,7 @@ Partial Class frmMain
     '
     Me.cmdMute.Dock = System.Windows.Forms.DockStyle.Fill
     Me.cmdMute.Image = Global.LimeSeed.My.Resources.Resources.button_nomute
-    Me.cmdMute.Location = New System.Drawing.Point(769, 2)
+    Me.cmdMute.Location = New System.Drawing.Point(837, 2)
     Me.cmdMute.Margin = New System.Windows.Forms.Padding(2, 2, 2, 5)
     Me.cmdMute.Name = "cmdMute"
     Me.cmdMute.Size = New System.Drawing.Size(26, 26)
@@ -376,7 +378,7 @@ Partial Class frmMain
     '
     'pctQuality
     '
-    Me.pctQuality.Location = New System.Drawing.Point(685, 7)
+    Me.pctQuality.Location = New System.Drawing.Point(753, 7)
     Me.pctQuality.Margin = New System.Windows.Forms.Padding(2, 7, 2, 7)
     Me.pctQuality.Name = "pctQuality"
     Me.pctQuality.Size = New System.Drawing.Size(16, 16)
@@ -398,7 +400,7 @@ Partial Class frmMain
     '
     'pctBeat
     '
-    Me.pctBeat.Location = New System.Drawing.Point(745, 5)
+    Me.pctBeat.Location = New System.Drawing.Point(813, 5)
     Me.pctBeat.Margin = New System.Windows.Forms.Padding(2, 5, 2, 5)
     Me.pctBeat.Name = "pctBeat"
     Me.pctBeat.Size = New System.Drawing.Size(20, 20)
@@ -420,20 +422,31 @@ Partial Class frmMain
     Me.tbsView.Multiline = True
     Me.tbsView.Name = "tbsView"
     Me.tbsView.SelectedIndex = 0
-    Me.tbsView.Size = New System.Drawing.Size(872, 230)
+    Me.tbsView.Size = New System.Drawing.Size(940, 306)
     Me.tbsView.SizeMode = System.Windows.Forms.TabSizeMode.Fixed
     Me.tbsView.TabIndex = 1
     '
     'tabArt
     '
+    Me.tabArt.Controls.Add(Me.pbArt)
     Me.tabArt.Controls.Add(Me.pctAlbumArt)
     Me.tabArt.Controls.Add(Me.artList)
     Me.tabArt.Location = New System.Drawing.Point(0, 0)
     Me.tabArt.Margin = New System.Windows.Forms.Padding(0)
     Me.tabArt.Name = "tabArt"
-    Me.tabArt.Size = New System.Drawing.Size(872, 207)
+    Me.tabArt.Size = New System.Drawing.Size(940, 283)
     Me.tabArt.TabIndex = 0
     Me.tabArt.Text = "Album Art"
+    '
+    'pbArt
+    '
+    Me.pbArt.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+    Me.pbArt.Location = New System.Drawing.Point(3, 268)
+    Me.pbArt.Name = "pbArt"
+    Me.pbArt.Size = New System.Drawing.Size(934, 12)
+    Me.pbArt.TabIndex = 2
+    Me.pbArt.Visible = False
     '
     'pctAlbumArt
     '
@@ -443,7 +456,7 @@ Partial Class frmMain
     Me.pctAlbumArt.Dock = System.Windows.Forms.DockStyle.Fill
     Me.pctAlbumArt.Location = New System.Drawing.Point(0, 0)
     Me.pctAlbumArt.Name = "pctAlbumArt"
-    Me.pctAlbumArt.Size = New System.Drawing.Size(872, 207)
+    Me.pctAlbumArt.Size = New System.Drawing.Size(940, 283)
     Me.pctAlbumArt.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage
     Me.pctAlbumArt.TabIndex = 0
     Me.pctAlbumArt.TabStop = False
@@ -497,7 +510,7 @@ Partial Class frmMain
     Me.artList.Dock = System.Windows.Forms.DockStyle.Fill
     Me.artList.Location = New System.Drawing.Point(0, 0)
     Me.artList.Name = "artList"
-    Me.artList.Size = New System.Drawing.Size(872, 207)
+    Me.artList.Size = New System.Drawing.Size(940, 283)
     Me.artList.TabIndex = 1
     Me.artList.Visible = False
     '
@@ -507,7 +520,7 @@ Partial Class frmMain
     Me.tabVideo.Location = New System.Drawing.Point(0, 0)
     Me.tabVideo.Margin = New System.Windows.Forms.Padding(0)
     Me.tabVideo.Name = "tabVideo"
-    Me.tabVideo.Size = New System.Drawing.Size(872, 207)
+    Me.tabVideo.Size = New System.Drawing.Size(940, 283)
     Me.tabVideo.TabIndex = 1
     Me.tabVideo.Text = "Video"
     '
@@ -531,7 +544,7 @@ Partial Class frmMain
     Me.mpPlayer.QueueTime = 0.17R
     Me.mpPlayer.Rate = 1.0R
     Me.mpPlayer.Repeat = False
-    Me.mpPlayer.Size = New System.Drawing.Size(872, 207)
+    Me.mpPlayer.Size = New System.Drawing.Size(940, 283)
     Me.mpPlayer.StateFade = False
     Me.mpPlayer.TabIndex = 10
     Me.mpPlayer.VideoHeight = CType(240, Long)
@@ -543,7 +556,7 @@ Partial Class frmMain
     Me.tabRipper.Location = New System.Drawing.Point(0, 0)
     Me.tabRipper.Margin = New System.Windows.Forms.Padding(0)
     Me.tabRipper.Name = "tabRipper"
-    Me.tabRipper.Size = New System.Drawing.Size(872, 207)
+    Me.tabRipper.Size = New System.Drawing.Size(940, 283)
     Me.tabRipper.TabIndex = 2
     Me.tabRipper.Text = "Rip CD"
     '
@@ -555,7 +568,7 @@ Partial Class frmMain
     Me.ripBox.Location = New System.Drawing.Point(0, 0)
     Me.ripBox.Margin = New System.Windows.Forms.Padding(0)
     Me.ripBox.Name = "ripBox"
-    Me.ripBox.Size = New System.Drawing.Size(872, 207)
+    Me.ripBox.Size = New System.Drawing.Size(940, 283)
     Me.ripBox.TabIndex = 0
     '
     'tabPlayList
@@ -564,7 +577,7 @@ Partial Class frmMain
     Me.tabPlayList.Location = New System.Drawing.Point(0, 0)
     Me.tabPlayList.Margin = New System.Windows.Forms.Padding(0)
     Me.tabPlayList.Name = "tabPlayList"
-    Me.tabPlayList.Size = New System.Drawing.Size(872, 207)
+    Me.tabPlayList.Size = New System.Drawing.Size(940, 283)
     Me.tabPlayList.TabIndex = 3
     Me.tabPlayList.Text = "PlayList"
     '
@@ -583,7 +596,7 @@ Partial Class frmMain
     Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30.0!))
     Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
     Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle())
-    Me.pnlPlayList.Size = New System.Drawing.Size(872, 207)
+    Me.pnlPlayList.Size = New System.Drawing.Size(940, 283)
     Me.pnlPlayList.TabIndex = 0
     '
     'pnlPlayListControls
@@ -601,7 +614,7 @@ Partial Class frmMain
     Me.pnlPlayListControls.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50.0!))
     Me.pnlPlayListControls.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 30.0!))
     Me.pnlPlayListControls.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 10.0!))
-    Me.pnlPlayListControls.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 32.0!))
+    Me.pnlPlayListControls.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 34.0!))
     Me.pnlPlayListControls.Controls.Add(Me.cmdAddToPL, 4, 0)
     Me.pnlPlayListControls.Controls.Add(Me.cmdClearPL, 8, 0)
     Me.pnlPlayListControls.Controls.Add(Me.cmdRemoveFromPL, 6, 0)
@@ -610,19 +623,19 @@ Partial Class frmMain
     Me.pnlPlayListControls.Controls.Add(Me.cmdLoopPL, 2, 0)
     Me.pnlPlayListControls.Controls.Add(Me.cmdShufflePL, 0, 0)
     Me.pnlPlayListControls.Dock = System.Windows.Forms.DockStyle.Fill
-    Me.pnlPlayListControls.Location = New System.Drawing.Point(1, 179)
+    Me.pnlPlayListControls.Location = New System.Drawing.Point(1, 255)
     Me.pnlPlayListControls.Margin = New System.Windows.Forms.Padding(1, 0, 1, 0)
     Me.pnlPlayListControls.Name = "pnlPlayListControls"
     Me.pnlPlayListControls.RowCount = 1
     Me.pnlPlayListControls.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
-    Me.pnlPlayListControls.Size = New System.Drawing.Size(870, 28)
+    Me.pnlPlayListControls.Size = New System.Drawing.Size(938, 28)
     Me.pnlPlayListControls.TabIndex = 1
     '
     'cmdAddToPL
     '
     Me.cmdAddToPL.Dock = System.Windows.Forms.DockStyle.Fill
     Me.cmdAddToPL.Image = Global.LimeSeed.My.Resources.Resources.pl_button_add
-    Me.cmdAddToPL.Location = New System.Drawing.Point(381, 1)
+    Me.cmdAddToPL.Location = New System.Drawing.Point(414, 1)
     Me.cmdAddToPL.Margin = New System.Windows.Forms.Padding(2, 1, 2, 1)
     Me.cmdAddToPL.Name = "cmdAddToPL"
     Me.cmdAddToPL.Size = New System.Drawing.Size(26, 26)
@@ -634,7 +647,7 @@ Partial Class frmMain
     '
     Me.cmdClearPL.Dock = System.Windows.Forms.DockStyle.Fill
     Me.cmdClearPL.Image = Global.LimeSeed.My.Resources.Resources.pl_button_clr
-    Me.cmdClearPL.Location = New System.Drawing.Point(461, 1)
+    Me.cmdClearPL.Location = New System.Drawing.Point(494, 1)
     Me.cmdClearPL.Margin = New System.Windows.Forms.Padding(2, 1, 2, 1)
     Me.cmdClearPL.Name = "cmdClearPL"
     Me.cmdClearPL.Padding = New System.Windows.Forms.Padding(2)
@@ -647,7 +660,7 @@ Partial Class frmMain
     '
     Me.cmdRemoveFromPL.Dock = System.Windows.Forms.DockStyle.Fill
     Me.cmdRemoveFromPL.Image = Global.LimeSeed.My.Resources.Resources.pl_button_del
-    Me.cmdRemoveFromPL.Location = New System.Drawing.Point(421, 1)
+    Me.cmdRemoveFromPL.Location = New System.Drawing.Point(454, 1)
     Me.cmdRemoveFromPL.Margin = New System.Windows.Forms.Padding(2, 1, 2, 1)
     Me.cmdRemoveFromPL.Name = "cmdRemoveFromPL"
     Me.cmdRemoveFromPL.Padding = New System.Windows.Forms.Padding(2)
@@ -660,11 +673,11 @@ Partial Class frmMain
     '
     Me.cmdSavePL.Dock = System.Windows.Forms.DockStyle.Fill
     Me.cmdSavePL.Image = Global.LimeSeed.My.Resources.Resources.pl_button_save
-    Me.cmdSavePL.Location = New System.Drawing.Point(840, 1)
+    Me.cmdSavePL.Location = New System.Drawing.Point(906, 1)
     Me.cmdSavePL.Margin = New System.Windows.Forms.Padding(2, 1, 2, 1)
     Me.cmdSavePL.Name = "cmdSavePL"
     Me.cmdSavePL.Padding = New System.Windows.Forms.Padding(2)
-    Me.cmdSavePL.Size = New System.Drawing.Size(28, 26)
+    Me.cmdSavePL.Size = New System.Drawing.Size(30, 26)
     Me.cmdSavePL.TabIndex = 6
     Me.ttDisp.SetToolTip(Me.cmdSavePL, "Save PlayList")
     Me.cmdSavePL.UseVisualStyleBackColor = True
@@ -673,7 +686,7 @@ Partial Class frmMain
     '
     Me.cmdOpenPL.Dock = System.Windows.Forms.DockStyle.Fill
     Me.cmdOpenPL.Image = Global.LimeSeed.My.Resources.Resources.pl_button_open
-    Me.cmdOpenPL.Location = New System.Drawing.Point(800, 1)
+    Me.cmdOpenPL.Location = New System.Drawing.Point(866, 1)
     Me.cmdOpenPL.Margin = New System.Windows.Forms.Padding(2, 1, 2, 1)
     Me.cmdOpenPL.Name = "cmdOpenPL"
     Me.cmdOpenPL.Padding = New System.Windows.Forms.Padding(2)
@@ -737,7 +750,7 @@ Partial Class frmMain
     Me.dgvPlayList.ShowCellErrors = False
     Me.dgvPlayList.ShowEditingIcon = False
     Me.dgvPlayList.ShowRowErrors = False
-    Me.dgvPlayList.Size = New System.Drawing.Size(866, 143)
+    Me.dgvPlayList.Size = New System.Drawing.Size(934, 219)
     Me.dgvPlayList.StandardTab = True
     Me.dgvPlayList.TabIndex = 2
     '
@@ -775,7 +788,7 @@ Partial Class frmMain
     Me.txtPlayListTitle.Multiline = True
     Me.txtPlayListTitle.Name = "txtPlayListTitle"
     Me.txtPlayListTitle.ReadOnly = True
-    Me.txtPlayListTitle.Size = New System.Drawing.Size(866, 24)
+    Me.txtPlayListTitle.Size = New System.Drawing.Size(934, 24)
     Me.txtPlayListTitle.TabIndex = 0
     Me.txtPlayListTitle.TabStop = False
     Me.txtPlayListTitle.Tag = "Unknown Album"
@@ -799,7 +812,7 @@ Partial Class frmMain
     Me.pnlProgress.Name = "pnlProgress"
     Me.pnlProgress.RowCount = 1
     Me.pnlProgress.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
-    Me.pnlProgress.Size = New System.Drawing.Size(872, 17)
+    Me.pnlProgress.Size = New System.Drawing.Size(940, 17)
     Me.pnlProgress.TabIndex = 2
     '
     'cmdBackPL
@@ -832,7 +845,8 @@ Partial Class frmMain
     Me.pbProgress.Maximum = 100.0R
     Me.pbProgress.Minimum = 0.0R
     Me.pbProgress.Name = "pbProgress"
-    Me.pbProgress.Size = New System.Drawing.Size(838, 14)
+    Me.pbProgress.Size = New System.Drawing.Size(906, 14)
+    Me.pbProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous
     Me.pbProgress.TabIndex = 2
     Me.pbProgress.TabStop = False
     Me.pbProgress.Value = 0.0R
@@ -846,7 +860,7 @@ Partial Class frmMain
     Me.cmdNextPL.FlatAppearance.MouseDownBackColor = System.Drawing.SystemColors.ButtonFace
     Me.cmdNextPL.FlatAppearance.MouseOverBackColor = System.Drawing.SystemColors.ButtonHighlight
     Me.cmdNextPL.Image = Global.LimeSeed.My.Resources.Resources.pl_button_jump_next
-    Me.cmdNextPL.Location = New System.Drawing.Point(856, 0)
+    Me.cmdNextPL.Location = New System.Drawing.Point(924, 0)
     Me.cmdNextPL.Margin = New System.Windows.Forms.Padding(0)
     Me.cmdNextPL.Name = "cmdNextPL"
     Me.cmdNextPL.Padding = New System.Windows.Forms.Padding(0, 0, 0, 1)
@@ -859,13 +873,13 @@ Partial Class frmMain
     Me.mnuMain.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.mnuFile, Me.mnuOptions, Me.mnuHelp})
     Me.mnuMain.Location = New System.Drawing.Point(0, 0)
     Me.mnuMain.Name = "mnuMain"
-    Me.mnuMain.Size = New System.Drawing.Size(872, 24)
+    Me.mnuMain.Size = New System.Drawing.Size(940, 24)
     Me.mnuMain.TabIndex = 9
     Me.mnuMain.Text = "Lime Seed"
     '
     'mnuFile
     '
-    Me.mnuFile.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.mnuOpenFile, Me.mnuCloseFile, Me.mnuTransferFile, Me.mnuSpace1, Me.mnuProperties, Me.mnuSpace2, Me.mnuExit})
+    Me.mnuFile.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.mnuOpenFile, Me.mnuCloseFile, Me.mnuSpace1, Me.mnuTransferFile, Me.mnuProperties, Me.mnuSpace2, Me.mnuExit})
     Me.mnuFile.Name = "mnuFile"
     Me.mnuFile.Size = New System.Drawing.Size(37, 20)
     Me.mnuFile.Text = "&File"
@@ -874,48 +888,48 @@ Partial Class frmMain
     '
     Me.mnuOpenFile.Image = Global.LimeSeed.My.Resources.Resources.pl_button_open
     Me.mnuOpenFile.Name = "mnuOpenFile"
-    Me.mnuOpenFile.Size = New System.Drawing.Size(157, 22)
+    Me.mnuOpenFile.Size = New System.Drawing.Size(136, 22)
     Me.mnuOpenFile.Text = "&Open"
     '
     'mnuCloseFile
     '
     Me.mnuCloseFile.Image = Global.LimeSeed.My.Resources.Resources.pl_button_clr
     Me.mnuCloseFile.Name = "mnuCloseFile"
-    Me.mnuCloseFile.Size = New System.Drawing.Size(157, 22)
+    Me.mnuCloseFile.Size = New System.Drawing.Size(136, 22)
     Me.mnuCloseFile.Text = "&Close"
-    '
-    'mnuTransferFile
-    '
-    Me.mnuTransferFile.Image = Global.LimeSeed.My.Resources.Resources.button_loop_on
-    Me.mnuTransferFile.Name = "mnuTransferFile"
-    Me.mnuTransferFile.Size = New System.Drawing.Size(157, 22)
-    Me.mnuTransferFile.Text = "&Transfer..."
     '
     'mnuSpace1
     '
     Me.mnuSpace1.ForeColor = System.Drawing.SystemColors.ControlText
     Me.mnuSpace1.Name = "mnuSpace1"
-    Me.mnuSpace1.Size = New System.Drawing.Size(154, 6)
+    Me.mnuSpace1.Size = New System.Drawing.Size(133, 6)
+    '
+    'mnuTransferFile
+    '
+    Me.mnuTransferFile.Image = Global.LimeSeed.My.Resources.Resources.button_loop_on
+    Me.mnuTransferFile.Name = "mnuTransferFile"
+    Me.mnuTransferFile.Size = New System.Drawing.Size(136, 22)
+    Me.mnuTransferFile.Text = "&Transfer..."
     '
     'mnuProperties
     '
     Me.mnuProperties.Image = Global.LimeSeed.My.Resources.Resources.properties
     Me.mnuProperties.Name = "mnuProperties"
-    Me.mnuProperties.Size = New System.Drawing.Size(157, 22)
-    Me.mnuProperties.Text = "File &Properties..."
+    Me.mnuProperties.Size = New System.Drawing.Size(136, 22)
+    Me.mnuProperties.Text = "&Properties..."
     '
     'mnuSpace2
     '
     Me.mnuSpace2.ForeColor = System.Drawing.SystemColors.ControlText
     Me.mnuSpace2.Name = "mnuSpace2"
-    Me.mnuSpace2.Size = New System.Drawing.Size(154, 6)
+    Me.mnuSpace2.Size = New System.Drawing.Size(133, 6)
     '
     'mnuExit
     '
     Me.mnuExit.Image = Global.LimeSeed.My.Resources.Resources.close
     Me.mnuExit.Name = "mnuExit"
     Me.mnuExit.ShortcutKeys = CType((System.Windows.Forms.Keys.Alt Or System.Windows.Forms.Keys.F4), System.Windows.Forms.Keys)
-    Me.mnuExit.Size = New System.Drawing.Size(157, 22)
+    Me.mnuExit.Size = New System.Drawing.Size(136, 22)
     Me.mnuExit.Text = "E&xit"
     '
     'mnuOptions
@@ -1140,7 +1154,7 @@ Partial Class frmMain
     '
     Me.mnuPL.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.mnuPLPlay, Me.ToolStripMenuItem1, Me.mnuPLProps, Me.mnuPLOpenFile, Me.ToolStripMenuItem2, Me.mnuPLDelete})
     Me.mnuPL.Name = "mnuPL"
-    Me.mnuPL.Size = New System.Drawing.Size(174, 104)
+    Me.mnuPL.Size = New System.Drawing.Size(174, 126)
     '
     'mnuPLPlay
     '
@@ -1194,7 +1208,7 @@ Partial Class frmMain
     Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
     Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
     Me.BackColor = System.Drawing.Color.Black
-    Me.ClientSize = New System.Drawing.Size(872, 301)
+    Me.ClientSize = New System.Drawing.Size(940, 377)
     Me.Controls.Add(Me.pnlMain)
     Me.Icon = Global.LimeSeed.My.Resources.Resources.norm
     Me.MainMenuStrip = Me.mnuMain
@@ -1330,5 +1344,6 @@ Partial Class frmMain
   Friend WithEvents mnuVideoTrack As System.Windows.Forms.ToolStripMenuItem
   Friend WithEvents mnuTransferFile As System.Windows.Forms.ToolStripMenuItem
   Friend WithEvents svcSqueezer As System.ServiceProcess.ServiceController
+  Friend WithEvents pbArt As System.Windows.Forms.ProgressBar
 
 End Class

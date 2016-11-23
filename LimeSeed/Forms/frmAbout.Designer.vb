@@ -182,6 +182,7 @@ Partial Class frmAbout
     '
     'lblFFDShow
     '
+    Me.lblFFDShow.AutoEllipsis = True
     Me.lblFFDShow.Dock = System.Windows.Forms.DockStyle.Fill
     Me.lblFFDShow.Location = New System.Drawing.Point(136, 80)
     Me.lblFFDShow.Margin = New System.Windows.Forms.Padding(6, 0, 3, 0)
