@@ -73,6 +73,7 @@ Partial Class frmMain
     Me.colTitle = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.colLength = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.txtPlayListTitle = New System.Windows.Forms.TextBox()
+    Me.lblPLAlert = New System.Windows.Forms.Label()
     Me.pnlProgress = New System.Windows.Forms.TableLayoutPanel()
     Me.cmdBackPL = New System.Windows.Forms.Button()
     Me.pbProgress = New LimeSeed.BetterProgress()
@@ -128,6 +129,7 @@ Partial Class frmMain
     Me.mnuPLDelete = New System.Windows.Forms.ToolStripMenuItem()
     Me.tmrVis = New System.Windows.Forms.Timer(Me.components)
     Me.svcSqueezer = New System.ServiceProcess.ServiceController()
+    Me.tmrHideAlert = New System.Windows.Forms.Timer(Me.components)
     Me.pnlMain.SuspendLayout()
     Me.pnlControls.SuspendLayout()
     Me.pnlVidOpts.SuspendLayout()
@@ -585,15 +587,17 @@ Partial Class frmMain
     '
     Me.pnlPlayList.ColumnCount = 1
     Me.pnlPlayList.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
-    Me.pnlPlayList.Controls.Add(Me.pnlPlayListControls, 0, 2)
-    Me.pnlPlayList.Controls.Add(Me.dgvPlayList, 0, 1)
+    Me.pnlPlayList.Controls.Add(Me.pnlPlayListControls, 0, 3)
+    Me.pnlPlayList.Controls.Add(Me.dgvPlayList, 0, 2)
     Me.pnlPlayList.Controls.Add(Me.txtPlayListTitle, 0, 0)
+    Me.pnlPlayList.Controls.Add(Me.lblPLAlert, 0, 1)
     Me.pnlPlayList.Dock = System.Windows.Forms.DockStyle.Fill
     Me.pnlPlayList.Location = New System.Drawing.Point(0, 0)
     Me.pnlPlayList.Margin = New System.Windows.Forms.Padding(0)
     Me.pnlPlayList.Name = "pnlPlayList"
-    Me.pnlPlayList.RowCount = 3
+    Me.pnlPlayList.RowCount = 4
     Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30.0!))
+    Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 0.0!))
     Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
     Me.pnlPlayList.RowStyles.Add(New System.Windows.Forms.RowStyle())
     Me.pnlPlayList.Size = New System.Drawing.Size(940, 283)
@@ -796,6 +800,18 @@ Partial Class frmMain
     Me.txtPlayListTitle.TextAlign = System.Windows.Forms.HorizontalAlignment.Center
     Me.ttDisp.SetToolTip(Me.txtPlayListTitle, "Rename PlayList")
     Me.txtPlayListTitle.WordWrap = False
+    '
+    'lblPLAlert
+    '
+    Me.lblPLAlert.AutoSize = True
+    Me.lblPLAlert.BackColor = System.Drawing.SystemColors.Info
+    Me.lblPLAlert.Dock = System.Windows.Forms.DockStyle.Top
+    Me.lblPLAlert.Location = New System.Drawing.Point(0, 30)
+    Me.lblPLAlert.Margin = New System.Windows.Forms.Padding(0)
+    Me.lblPLAlert.Name = "lblPLAlert"
+    Me.lblPLAlert.Padding = New System.Windows.Forms.Padding(3)
+    Me.lblPLAlert.Size = New System.Drawing.Size(940, 1)
+    Me.lblPLAlert.TabIndex = 3
     '
     'pnlProgress
     '
@@ -1154,7 +1170,7 @@ Partial Class frmMain
     '
     Me.mnuPL.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.mnuPLPlay, Me.ToolStripMenuItem1, Me.mnuPLProps, Me.mnuPLOpenFile, Me.ToolStripMenuItem2, Me.mnuPLDelete})
     Me.mnuPL.Name = "mnuPL"
-    Me.mnuPL.Size = New System.Drawing.Size(174, 126)
+    Me.mnuPL.Size = New System.Drawing.Size(174, 104)
     '
     'mnuPLPlay
     '
@@ -1201,6 +1217,10 @@ Partial Class frmMain
     'svcSqueezer
     '
     Me.svcSqueezer.ServiceName = "LimeSqueezer"
+    '
+    'tmrHideAlert
+    '
+    Me.tmrHideAlert.Interval = 4000
     '
     'frmMain
     '
@@ -1345,5 +1365,7 @@ Partial Class frmMain
   Friend WithEvents mnuTransferFile As System.Windows.Forms.ToolStripMenuItem
   Friend WithEvents svcSqueezer As System.ServiceProcess.ServiceController
   Friend WithEvents pbArt As System.Windows.Forms.ProgressBar
+  Friend WithEvents lblPLAlert As System.Windows.Forms.Label
+  Friend WithEvents tmrHideAlert As System.Windows.Forms.Timer
 
 End Class

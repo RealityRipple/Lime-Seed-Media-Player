@@ -486,7 +486,7 @@ Public Class frmMain
             Case "UDF"
               OpenDVD(sResults(0))
             Case Else
-              MsgBox("Unable to open Disc. Unknown Format: " & My.Computer.FileSystem.GetDriveInfo(sResults(0).Substring(0, 3)).DriveFormat, MsgBoxStyle.Critical, "Open Failure")
+              MsgBox("Unable to open Disc. Unknown Format: " & My.Computer.FileSystem.GetDriveInfo(sResults(0).Substring(0, 3)).DriveFormat, MsgBoxStyle.Critical, My.Application.Info.Title)
           End Select
         ElseIf My.Computer.FileSystem.DirectoryExists(sResults(0)) Then
           If sResults(0).EndsWith("VIDEO_TS") Then
@@ -550,9 +550,9 @@ Public Class frmMain
 
   Private Sub mnuProperties_Click(sender As System.Object, e As System.EventArgs) Handles mnuProperties.Click
     If bCD Then
-      MsgBox("CDs do not have properties.", MsgBoxStyle.Information, "No Properties")
+      MsgBox("CDs do not have properties.", MsgBoxStyle.Information, My.Application.Info.Title)
     ElseIf mpPlayer.IsStreaming Then
-      MsgBox("Streams do not have properties.", MsgBoxStyle.Information, "No Properties")
+      MsgBox("Streams do not have properties.", MsgBoxStyle.Information, My.Application.Info.Title)
     Else
       For Each frm As Form In Application.OpenForms
         If frm.GetType Is GetType(frmProps) Then
@@ -1196,6 +1196,41 @@ Public Class frmMain
     Erase fromStyle
   End Sub
 #End Region
+
+  Private Sub PLShowMissing(sMissingPath As String)
+    Dim showReally As New pool_DoneInvoker(AddressOf PLShowMissing_Really)
+    showReally.BeginInvoke(sMissingPath, Nothing, Nothing)
+  End Sub
+
+  Private Sub PLShowMissing_Really(sMissingPath As String)
+    If Me.InvokeRequired Then
+      Me.Invoke(New pool_DoneInvoker(AddressOf PLShowMissing_Really), sMissingPath)
+      Return
+    End If
+    If Not String.IsNullOrEmpty(lblPLAlert.Text) Then
+      tmrHideAlert.Enabled = False
+      Dim realHeight As Integer = pnlPlayList.RowStyles(1).Height
+      pnlPlayList.RowStyles(1).Height = 75
+      lblPLAlert.Text &= vbNewLine & "Unable to add """ & sMissingPath & """ to the PlayList!"
+      Dim myHeight As Integer = lblPLAlert.Height
+      pnlPlayList.RowStyles(1).Height = realHeight
+      Do Until pnlPlayList.RowStyles(1).Height >= myHeight
+        pnlPlayList.RowStyles(1).Height += 1
+        Application.DoEvents()
+      Loop
+      tmrHideAlert.Enabled = True
+    Else
+      pnlPlayList.RowStyles(1).Height = 75
+      lblPLAlert.Text = "Unable to add """ & sMissingPath & """ to the PlayList!"
+      Dim myHeight As Integer = lblPLAlert.Height
+      pnlPlayList.RowStyles(1).Height = 0
+      Do Until pnlPlayList.RowStyles(1).Height >= myHeight
+        pnlPlayList.RowStyles(1).Height += 1
+        Application.DoEvents()
+      Loop
+      tmrHideAlert.Enabled = True
+    End If
+  End Sub
 #End Region
 
 #Region "Buttons"
@@ -1351,7 +1386,7 @@ Public Class frmMain
   End Sub
 
   Private Sub cmdClearPL_Click(sender As System.Object, e As System.EventArgs) Handles cmdClearPL.Click
-    If MsgBox("Are you sure you want to clear the PlayList?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, "Clear PlayList?") = MsgBoxResult.Yes Then
+    If MsgBox("Are you sure you want to clear the PlayList?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, My.Application.Info.Title) = MsgBoxResult.Yes Then
       ClearPlayList()
     End If
   End Sub
@@ -1386,7 +1421,7 @@ Public Class frmMain
       Case ".m3u8" : OpenM3U(Path, True)
       Case ".pls" : OpenPLS(Path)
       Case Else
-        MsgBox("Unknown file extension: " & IO.Path.GetExtension(Path).Substring(1).ToUpper & "!" & vbNewLine & "Attempting standard text, line delimited read.", MsgBoxStyle.Critical, "Unknown PlayList Extension")
+        MsgBox("Unknown file extension: " & IO.Path.GetExtension(Path).Substring(1).ToUpper & "!" & vbNewLine & "Attempting standard text, line delimited read.", MsgBoxStyle.Critical, My.Application.Info.Title)
         OpenTextPL(Path)
     End Select
     If dgvPlayList.Rows.Count > 0 And AutoPlay Then
@@ -1461,7 +1496,7 @@ Public Class frmMain
           Dim sINFO As String = sReader.ReadLine
           Dim sPath As String = sReader.ReadLine
           If Not sINFO.Contains(",") Then
-            MsgBox("M3U file is corrupt!", MsgBoxStyle.Exclamation, "Corrupt File")
+            MsgBox("M3U file is corrupt!", MsgBoxStyle.Exclamation, My.Application.Info.Title)
             Exit Do
           End If
           Dim lTime As Double = Val(sINFO.Split(","c)(0).Substring(sINFO.IndexOf(":") + 1))
@@ -1480,7 +1515,7 @@ Public Class frmMain
       sReader.Close()
       QueueFullPlayListData()
     Catch
-      MsgBox("M3U file is corrupt!", MsgBoxStyle.Exclamation, "Corrupt File")
+      MsgBox("M3U file is corrupt!", MsgBoxStyle.Exclamation, My.Application.Info.Title)
     End Try
   End Sub
 
@@ -1498,11 +1533,11 @@ Public Class frmMain
         Next
         QueueFullPlayListData()
       Else
-        MsgBox("Lime Seed does not recognize PLS v" & iniPLS.GetValue("playlist", "Version") & "!", MsgBoxStyle.Exclamation, "Corrupt File")
+        MsgBox("Lime Seed does not recognize PLS v" & iniPLS.GetValue("playlist", "Version") & "!", MsgBoxStyle.Exclamation, My.Application.Info.Title)
       End If
       iniPLS = Nothing
     Catch
-      MsgBox("PLS file is corrupt!", MsgBoxStyle.Exclamation, "Corrupt File")
+      MsgBox("PLS file is corrupt!", MsgBoxStyle.Exclamation, My.Application.Info.Title)
     End Try
   End Sub
 #End Region
@@ -1575,35 +1610,40 @@ Public Class frmMain
   Friend instanceID As Integer = 0
 
   Private Sub SaveTempPL()
-    If dgvPlayList.RowCount > 0 AndAlso Not mpPlayer.IsStreaming Then
-      Select Case mpPlayer.State
-        Case Seed.ctlSeed.MediaState.mPlaying, Seed.ctlSeed.MediaState.mPaused
-          SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
-          My.Computer.FileSystem.WriteAllText(IO.Path.GetTempPath & "seed" & instanceID & ".ini", GetSelectedPlayListItem() & vbNewLine & mpPlayer.Position, False)
-        Case Seed.ctlSeed.MediaState.mStopped
-          If GetSelectedPlayListItem() = dgvPlayList.RowCount - 1 Then
-            If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".llpl") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
+    Try
+      If dgvPlayList.RowCount > 0 AndAlso Not mpPlayer.IsStreaming Then
+        Select Case mpPlayer.State
+          Case Seed.ctlSeed.MediaState.mPlaying, Seed.ctlSeed.MediaState.mPaused
+            SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8")
+            My.Computer.FileSystem.WriteAllText(IO.Path.GetTempPath & "seed" & instanceID & ".ini", GetSelectedPlayListItem() & vbNewLine & mpPlayer.Position, False)
+          Case Seed.ctlSeed.MediaState.mStopped
+            If GetSelectedPlayListItem() = dgvPlayList.RowCount - 1 Then
+              If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8")
+              If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".ini") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".ini")
+            Else
+              SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8")
+              My.Computer.FileSystem.WriteAllText(IO.Path.GetTempPath & "seed" & instanceID & ".ini", GetSelectedPlayListItem() & vbNewLine & "0", False)
+            End If
+          Case Else
+            SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8")
             If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".ini") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".ini")
-          Else
-            SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
-            My.Computer.FileSystem.WriteAllText(IO.Path.GetTempPath & "seed" & instanceID & ".ini", GetSelectedPlayListItem() & vbNewLine & "0", False)
-          End If
-        Case Else
-          SavePlayList(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
-          If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".ini") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".ini")
-      End Select
-    Else
-      If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".llpl") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
-      If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".ini") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".ini")
-    End If
+        End Select
+      Else
+        If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8")
+        If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".ini") Then My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & instanceID & ".ini")
+      End If
+    Catch ex As Exception
+      instanceID += 1
+    End Try
   End Sub
 
   Private Sub LoadTempPL()
     Dim Loaded As Boolean = False
-    If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".llpl") Then
+    If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8") Then
+      Me.Size = New Drawing.Size(600, 450)
       dgvPlayList.Rows.Clear()
       Loaded = True
-      OpenPlayList(IO.Path.GetTempPath & "seed" & instanceID & ".llpl")
+      OpenPlayList(IO.Path.GetTempPath & "seed" & instanceID & ".m3u8")
       If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & instanceID & ".ini") Then
         Dim iData As String = My.Computer.FileSystem.ReadAllText(IO.Path.GetTempPath & "seed" & instanceID & ".ini")
         If iData.Contains(vbNewLine) Then
@@ -1645,7 +1685,7 @@ Public Class frmMain
     End If
     Dim iItems As Integer = 0
     For iTest As Integer = 1 To 99
-      Dim tPL_PATH As String = IO.Path.GetTempPath & "seed" & iTest & ".llpl"
+      Dim tPL_PATH As String = IO.Path.GetTempPath & "seed" & iTest & ".m3u8"
       If My.Computer.FileSystem.FileExists(tPL_PATH) Then
         iItems += 1
       End If
@@ -1655,16 +1695,16 @@ Public Class frmMain
       If Not Loaded Then
         Dim tmpID As Integer = 1
         For iTest As Integer = 1 To 99
-          Dim tPL_PATH As String = IO.Path.GetTempPath & "seed" & iTest & ".llpl"
+          Dim tPL_PATH As String = IO.Path.GetTempPath & "seed" & iTest & ".m3u8"
           If My.Computer.FileSystem.FileExists(tPL_PATH) Then
             tmpID = iTest
             Exit For
           End If
         Next
-        If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & tmpID & ".llpl") Then
+        If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & tmpID & ".m3u8") Then
           dgvPlayList.Rows.Clear()
           Loaded = True
-          OpenPlayList(IO.Path.GetTempPath & "seed" & tmpID & ".llpl")
+          OpenPlayList(IO.Path.GetTempPath & "seed" & tmpID & ".m3u8")
           If My.Computer.FileSystem.FileExists(IO.Path.GetTempPath & "seed" & tmpID & ".ini") Then
             Dim iData As String = My.Computer.FileSystem.ReadAllText(IO.Path.GetTempPath & "seed" & tmpID & ".ini")
             If iData.Contains(vbNewLine) Then
@@ -1704,7 +1744,7 @@ Public Class frmMain
             End If
             My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & tmpID & ".ini")
           End If
-          My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & tmpID & ".llpl")
+          My.Computer.FileSystem.DeleteFile(IO.Path.GetTempPath & "seed" & tmpID & ".m3u8")
         End If
         iStart = tmpID + 1
         iItems -= 1
@@ -1712,10 +1752,10 @@ Public Class frmMain
       End If
       Dim sPromt As String = "There are " & iItems & " other PlayLists saved as well." & vbNewLine & "Would you like to open new players for them?"
       If iItems = 1 Then sPromt = "There is another PlayList saved as well." & vbNewLine & "Would you like to open a new player for it?"
-      If MsgBox(sPromt, MsgBoxStyle.Question Or MsgBoxStyle.YesNo, "Multiple PlayLists") = MsgBoxResult.Yes Then
+      If MsgBox(sPromt, MsgBoxStyle.Question Or MsgBoxStyle.YesNo, My.Application.Info.Title) = MsgBoxResult.Yes Then
         Dim iInst As Integer = 0
         For iTest As Integer = iStart To 99
-          Dim tPL_PATH As String = IO.Path.GetTempPath & "seed" & iTest & ".llpl"
+          Dim tPL_PATH As String = IO.Path.GetTempPath & "seed" & iTest & ".m3u8"
           If My.Computer.FileSystem.FileExists(tPL_PATH) Then
             iInst += 1
             Dim frmTmp As New frmMain
@@ -1809,7 +1849,10 @@ Public Class frmMain
         Dim dgvX As DataGridViewRow = dgvItems(I)
         If dgvX Is Nothing Then Return
         If result(1) = "DELETE" Then
-          If dgvX IsNot Nothing Then dgvPlayList.Rows.Remove(dgvX)
+          If dgvX IsNot Nothing Then
+            PLShowMissing(result(0))
+            dgvPlayList.Rows.Remove(dgvX)
+          End If
         Else
           If dgvX IsNot Nothing Then
             Dim Path As String = result(0)
@@ -1854,7 +1897,10 @@ Public Class frmMain
           ElseIf ID3v2Tags.FindFrame("TP1") Then
             Artist = ID3v2Tags.FindFrameMatchString("TP1")
           End If
-          If ID3v2Tags.FindFrame("TT2") Then Title = ID3v2Tags.FindFrameMatchString("TT2")
+          If ID3v2Tags.FindFrame("TT2") Then
+            Title = ID3v2Tags.FindFrameMatchString("TT2")
+            If ID3v2Tags.FindFrame("TT3") Then Title &= " (" & ID3v2Tags.FindFrameMatchString("TT3") & ")"
+          End If
           If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
           If ID3v2Tags.FindFrame("TCO") Then Genre = ID3v2Tags.FindFrameMatchString("TCO")
         End If
@@ -1972,8 +2018,12 @@ Public Class frmMain
     Dim sExt As String = IO.Path.GetExtension(Path).ToLower
     Select Case sExt
       Case ".jpg", ".jpeg", ".gif", ".png", ".bmp", ".dib", ".ini", ".db"
-        'nothing
+        Return
       Case Else
+        If Not Path.ToLower.StartsWith("http://") AndAlso Not IO.File.Exists(Path) Then
+          PLShowMissing(Path)
+          Return
+        End If
         If String.IsNullOrEmpty(Title) Then Title = IO.Path.GetFileNameWithoutExtension(Path)
         Dim Artist As String = UNKNOWN_ARTIST
         Dim Album As String = UNKNOWN_ALBUM
@@ -2257,7 +2307,7 @@ Public Class frmMain
 #End Region
 
   Private Sub mpPlayer_CantOpen(Message As String) Handles mpPlayer.CantOpen
-    MsgBox("Can't Open File:" & vbNewLine & Message, MsgBoxStyle.Exclamation, "Media Error")
+    MsgBox("Can't Open File:" & vbNewLine & Message, MsgBoxStyle.Exclamation, My.Application.Info.Title)
   End Sub
 
   Private Sub mpPlayer_EndOfFile(Status As Integer) Handles mpPlayer.EndOfFile
@@ -4575,7 +4625,6 @@ Public Class frmMain
         End If
       Next
       If Not bFound Then
-        Debug.Print("Defaulting")
         volDevice = devEnum.GetDefaultAudioEndpoint(CoreAudioApi.EDataFlow.eRender, CoreAudioApi.ERole.eMultimedia)
       End If
     Catch ex As Exception
@@ -4968,7 +5017,7 @@ Public Class frmMain
       Else
         Dim sTmp As String = mpPlayer.FileName
         mpPlayer.FileName = Nothing
-        MsgBox("Lime Seed was unable to play the file """ & IO.Path.GetFileName(Path) & """. Error returned: " & vbNewLine & sTmp, MsgBoxStyle.Exclamation, "Media Playback Error")
+        MsgBox("Lime Seed was unable to play the file """ & IO.Path.GetFileName(Path) & """. Error returned: " & vbNewLine & sTmp, MsgBoxStyle.Exclamation, My.Application.Info.Title)
       End If
     End If
   End Sub
@@ -5010,7 +5059,10 @@ Public Class frmMain
           ElseIf ID3v2Tags.FindFrame("TP1") Then
             Artist = ID3v2Tags.FindFrameMatchString("TP1")
           End If
-          If ID3v2Tags.FindFrame("TT2") Then Title = ID3v2Tags.FindFrameMatchString("TT2")
+          If ID3v2Tags.FindFrame("TT2") Then
+            Title = ID3v2Tags.FindFrameMatchString("TT2")
+            If ID3v2Tags.FindFrame("TT3") Then Title &= " (" & ID3v2Tags.FindFrameMatchString("TT3") & ")"
+          End If
         End If
       End Using
       Using ID3v1Tags As New Seed.clsID3v1(Path)
@@ -5150,6 +5202,8 @@ Public Class frmMain
           End If
         End If
       End If
+    ElseIf Track1 = 0 Then
+      Track = Nothing
     Else
       Track = Track1
     End If
@@ -5276,17 +5330,6 @@ Public Class frmMain
     Else
       Genre = Genre1
     End If
-    'TODO: Verify this is all right
-    Debug.Print("Determined Values:")
-    Debug.Print("Track " & Track)
-    Debug.Print("Title: " & Title)
-    Debug.Print("Artist: " & Artist)
-    Debug.Print("Album: " & Album)
-    Debug.Print("Year: " & Year)
-    Debug.Print("Genre: " & Genre)
-    Debug.Print("Cleaning: " & My.Settings.ID3_Clean.ToString)
-    Debug.Print("Version: " & My.Settings.ID3_Ver)
-    Debug.Print("")
 
     If My.Settings.ID3_Clean Then
       Using ID3v1Tags As New Seed.clsID3v1(MP3Path)
@@ -5324,12 +5367,21 @@ Public Class frmMain
         End Try
       End Using
       Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
+        Dim id3v2V(1) As Byte
         If Not ID3v2Tags.HasID3v2Tag Then
           If vSVer = "2.0.0" Then
             ID3v2Tags.ID3v2Ver = "2.3.0"
           Else
             ID3v2Tags.ID3v2Ver = vSVer
           End If
+        End If
+        Dim vData() As String = Split(ID3v2Tags.ID3v2Ver, ".")
+        If vData.Length = 3 Then
+          id3v2V(0) = Val(vData(1))
+          id3v2V(1) = Val(vData(2))
+        Else
+          id3v2V(0) = 3
+          id3v2V(1) = 0
         End If
         If Not String.IsNullOrEmpty(Track) Then If Not ID3v2Tags.FindFrame("TRK") Then ID3v2Tags.AddTextFrame("TRK", New Seed.clsID3v2.EncodedText(Track))
         If Not String.IsNullOrEmpty(Title) Then If Not ID3v2Tags.FindFrame("TT2") Then ID3v2Tags.AddTextFrame("TT2", New Seed.clsID3v2.EncodedText(Title))
@@ -5338,19 +5390,88 @@ Public Class frmMain
           If Not ID3v2Tags.FindFrame("TP1") Then ID3v2Tags.AddTextFrame("TP1", New Seed.clsID3v2.EncodedText(Artist))
         End If
         If Not String.IsNullOrEmpty(Album) Then If Not ID3v2Tags.FindFrame("TAL") Then ID3v2Tags.AddTextFrame("TAL", New Seed.clsID3v2.EncodedText(Album))
-        If Not String.IsNullOrEmpty(Year) Then
-          If Not ID3v2Tags.FindFrame("TRD") Then ID3v2Tags.AddTextFrame("TRD", New Seed.clsID3v2.EncodedText(Year))
-          If Not ID3v2Tags.FindFrame("TYE") Then ID3v2Tags.AddTextFrame("TYE", New Seed.clsID3v2.EncodedText(Year))
-        End If
+        If Not String.IsNullOrEmpty(Year) Then If Not ID3v2Tags.FindFrame("TYE") Then ID3v2Tags.AddTextFrame("TYE", New Seed.clsID3v2.EncodedText(Year))
         If Not String.IsNullOrEmpty(Genre) Then If Not ID3v2Tags.FindFrame("TCO") Then ID3v2Tags.Genre = Genre
         If ID3v2Tags.FindFrame("PIC") Then
-          Dim picList() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
+          Dim picList As Seed.clsID3v2.ParseResponse() = ID3v2Tags.FindFrameMatches("PIC")
           If picList IsNot Nothing Then
-            For I As Integer = 0 To picList.Length - 1
+            For I As Integer = picList.Length - 1 To 0 Step -1
+              If picList(I).GetType IsNot GetType(Seed.clsID3v2.Parsed_APIC) Then Continue For
               If CType(picList(I), Seed.clsID3v2.Parsed_APIC).Type = Seed.clsID3v2.ID3_PIC_TYPE.INVALID Then
                 ID3v2Tags.RemoveFrame("PIC", I)
                 Continue For
               End If
+            Next
+            picList = ID3v2Tags.FindFrameMatches("PIC")
+            If picList IsNot Nothing Then
+              For I As Integer = picList.Length - 1 To 0 Step -1
+                If picList(I).GetType IsNot GetType(Seed.clsID3v2.Parsed_APIC) Then Continue For
+                If id3v2V(0) = 2 Then
+                  If CType(picList(I), Seed.clsID3v2.Parsed_APIC).Type = Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER Then
+                    ID3v2Tags.RemoveFrame("PIC", I)
+                    ID3v2Tags.AddImageFrame(CType(picList(I), Seed.clsID3v2.Parsed_APIC).Image, Seed.clsID3v2.ID3_PIC_TYPE.OTHER, CType(picList(I), Seed.clsID3v2.Parsed_APIC).MIME, New Seed.clsID3v2.EncodedText(CType(picList(I), Seed.clsID3v2.Parsed_APIC).Description))
+                    Continue For
+                  End If
+                Else
+                  If CType(picList(I), Seed.clsID3v2.Parsed_APIC).Type = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then
+                    ID3v2Tags.RemoveFrame("PIC", I)
+                    ID3v2Tags.AddImageFrame(CType(picList(I), Seed.clsID3v2.Parsed_APIC).Image, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, CType(picList(I), Seed.clsID3v2.Parsed_APIC).MIME, New Seed.clsID3v2.EncodedText(CType(picList(I), Seed.clsID3v2.Parsed_APIC).Description))
+                    Continue For
+                  End If
+                End If
+              Next
+            End If
+          End If
+        End If
+
+        If ID3v2Tags.FindFrame("PRIV") Then
+          Dim privList As Seed.clsID3v2.ParseResponse() = ID3v2Tags.FindFrameMatches("PRIV")
+          If privList IsNot Nothing Then
+            For I As Integer = privList.Length - 1 To 0 Step -1
+              If privList(I).GetType IsNot GetType(Seed.clsID3v2.Parsed_PRIV) Then Continue For
+              If String.IsNullOrEmpty(CType(privList(I), Seed.clsID3v2.Parsed_PRIV).Owner) Then
+                Debug.Print("Ownerless Private Frame:")
+                Debug.Print(CType(privList(I), Seed.clsID3v2.Parsed_PRIV).DataString)
+                Continue For
+              End If
+              If CType(privList(I), Seed.clsID3v2.Parsed_PRIV).Owner.StartsWith("WM/") Then
+                ID3v2Tags.RemoveFrame("PRIV", I)
+                Continue For
+              End If
+              Debug.Print("Unknown Private Frame: " & CType(privList(I), Seed.clsID3v2.Parsed_PRIV).Owner)
+              Debug.Print(CType(privList(I), Seed.clsID3v2.Parsed_PRIV).DataString)
+              Continue For
+            Next
+          End If
+        End If
+        If ID3v2Tags.FindFrame("GEO") Then
+          Dim objList As Seed.clsID3v2.ParseResponse() = ID3v2Tags.FindFrameMatches("GEO")
+          If objList IsNot Nothing Then
+            For I As Integer = objList.Length - 1 To 0 Step -1
+              If objList(I).GetType IsNot GetType(Seed.clsID3v2.Parsed_GEOB) Then Continue For
+              If Not String.IsNullOrEmpty(CType(objList(I), Seed.clsID3v2.Parsed_GEOB).Description) AndAlso CType(objList(I), Seed.clsID3v2.Parsed_GEOB).Description = "RealJukebox:Metadata" Then
+                ID3v2Tags.RemoveFrame("GEO", I)
+                Continue For
+              End If
+            Next
+          End If
+        End If
+        If ID3v2Tags.FindFrame("COM") Then
+          Dim comList As Seed.clsID3v2.ParseResponse() = ID3v2Tags.FindFrameMatches("COM")
+          If comList IsNot Nothing Then
+            For I As Integer = comList.Length - 1 To 0 Step -1
+              If comList(I).GetType IsNot GetType(Seed.clsID3v2.Parsed_COMM) Then Continue For
+              If Not String.IsNullOrEmpty(CType(comList(I), Seed.clsID3v2.Parsed_COMM).Comment) AndAlso CType(comList(I), Seed.clsID3v2.Parsed_COMM).Comment = "Track:Comments" Then
+                ID3v2Tags.RemoveFrame("COM", I)
+                Continue For
+              End If
+              If Not String.IsNullOrEmpty(CType(comList(I), Seed.clsID3v2.Parsed_COMM).Description) AndAlso CType(comList(I), Seed.clsID3v2.Parsed_COMM).Description.StartsWith("iTun") Then
+                ID3v2Tags.RemoveFrame("COM", I)
+                Continue For
+              End If
+              Debug.Print("Other comment data:")
+              Debug.Print(Join(CType(comList(I), Seed.clsID3v2.Parsed_COMM).StringData, ""))
+              Continue For
             Next
           End If
         End If
@@ -5374,253 +5495,6 @@ Public Class frmMain
       End If
     End If
   End Sub
-
-  Private Function SendArtA(Artist As String, Album As String, DoSearch As Boolean) As ImageWithName
-    If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Album) Then Return Nothing
-    If String.IsNullOrEmpty(Artist) Then
-      If DoSearch Then
-        macArt = New AppleNet(Album, AppleNet.Term.Album)
-        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-      End If
-      Return Nothing
-    End If
-    If String.IsNullOrEmpty(Album) Then
-      If DoSearch Then
-        macArt = New AppleNet(Artist, AppleNet.Term.Artist)
-        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-      End If
-      Return Nothing
-    End If
-    If DoSearch Then
-      macArt = New AppleNet(Artist & " " & Album, AppleNet.Term.Any)
-      Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-    End If
-    Return Nothing
-  End Function
-
-  Private Function SendArtT(Artist As String, Title As String, DoSearch As Boolean) As ImageWithName
-    If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Title) Then Return Nothing
-    If String.IsNullOrEmpty(Artist) Then
-      If DoSearch Then
-        macArt = New AppleNet(Title, AppleNet.Term.Title)
-        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-      End If
-      Return Nothing
-    End If
-    If String.IsNullOrEmpty(Title) Then
-      If DoSearch Then
-        macArt = New AppleNet(Artist, AppleNet.Term.Artist)
-        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-      End If
-      Return Nothing
-    End If
-    If DoSearch Then
-      macArt = New AppleNet(Artist & " " & Title, AppleNet.Term.Any)
-      Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-    End If
-    Return Nothing
-  End Function
-
-  Private Sub SaveArtToMP3(MP3Path As String, ImagePath As String, Optional AlbumName As String = Nothing)
-    If Not IO.Path.GetExtension(MP3Path).ToLower = ".mp3" Then Return
-    If Not My.Settings.ID3_Modify Then Return
-    If Not My.Settings.ID3_Art Then Return
-    If Not IO.File.Exists(ImagePath) Then Return
-    If Not IO.File.Exists(MP3Path) Then Return
-    Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
-      If Not ID3v2Tags.HasID3v2Tag Then Return
-      Dim shouldSave As Boolean = True
-      If ID3v2Tags.FindFrame("PIC") Then
-        Dim picList() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
-        If picList IsNot Nothing Then
-          For I As Integer = 0 To picList.Length - 1
-            Dim iPic As Seed.clsID3v2.Parsed_APIC = picList(I)
-            If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.INVALID Then
-              If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I)
-              Continue For
-            End If
-            If ID3v2Tags.ID3v2Ver = "2.2.0" Then
-              If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then
-                If CompareArtSizes(iPic.Image, ImagePath) Then
-                  If String.IsNullOrEmpty(iPic.Description) OrElse iPic.Description.ToLower.Contains("album cover") Then
-                    If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I)
-                  Else
-                    Debug.Print("Not removing """ & iPic.Description & """ image!")
-                  End If
-                Else
-                  shouldSave = False
-                End If
-              End If
-            Else
-              If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER Then
-                If CompareArtSizes(iPic.Image, ImagePath) Then
-                  If String.IsNullOrEmpty(iPic.Description) OrElse iPic.Description.ToLower.Contains("album cover") Then
-                    If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I)
-                  Else
-                    Debug.Print("Not removing """ & iPic.Description & """ image!")
-                  End If
-                Else
-                  shouldSave = False
-                End If
-              End If
-            End If
-          Next
-        End If
-      End If
-      Try
-        If shouldSave Then
-          If ID3v2Tags.ID3v2Ver = "2.2.0" Then
-            If Not ID3v2Tags.AddImageFrame(IO.File.ReadAllBytes(ImagePath), Seed.clsID3v2.ID3_PIC_TYPE.OTHER, Seed.clsID3v2.ExtToMIME(ImagePath), Seed.clsID3v2.EncodedText.Empty) = Seed.clsID3v2.ID3Returns.Added Then Return
-          Else
-            If Not ID3v2Tags.AddImageFrame(IO.File.ReadAllBytes(ImagePath), Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Seed.clsID3v2.ExtToMIME(ImagePath), Seed.clsID3v2.EncodedText.Empty) = Seed.clsID3v2.ID3Returns.Added Then Return
-          End If
-          ID3v2Tags.Save()
-        End If
-      Catch ex As Exception
-
-      End Try
-    End Using
-  End Sub
-
-  Private Function GetArt(Path As String, DoSearch As Boolean, ForceSearch As Boolean) As ImageWithName
-    If bCD Then
-      If DoSearch Then
-        macArt = New AppleNet(dgvPlayList.Rows(GetSelectedPlayListItem).Tag(3), AppleNet.Term.Album)
-        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
-      End If
-      Return Nothing
-    End If
-    Dim Artist As String = String.Empty
-    Dim Album As String = String.Empty
-    Select Case IO.Path.GetExtension(Path).ToLower
-      Case ".mp3"
-        CleanupID3(Path)
-        If ForceSearch Then
-          Using ID3v2Tags As New Seed.clsID3v2(Path)
-            If ID3v2Tags.HasID3v2Tag Then
-              If ID3v2Tags.FindFrame("TP2") Then
-                Artist = ID3v2Tags.FindFrameMatchString("TP2")
-              ElseIf ID3v2Tags.FindFrame("TP1") Then
-                Artist = ID3v2Tags.FindFrameMatchString("TP1")
-              End If
-              If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
-            End If
-          End Using
-          Using ID3v1Tags As New Seed.clsID3v1(Path)
-            If ID3v1Tags.HasID3v1Tag Then
-              If String.IsNullOrEmpty(Artist) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Artist) Then Artist = ID3v1Tags.Artist
-              If String.IsNullOrEmpty(Album) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Album) Then Album = ID3v1Tags.Album
-            End If
-          End Using
-          Return SendArtA(Artist, Album, DoSearch)
-        End If
-        Using ID3v2Tags As New Seed.clsID3v2(Path)
-          If ID3v2Tags.HasID3v2Tag Then
-            If ID3v2Tags.FindFrame("PIC") Then
-              Dim fData() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
-              For Each picType In Seed.clsID3v2.ID3_PIC_TYPE_DISPLAYORDER
-                For Each pData As Seed.clsID3v2.Parsed_APIC In fData
-                  If pData.Type = picType Then
-                    If pData.Picture IsNot Nothing Then
-
-                      Dim j2Path As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
-                      If My.Computer.FileSystem.FileExists(j2Path) Then
-                        If Not (IO.File.GetAttributes(j2Path) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(j2Path, IO.FileAttributes.Hidden)
-                        Dim myReturn As Boolean = False
-                        If CompareArtSizes(pData.Picture, j2Path) Then myReturn = True
-                        SaveArtToMP3(Path, j2Path, Album)
-                        If myReturn Then Return New ImageWithName(j2Path)
-                      End If
-
-                      Return (New ImageWithName(pData.Picture, Path))
-
-                    End If
-                  End If
-                Next
-              Next
-            End If
-          End If
-        End Using
-        Using ID3v2Tags As New Seed.clsID3v2(Path)
-          If ID3v2Tags.HasID3v2Tag Then
-            If ID3v2Tags.FindFrame("TP2") Then
-              Artist = ID3v2Tags.FindFrameMatchString("TP2")
-            ElseIf ID3v2Tags.FindFrame("TP1") Then
-              Artist = ID3v2Tags.FindFrameMatchString("TP1")
-            End If
-            If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
-          End If
-        End Using
-        Using ID3v1Tags As New Seed.clsID3v1(Path)
-          If ID3v1Tags.HasID3v1Tag Then
-            If String.IsNullOrEmpty(Artist) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Artist) Then Artist = ID3v1Tags.Artist
-            If String.IsNullOrEmpty(Album) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Album) Then Album = ID3v1Tags.Album
-          End If
-        End Using
-        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
-        If My.Computer.FileSystem.FileExists(jPath) Then
-          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
-          SaveArtToMP3(Path, jPath, Album)
-          Return New ImageWithName(jPath)
-        End If
-        Return SendArtA(Artist, Album, DoSearch)
-      Case ".ogg", ".ogm", ".flac"
-        If ForceSearch Then
-          Using cVorbis As New Seed.clsVorbis(Path)
-            If cVorbis.HasVorbis Then
-              If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
-              If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
-            End If
-          End Using
-          Return SendArtA(Artist, Album, DoSearch)
-        End If
-        Using cVorbis As New Seed.clsVorbis(Path)
-          If cVorbis.HasVorbis Then
-            If cVorbis.Pictures IsNot Nothing Then
-              If cVorbis.Pictures.Count > 0 Then
-                For Each picType In Seed.clsID3v2.ID3_PIC_TYPE_DISPLAYORDER
-                  For I As Integer = 0 To cVorbis.Pictures.Count - 1
-                    If cVorbis.Pictures(I).PicType = picType Then
-                      Return cVorbis.Pictures(I).Image.Clone
-                    End If
-                  Next
-                Next
-                Return cVorbis.Pictures(0).Image.Clone
-              End If
-            End If
-          End If
-        End Using
-        Using cVorbis As New Seed.clsVorbis(Path)
-          If cVorbis.HasVorbis Then
-            If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
-            If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
-          End If
-        End Using
-        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
-        If My.Computer.FileSystem.FileExists(jPath) Then
-          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
-          Return New ImageWithName(jPath)
-        End If
-        Return SendArtA(Artist, Album, DoSearch)
-      Case Else
-        If ForceSearch Then
-          Dim Title As String = String.Empty
-          If IO.Path.GetFileNameWithoutExtension(Path).Contains(" - ") Then
-            Artist = Split(IO.Path.GetFileNameWithoutExtension(Path), " - ", 2)(0)
-            Title = Split(IO.Path.GetFileNameWithoutExtension(Path), " - ", 2)(1)
-          Else
-            Title = IO.Path.GetFileNameWithoutExtension(Path)
-          End If
-          Return SendArtT(Artist, Title, DoSearch)
-        End If
-        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
-        If My.Computer.FileSystem.FileExists(jPath) Then
-          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
-          Return New ImageWithName(jPath)
-        End If
-        Return Nothing
-    End Select
-  End Function
 
   <System.Runtime.InteropServices.DllImportAttribute("user32.dll")> Private Shared Function DestroyIcon(handle As IntPtr) As Boolean
   End Function
@@ -6196,6 +6070,257 @@ Public Class frmMain
   End Sub
 #End Region
 
+  Private Function SendArtA(Artist As String, Album As String, DoSearch As Boolean) As ImageWithName
+    If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Album) Then Return Nothing
+    If String.IsNullOrEmpty(Artist) Then
+      If DoSearch Then
+        macArt = New AppleNet(Album, AppleNet.Term.Album)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If String.IsNullOrEmpty(Album) Then
+      If DoSearch Then
+        macArt = New AppleNet(Artist, AppleNet.Term.Artist)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If DoSearch Then
+      macArt = New AppleNet(Artist & " " & Album, AppleNet.Term.Any)
+      Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+    End If
+    Return Nothing
+  End Function
+
+  Private Function SendArtT(Artist As String, Title As String, DoSearch As Boolean) As ImageWithName
+    If String.IsNullOrEmpty(Artist) And String.IsNullOrEmpty(Title) Then Return Nothing
+    If String.IsNullOrEmpty(Artist) Then
+      If DoSearch Then
+        macArt = New AppleNet(Title, AppleNet.Term.Title)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If String.IsNullOrEmpty(Title) Then
+      If DoSearch Then
+        macArt = New AppleNet(Artist, AppleNet.Term.Artist)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    If DoSearch Then
+      macArt = New AppleNet(Artist & " " & Title, AppleNet.Term.Any)
+      Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+    End If
+    Return Nothing
+  End Function
+
+  Private Sub SaveArtToMP3(MP3Path As String, ImagePath As String)
+    If Not IO.Path.GetExtension(MP3Path).ToLower = ".mp3" Then Return
+    If Not My.Settings.ID3_Modify Then Return
+    If Not My.Settings.ID3_Art Then Return
+    If Not IO.File.Exists(ImagePath) Then Return
+    If Not IO.File.Exists(MP3Path) Then Return
+    Using ID3v2Tags As New Seed.clsID3v2(MP3Path)
+      If Not ID3v2Tags.HasID3v2Tag Then Return
+      Dim shouldSave As Boolean = False
+      Dim shouldAdd As Boolean = True
+      If ID3v2Tags.FindFrame("PIC") Then
+        Dim picList() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
+        If picList IsNot Nothing Then
+          For I As Integer = 0 To picList.Length - 1
+            Dim iPic As Seed.clsID3v2.Parsed_APIC = picList(I)
+            If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.INVALID Then
+              If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I) : shouldSave = True
+              Continue For
+            End If
+            If ID3v2Tags.ID3v2Ver = "2.2.0" Then
+              If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.OTHER Then
+                If CompareArtSizes(iPic.Image, ImagePath) Then
+                  If String.IsNullOrEmpty(iPic.Description) OrElse iPic.Description.ToLower.Contains("cover") Then
+                    If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I) : shouldSave = True
+                  Else
+                    Debug.Print("Not removing """ & iPic.Description & """ image!")
+                  End If
+                Else
+                  shouldAdd = False
+                End If
+              End If
+            Else
+              If iPic.Type = Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER Then
+                If CompareArtSizes(iPic.Image, ImagePath) Then
+                  If String.IsNullOrEmpty(iPic.Description) OrElse iPic.Description.ToLower.Contains("cover") Then
+                    If My.Settings.ID3_Clean Then ID3v2Tags.RemoveFrame("PIC", I) : shouldSave = True
+                  Else
+                    Debug.Print("Not removing """ & iPic.Description & """ image!")
+                  End If
+                Else
+                  shouldAdd = False
+                End If
+              End If
+            End If
+          Next
+        End If
+      End If
+      If shouldAdd Then shouldSave = True
+      Try
+        If shouldSave Then
+          If shouldAdd Then
+            If ID3v2Tags.ID3v2Ver = "2.2.0" Then
+              If Not ID3v2Tags.AddImageFrame(IO.File.ReadAllBytes(ImagePath), Seed.clsID3v2.ID3_PIC_TYPE.OTHER, Seed.clsID3v2.ExtToMIME(ImagePath), Seed.clsID3v2.EncodedText.Empty) = Seed.clsID3v2.ID3Returns.Added Then Return
+            Else
+              If Not ID3v2Tags.AddImageFrame(IO.File.ReadAllBytes(ImagePath), Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Seed.clsID3v2.ExtToMIME(ImagePath), Seed.clsID3v2.EncodedText.Empty) = Seed.clsID3v2.ID3Returns.Added Then Return
+            End If
+          End If
+          If Not ID3v2Tags.Save() Then Debug.Print("Didn't Save art!")
+        End If
+      Catch ex As Exception
+
+      End Try
+    End Using
+  End Sub
+
+  Private Function GetArt(Path As String, DoSearch As Boolean, ForceSearch As Boolean) As ImageWithName
+    If bCD Then
+      If DoSearch Then
+        macArt = New AppleNet(dgvPlayList.Rows(GetSelectedPlayListItem).Tag(3), AppleNet.Term.Album)
+        Return New ImageWithName(My.Resources.loadingartlarge, "loadingartlarge")
+      End If
+      Return Nothing
+    End If
+    Dim Artist As String = String.Empty
+    Dim Album As String = String.Empty
+    Select Case IO.Path.GetExtension(Path).ToLower
+      Case ".mp3"
+        CleanupID3(Path)
+        If ForceSearch Then
+          Using ID3v2Tags As New Seed.clsID3v2(Path)
+            If ID3v2Tags.HasID3v2Tag Then
+              If ID3v2Tags.FindFrame("TP2") Then
+                Artist = ID3v2Tags.FindFrameMatchString("TP2")
+              ElseIf ID3v2Tags.FindFrame("TP1") Then
+                Artist = ID3v2Tags.FindFrameMatchString("TP1")
+              End If
+              If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
+            End If
+          End Using
+          Using ID3v1Tags As New Seed.clsID3v1(Path)
+            If ID3v1Tags.HasID3v1Tag Then
+              If String.IsNullOrEmpty(Artist) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Artist) Then Artist = ID3v1Tags.Artist
+              If String.IsNullOrEmpty(Album) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Album) Then Album = ID3v1Tags.Album
+            End If
+          End Using
+          Return SendArtA(Artist, Album, DoSearch)
+        End If
+        Using ID3v2Tags As New Seed.clsID3v2(Path)
+          If ID3v2Tags.HasID3v2Tag Then
+            If ID3v2Tags.FindFrame("PIC") Then
+              Dim fData() As Seed.clsID3v2.ParseResponse = ID3v2Tags.FindFrameMatches("PIC")
+              For Each picType In Seed.clsID3v2.ID3_PIC_TYPE_DISPLAYORDER
+                For Each pData As Seed.clsID3v2.Parsed_APIC In fData
+                  If pData.Type = picType Then
+                    If pData.Picture IsNot Nothing Then
+
+                      Dim j2Path As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+                      If My.Computer.FileSystem.FileExists(j2Path) Then
+                        If Not (IO.File.GetAttributes(j2Path) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(j2Path, IO.FileAttributes.Hidden)
+                        Dim myReturn As Boolean = False
+                        If CompareArtSizes(pData.Picture, j2Path) Then myReturn = True
+                        SaveArtToMP3(Path, j2Path)
+                        If myReturn Then Return New ImageWithName(j2Path)
+                      End If
+
+                      Return (New ImageWithName(pData.Picture, Path))
+
+                    End If
+                  End If
+                Next
+              Next
+            End If
+          End If
+        End Using
+        Using ID3v2Tags As New Seed.clsID3v2(Path)
+          If ID3v2Tags.HasID3v2Tag Then
+            If ID3v2Tags.FindFrame("TP2") Then
+              Artist = ID3v2Tags.FindFrameMatchString("TP2")
+            ElseIf ID3v2Tags.FindFrame("TP1") Then
+              Artist = ID3v2Tags.FindFrameMatchString("TP1")
+            End If
+            If ID3v2Tags.FindFrame("TAL") Then Album = ID3v2Tags.FindFrameMatchString("TAL")
+          End If
+        End Using
+        Using ID3v1Tags As New Seed.clsID3v1(Path)
+          If ID3v1Tags.HasID3v1Tag Then
+            If String.IsNullOrEmpty(Artist) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Artist) Then Artist = ID3v1Tags.Artist
+            If String.IsNullOrEmpty(Album) AndAlso Not String.IsNullOrWhiteSpace(ID3v1Tags.Album) Then Album = ID3v1Tags.Album
+          End If
+        End Using
+        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+        If My.Computer.FileSystem.FileExists(jPath) Then
+          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+          SaveArtToMP3(Path, jPath)
+          Return New ImageWithName(jPath)
+        End If
+        Return SendArtA(Artist, Album, DoSearch)
+      Case ".ogg", ".ogm", ".flac"
+        If ForceSearch Then
+          Using cVorbis As New Seed.clsVorbis(Path)
+            If cVorbis.HasVorbis Then
+              If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
+              If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
+            End If
+          End Using
+          Return SendArtA(Artist, Album, DoSearch)
+        End If
+        Using cVorbis As New Seed.clsVorbis(Path)
+          If cVorbis.HasVorbis Then
+            If cVorbis.Pictures IsNot Nothing Then
+              If cVorbis.Pictures.Count > 0 Then
+                For Each picType In Seed.clsID3v2.ID3_PIC_TYPE_DISPLAYORDER
+                  For I As Integer = 0 To cVorbis.Pictures.Count - 1
+                    If cVorbis.Pictures(I).PicType = picType Then
+                      Return cVorbis.Pictures(I).Image.Clone
+                    End If
+                  Next
+                Next
+                Return cVorbis.Pictures(0).Image.Clone
+              End If
+            End If
+          End If
+        End Using
+        Using cVorbis As New Seed.clsVorbis(Path)
+          If cVorbis.HasVorbis Then
+            If Not String.IsNullOrEmpty(cVorbis.Album) Then Album = cVorbis.Album
+            If Not String.IsNullOrEmpty(cVorbis.Artist) Then Artist = cVorbis.Artist
+          End If
+        End Using
+        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+        If My.Computer.FileSystem.FileExists(jPath) Then
+          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+          Return New ImageWithName(jPath)
+        End If
+        Return SendArtA(Artist, Album, DoSearch)
+      Case Else
+        If ForceSearch Then
+          Dim Title As String = String.Empty
+          If IO.Path.GetFileNameWithoutExtension(Path).Contains(" - ") Then
+            Artist = Split(IO.Path.GetFileNameWithoutExtension(Path), " - ", 2)(0)
+            Title = Split(IO.Path.GetFileNameWithoutExtension(Path), " - ", 2)(1)
+          Else
+            Title = IO.Path.GetFileNameWithoutExtension(Path)
+          End If
+          Return SendArtT(Artist, Title, DoSearch)
+        End If
+        Dim jPath As String = IO.Path.Combine(IO.Path.GetDirectoryName(Path), "Folder.jpg")
+        If My.Computer.FileSystem.FileExists(jPath) Then
+          If Not (IO.File.GetAttributes(jPath) Or IO.FileAttributes.Hidden) = IO.FileAttributes.Hidden Then IO.File.SetAttributes(jPath, IO.FileAttributes.Hidden)
+          Return New ImageWithName(jPath)
+        End If
+        Return Nothing
+    End Select
+  End Function
+
   Private Property FileArt As ImageWithName
     Get
       Return mFArt
@@ -6355,5 +6480,14 @@ Public Class frmMain
         If Me.Text.StartsWith("Lime Seed Media Player") AndAlso Not Me.Text = "Lime Seed Media Player (" & pbProgress.Value \ 10 & "%)" Then Me.Text = "Lime Seed Media Player (" & pbProgress.Value \ 10 & "%)"
       End If
     End If
+  End Sub
+
+  Private Sub tmrHideAlert_Tick(sender As System.Object, e As System.EventArgs) Handles tmrHideAlert.Tick
+    tmrHideAlert.Enabled = False
+    Do Until pnlPlayList.RowStyles(1).Height < 1
+      pnlPlayList.RowStyles(1).Height -= 1
+      Application.DoEvents()
+    Loop
+    lblPLAlert.Text = Nothing
   End Sub
 End Class

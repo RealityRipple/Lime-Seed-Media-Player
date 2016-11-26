@@ -61,7 +61,7 @@
 
   Public Sub Main()
     If String.IsNullOrEmpty(Command) Then
-      MsgBox("Please change association settings within Lime Seed or your Windows Association control panel item.", MsgBoxStyle.Exclamation, "Lime Seed File Association")
+      MsgBox("Please change association settings within Lime Seed or your Windows Association control panel item.", MsgBoxStyle.Exclamation, My.Application.Info.Title)
     Else
       If InStr(Command, " THUMB ") > 0 And 1 = 0 Then 'TODO: Enable if you ever get a thumbnail and property generator working better than K-Lite
         Thumbnails = True

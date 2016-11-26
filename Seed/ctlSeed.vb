@@ -343,7 +343,6 @@ Public Class ctlSeed
   End Property
 
   Private Function TrimFile(Path As String) As String
-    'Return Nothing
     If String.IsNullOrEmpty(Path) Then Return Nothing
     If Not My.Computer.FileSystem.FileExists(Path) Then Return Nothing
     If IO.Path.GetExtension(Path).ToLower = ".mp3" Then
@@ -352,10 +351,11 @@ Public Class ctlSeed
       Dim lFrameStart As Integer = 0
       Do
         lFrameStart = GetBytePos(bFile, &HFF, lFrameStart)
+        If lFrameStart < 1 Then Return Nothing
         If lFrameStart >= 0 AndAlso CheckMPEG(bFile, lFrameStart) Then Exit Do
         lFrameStart += 1
       Loop
-      If lFrameStart = 0 Then Return Nothing
+      If lFrameStart < 1 Then Return Nothing
       Dim lFrameLen As Integer = bFile.Length - lFrameStart - IIf((GetString(bFile, bFile.Length - &H80, 3) = "TAG"), &H80, 0)
       Dim bReturn(lFrameLen - 1) As Byte
       Array.ConstrainedCopy(bFile, lFrameStart, bReturn, 0, lFrameLen)

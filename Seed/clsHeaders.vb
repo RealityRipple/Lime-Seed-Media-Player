@@ -20,6 +20,7 @@
     If My.Computer.FileSystem.GetFileInfo(FilePath).Length >= 1024L * 1024L * 1024L * 2L Then Return
     sPath = FilePath
     Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(FilePath)
+    If bFile.Length <= &H80 Then Return
     lSize = bFile.Length
     Dim Id3v1 As Boolean = (GetString(bFile, bFile.Length - &H80, 3) = "TAG")
     Dim lFram As Integer = -1

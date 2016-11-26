@@ -148,7 +148,7 @@
     If Me.InvokeRequired Then
       Me.BeginInvoke(New FailureInvoker(AddressOf Failure), message)
     Else
-      If Not String.IsNullOrEmpty(message) Then MsgBox(message, MsgBoxStyle.Exclamation, "Connection Failure!")
+      If Not String.IsNullOrEmpty(message) Then MsgBox(message, MsgBoxStyle.Exclamation, My.Application.Info.Title)
       cmdTransfer.Enabled = False
       cmdTransfer.Text = "Transfer To ? >>"
       cmdRefresh.Enabled = True

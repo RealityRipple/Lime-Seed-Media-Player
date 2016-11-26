@@ -91,13 +91,13 @@
     Private Sub MyApplication_UnhandledException(sender As Object, e As Microsoft.VisualBasic.ApplicationServices.UnhandledExceptionEventArgs) Handles Me.UnhandledException
       Try
         If e.Exception.Message.Contains("Could not load file or assembly") Then
-          MsgBox("A critical file is missing. Please ensure " & My.Application.Info.ProductName & " has been fully installed." & vbNewLine & e.Exception.ToString, MsgBoxStyle.Critical, "Could not load File or Assembly.")
+          MsgBox("A critical file is missing. Please ensure " & My.Application.Info.ProductName & " has been fully installed." & vbNewLine & e.Exception.ToString, MsgBoxStyle.Critical, My.Application.Info.Title)
           e.ExitApplication = True
         Else
           Dim frmError As New Form With
             {
               .FormBorderStyle = Windows.Forms.FormBorderStyle.SizableToolWindow,
-              .Text = "Error in " & My.Application.Info.ProductName,
+              .Text = "Error in " & My.Application.Info.Title,
               .ShowIcon = False,
               .MinimizeBox = False,
               .MaximizeBox = False,
@@ -120,7 +120,7 @@
           pnlError.RowStyles.Add(New RowStyle(SizeType.Absolute, 48))
           pnlError.RowStyles.Add(New RowStyle(SizeType.Percent, 100))
           pnlError.RowStyles.Add(New RowStyle(SizeType.AutoSize))
-          Dim sErrorText As String = My.Application.Info.ProductName & " has Encountered an Error"
+          Dim sErrorText As String = My.Application.Info.Title & " has Encountered an Error"
           If e.Exception.TargetSite IsNot Nothing Then sErrorText &= " in " & e.Exception.TargetSite.Name
           Dim lblError As New Label With
             {
@@ -141,46 +141,45 @@
             {
               .ReadOnly = True,
               .BorderStyle = BorderStyle.Fixed3D,
-              .Text = "Error: " & e.Exception.Message,
+              .Text = "Error: " & e.Exception.ToString,
               .Dock = DockStyle.Fill,
               .Multiline = True,
               .ScrollBars = ScrollBars.Vertical
             }
-          txtError.Text = "Error: " & e.Exception.Message
+          txtError.Text = "Error: " & e.Exception.ToString
           If Not String.IsNullOrEmpty(e.Exception.StackTrace) Then
             If e.Exception.StackTrace.Contains(vbCr) Then
               txtError.Text &= vbNewLine & e.Exception.StackTrace.Substring(0, e.Exception.StackTrace.IndexOf(vbCr))
             Else
               txtError.Text &= vbNewLine & e.Exception.StackTrace
             End If
-          Else
-            If Not String.IsNullOrEmpty(e.Exception.Source) Then
-              txtError.Text &= vbNewLine & " @ " & e.Exception.Source
-              If e.Exception.TargetSite IsNot Nothing Then txtError.Text &= "." & e.Exception.TargetSite.Name
-            Else
-              If e.Exception.TargetSite IsNot Nothing Then txtError.Text &= vbNewLine & " @ " & e.Exception.TargetSite.Name
-            End If
           End If
-          Dim cmdReport As New Button With
-            {
-              .Text = "Report Error",
-              .AutoSize = True,
-              .Padding = New Padding(4),
-              .Anchor = AnchorStyles.Right,
-              .FlatStyle = FlatStyle.System,
-              .Enabled = False
-            }
-          AddHandler cmdReport.Click, Sub()
-                                        frmError.DialogResult = Windows.Forms.DialogResult.OK
-                                        frmError.Close()
-                                      End Sub
-          Dim lblReport As New Label With
-            {
-              .AutoSize = True,
-              .Padding = New Padding(3),
-              .Text = "The reporting system is disabled." & vbNewLine & "This is a work in progress.",
-              .Anchor = AnchorStyles.Right
-            }
+          If Not String.IsNullOrEmpty(e.Exception.Source) Then
+            txtError.Text &= vbNewLine & " @ " & e.Exception.Source
+            If e.Exception.TargetSite IsNot Nothing Then txtError.Text &= "." & e.Exception.TargetSite.Name
+          Else
+            If e.Exception.TargetSite IsNot Nothing Then txtError.Text &= vbNewLine & " @ " & e.Exception.TargetSite.Name
+          End If
+          'Dim cmdReport As New Button With
+          '  {
+          '    .Text = "Report Error",
+          '    .AutoSize = True,
+          '    .Padding = New Padding(4),
+          '    .Anchor = AnchorStyles.Right,
+          '    .FlatStyle = FlatStyle.System,
+          '    .Enabled = False
+          '  }
+          'AddHandler cmdReport.Click, Sub()
+          '                              frmError.DialogResult = Windows.Forms.DialogResult.OK
+          '                              frmError.Close()
+          '                            End Sub
+          'Dim lblReport As New Label With
+          '  {
+          '    .AutoSize = True,
+          '    .Padding = New Padding(3),
+          '    .Text = "The reporting system is disabled." & vbNewLine & "This is a work in progress.",
+          '    .Anchor = AnchorStyles.Right
+          '  }
           Dim cmdIgnore As New Button With
             {
               .Text = "Ignore and Continue",
@@ -209,13 +208,13 @@
           pnlError.Controls.Add(pctError, 0, 0)
           pnlError.Controls.Add(lblError, 1, 0)
           pnlError.Controls.Add(txtError, 1, 1)
-          pnlError.Controls.Add(lblReport, 0, 2)
+          'pnlError.Controls.Add(lblReport, 0, 2)
           pnlError.Controls.Add(cmdIgnore, 2, 2)
           pnlError.Controls.Add(cmdExit, 3, 2)
           pnlError.SetColumnSpan(lblError, 3)
           pnlError.SetColumnSpan(txtError, 3)
-          pnlError.SetColumnSpan(cmdReport, 2)
-          frmError.AcceptButton = cmdReport
+          'pnlError.SetColumnSpan(lblReport, 2)
+          'frmError.AcceptButton = cmdReport
           frmError.CancelButton = cmdIgnore
           My.Computer.Audio.PlaySystemSound(Media.SystemSounds.Hand)
           'Dim tmrCheck As New Timer With
@@ -246,7 +245,7 @@
           '                          End Sub
           Select Case frmError.ShowDialog
             Case DialogResult.OK
-              MsgBox("This program, by its very nature, is too unstable to set up an error reporting system." & vbNewLine & "The code is just here for future use", MsgBoxStyle.Information, "You can't see this message!")
+              MsgBox("This program, by its very nature, is too unstable to set up an error reporting system." & vbNewLine & "The code is just here for future use", MsgBoxStyle.Information, My.Application.Info.Title)
               'e.ExitApplication = False
               'Dim sRet As String = MantisReporter.ReportIssue(e.Exception)
               'If sRet = "OK" Then
@@ -280,7 +279,7 @@
           End Select
         End If
       Catch ex As Exception
-        MsgBox("There was an error while handling another error." & vbNewLine & ex.ToString & vbNewLine & vbNewLine & "Original Error:" & vbNewLine & e.Exception.Message, MsgBoxStyle.Critical, "Error Report Error")
+        MsgBox("There was an error while handling another error." & vbNewLine & ex.ToString & vbNewLine & vbNewLine & "Original Error:" & vbNewLine & e.Exception.Message, MsgBoxStyle.Critical, My.Application.Info.Title)
       End Try
       'Dim msg As String = "Time: " & Now.ToLongTimeString & ", Date: " & Now.ToLongDateString
       'If notifyIco Is Nothing Then

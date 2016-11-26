@@ -70,64 +70,93 @@
     End Try
   End Sub
 
-  Public Sub Save(Optional ByVal SaveAs As String = Nothing)
+  Public Function Save(Optional ByVal SaveAs As String = Nothing) As Boolean
     If String.IsNullOrEmpty(SaveAs) Then SaveAs = m_sMp3File
-    Dim bTrim As Boolean = False
-    Using bR As New IO.BinaryReader(New IO.FileStream(m_sMp3File, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.Read), fileEncoding)
-      If bR.BaseStream.Length > &H80 Then
-        bR.BaseStream.Position = bR.BaseStream.Length - &H80
-        If bR.ReadChars(3) = "TAG" Then bTrim = True
-      End If
-      bR.Close()
-    End Using
-    If String.IsNullOrEmpty(m_sTitle) And String.IsNullOrEmpty(m_sArtist) And String.IsNullOrEmpty(m_sAlbum) And String.IsNullOrEmpty(m_sYear) And String.IsNullOrEmpty(m_sComment) And m_bGenre = &HC And m_bTrack = 0 Then
-      If bTrim Then
-        Using bW As New IO.BinaryWriter(New IO.FileStream(SaveAs, IO.FileMode.Open, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite), fileEncoding)
-          bW.BaseStream.SetLength(bW.BaseStream.Length - &H80)
-          bW.Close()
-        End Using
-      Else
-        'Golden
-      End If
-    Else
-      If bTrim Then
-        Using bW As New IO.BinaryWriter(New IO.FileStream(SaveAs, IO.FileMode.Open, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite), fileEncoding)
-          bW.BaseStream.Position = bW.BaseStream.Length - &H80
-          bW.Write(fileEncoding.GetBytes("TAG"))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sTitle)))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sArtist)))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sAlbum)))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sYear, 4)))
-          If m_sComment.Length > 28 And m_bTrack = 0 Then
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 30)))
-          Else
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 28)))
-            bW.Write(CByte(0))
-            bW.Write(m_bTrack)
-          End If
-          bW.Write(m_bGenre)
-          bW.Close()
-        End Using
-      Else
-        Using bW As New IO.BinaryWriter(New IO.FileStream(SaveAs, IO.FileMode.Append, IO.FileAccess.Write, IO.FileShare.ReadWrite), fileEncoding)
-          bW.Write(fileEncoding.GetBytes("TAG"))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sTitle)))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sArtist)))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sAlbum)))
-          bW.Write(fileEncoding.GetBytes(MakeNull(m_sYear, 4)))
-          If m_sComment.Length > 28 And m_bTrack = 0 Then
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 30)))
-          Else
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 28)))
-            bW.Write(CByte(0))
-            bW.Write(m_bTrack)
-          End If
-          bW.Write(m_bGenre)
-          bW.Close()
-        End Using
-      End If
+    Dim newSave As String = SaveAs & ".new_id" & (New Random).Next(0, 255).ToString("x2")
+    If IO.File.Exists(newSave) Then
+      Try
+        IO.File.Delete(newSave)
+      Catch ex As Exception
+        Return False
+      End Try
     End If
-  End Sub
+    Try
+      Dim bTrim As Boolean = False
+      Using bR As New IO.BinaryReader(New IO.FileStream(m_sMp3File, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.Read), fileEncoding)
+        If bR.BaseStream.Length > &H80 Then
+          bR.BaseStream.Position = bR.BaseStream.Length - &H80
+          If bR.ReadChars(3) = "TAG" Then bTrim = True
+        End If
+        bR.Close()
+      End Using
+      IO.File.Copy(m_sMp3File, newSave)
+      If String.IsNullOrEmpty(m_sTitle) And String.IsNullOrEmpty(m_sArtist) And String.IsNullOrEmpty(m_sAlbum) And String.IsNullOrEmpty(m_sYear) And String.IsNullOrEmpty(m_sComment) And m_bGenre = &HC And m_bTrack = 0 Then
+        If bTrim Then
+          Using bW As New IO.BinaryWriter(New IO.FileStream(newSave, IO.FileMode.Open, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite), fileEncoding)
+            bW.BaseStream.SetLength(bW.BaseStream.Length - &H80)
+            bW.Close()
+          End Using
+        Else
+          'Golden
+        End If
+      Else
+        If bTrim Then
+          Using bW As New IO.BinaryWriter(New IO.FileStream(newSave, IO.FileMode.Open, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite), fileEncoding)
+            bW.BaseStream.Position = bW.BaseStream.Length - &H80
+            bW.Write(fileEncoding.GetBytes("TAG"))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sTitle)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sArtist)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sAlbum)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sYear, 4)))
+            If (Not String.IsNullOrEmpty(m_sComment) AndAlso m_sComment.Length > 28) And m_bTrack = 0 Then
+              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 30)))
+            Else
+              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 28)))
+              bW.Write(CByte(0))
+              bW.Write(m_bTrack)
+            End If
+            bW.Write(m_bGenre)
+            bW.Close()
+          End Using
+        Else
+          Using bW As New IO.BinaryWriter(New IO.FileStream(newSave, IO.FileMode.Append, IO.FileAccess.Write, IO.FileShare.ReadWrite), fileEncoding)
+            bW.Write(fileEncoding.GetBytes("TAG"))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sTitle)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sArtist)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sAlbum)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(m_sYear, 4)))
+            If (Not String.IsNullOrEmpty(m_sComment) AndAlso m_sComment.Length > 28) And m_bTrack = 0 Then
+              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 30)))
+            Else
+              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 28)))
+              bW.Write(CByte(0))
+              bW.Write(m_bTrack)
+            End If
+            bW.Write(m_bGenre)
+            bW.Close()
+          End Using
+        End If
+      End If
+      If CompareFiles(SaveAs, newSave) Then Return True
+      If IO.File.Exists(SaveAs) Then IO.File.Delete(SaveAs)
+      IO.File.Move(newSave, SaveAs)
+      Return True
+    Catch ex As Exception
+      Return False
+    Finally
+      If IO.File.Exists(newSave) Then IO.File.Delete(newSave)
+    End Try
+  End Function
+
+  Private Function CompareFiles(oldFile As String, newFile As String) As Boolean
+    Dim bOld As Byte() = IO.File.ReadAllBytes(oldFile)
+    Dim bNew As Byte() = IO.File.ReadAllBytes(newFile)
+    If Not bOld.Length = bNew.Length Then Return False
+    For I As Integer = 0 To bOld.Length - 1
+      If Not bOld(I) = bNew(I) Then Return False
+    Next
+    Return True
+  End Function
 
   Public Property Album As String
     Get
@@ -335,7 +364,7 @@
         Case &H89 : Return "Heavy Metal"
         Case &H8A : Return "Black Metal"
         Case &H8B : Return "Crossover"
-        Case &H8C : Return "Contemporary Christian"
+        Case &H8C : Return "Contemporary Classical"
         Case &H8D : Return "Christian Rock"
         Case &H8E : Return "Merengue"
         Case &H8F : Return "Salsa"
@@ -387,6 +416,7 @@
         Case &HBD : Return "Dubstep"
         Case &HBE : Return "Garage Rock"
         Case &HBF : Return "Psybient"
+        Case &HFF : Return "None"
         Case Else : Return "Unknown (" & Hex(Genre) & ")"
       End Select
     End Get
@@ -395,7 +425,7 @@
   Private Function MakeNull(sBuf As String, Optional ByVal lLen As Integer = 30) As String
     If String.IsNullOrEmpty(sBuf) Then Return StrDup(lLen, ChrW(0))
     sBuf = sBuf.Trim
-    If lLen < sBuf.Length Then Return sBuf
+    If lLen < sBuf.Length Then Return sBuf.Substring(0, lLen)
     Return sBuf & StrDup(lLen - sBuf.Length, ChrW(0))
   End Function
 

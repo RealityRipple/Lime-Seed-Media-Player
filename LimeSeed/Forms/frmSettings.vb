@@ -499,9 +499,9 @@
       X.StartInfo = New ProcessStartInfo(Application.StartupPath & "\LSFA.exe", "Associate:" & assocList & " ")
       X.Start()
       X.WaitForExit()
-      MsgBox("The selected file types have been associated with Lime Seed.", MsgBoxStyle.Information, "Associations Set")
+      MsgBox("The selected file types have been associated with Lime Seed.", MsgBoxStyle.Information, My.Application.Info.Title)
     Else
-      MsgBox("Unable to find Lime Seed File Association Tool! Please reinstall Lime Seed.", MsgBoxStyle.Critical, "File Association Tool Missing")
+      MsgBox("Unable to find Lime Seed File Association Tool! Please reinstall Lime Seed.", MsgBoxStyle.Critical, My.Application.Info.Title)
     End If
   End Sub
 
@@ -1128,7 +1128,7 @@
   Private Sub cmbID3v2_SelectedIndexChanged(sender As System.Object, e As System.EventArgs) Handles cmbID3v2.SelectedIndexChanged
     If Me.Tag = "LOAD" Then Return
     If cmbID3v2.SelectedIndex = 2 Then
-      If MsgBox("ID3v2.4.0 can not be read by Windows Explorer. Are you sure you want to convert tags to this version?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo) = MsgBoxResult.No Then
+      If MsgBox("ID3v2.4.0 can not be read by Windows Explorer. Are you sure you want to convert tags to this version?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, My.Application.Info.Title) = MsgBoxResult.No Then
         cmbID3v2.SelectedIndex = 1
       End If
     End If

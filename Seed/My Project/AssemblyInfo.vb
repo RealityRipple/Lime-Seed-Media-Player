@@ -8,12 +8,12 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Seed")> 
-<Assembly: AssemblyDescription("")> 
+<Assembly: AssemblyTitle("Lime Seed Media Core")> 
+<Assembly: AssemblyDescription("Lime Seed Media Core is a common library for DirectShow video and audio playback used by the Lime Media Player products.")> 
 <Assembly: AssemblyCompany("RealityRipple Software")> 
-<Assembly: AssemblyProduct("Seed")> 
-<Assembly: AssemblyCopyright("Copyright © RealityRipple Software 2011")> 
-<Assembly: AssemblyTrademark("")> 
+<Assembly: AssemblyProduct("Lime Media Player")> 
+<Assembly: AssemblyCopyright("Copyright does not apply to this product.")> 
+<Assembly: AssemblyTrademark("Lime Seed Media Core by RealityRipple Software.")> 
 
 <Assembly: ComVisible(False)>
 
@@ -30,5 +30,5 @@ Imports System.Runtime.InteropServices
 ' You can specify all the values or you can default the Build and Revision Numbers 
 ' by using the '*' as shown below:
 
-<Assembly: AssemblyVersion("0.7.*")> 
-<Assembly: AssemblyFileVersion("0.7")> 
+<Assembly: AssemblyVersion("0.8.*")> 
+<Assembly: AssemblyFileVersion("0.8")> 

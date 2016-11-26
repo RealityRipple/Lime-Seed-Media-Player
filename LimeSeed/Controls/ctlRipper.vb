@@ -486,10 +486,10 @@
 
   Private Sub cmdSendInfo_Click(sender As System.Object, e As System.EventArgs) Handles cmdSendInfo.Click
     If lLastRev = -1 Then
-      MsgBox("Revision entry is not set, you may be unable to submit this entry if a version already exists.", MsgBoxStyle.Exclamation, "No Revision Entry Set")
+      MsgBox("Revision entry is not set, you may be unable to submit this entry if a version already exists.", MsgBoxStyle.Exclamation, My.Application.Info.Title)
       lLastRev = 0
     End If
-    If MsgBox("Are you sure you wish to submit this album to FreeDB?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, "Submit Album?") = MsgBoxResult.Yes Then
+    If MsgBox("Are you sure you wish to submit this album to FreeDB?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, My.Application.Info.Title) = MsgBoxResult.Yes Then
       Dim sCat, sID, sEntry As String
       If String.Compare(txtAlbumGenre.Text, "blues", True) = 0 Or
          String.Compare(txtAlbumGenre.Text, "classical", True) = 0 Or
@@ -549,7 +549,7 @@
         sEntry &= "EXTT" & I & "=" & vbCrLf
       Next
       sEntry &= "PLAYORDER=" & vbNewLine
-      If MsgBox("Ready to write entry:" & vbNewLine & "Category: " & sCat & vbNewLine & "Disc ID: " & sID & vbNewLine & "Entry Data:" & vbNewLine & sEntry & vbNewLine & "Submit this entry?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, "Confirm Entry") = MsgBoxResult.Yes Then
+      If MsgBox("Ready to write entry:" & vbNewLine & "Category: " & sCat & vbNewLine & "Disc ID: " & sID & vbNewLine & "Entry Data:" & vbNewLine & sEntry & vbNewLine & "Submit this entry?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, My.Application.Info.Title) = MsgBoxResult.Yes Then
         If cInfo.WriteEntry(sCat, sID, sEntry) Then
           SetStatus("Writing entry to FreeDB...")
         Else
