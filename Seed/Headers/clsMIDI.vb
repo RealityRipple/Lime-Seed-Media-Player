@@ -78,9 +78,9 @@
   Public Sub New(FilePath As String)
     bValid = False
     If String.IsNullOrEmpty(FilePath) Then Return
-    If Not My.Computer.FileSystem.FileExists(FilePath) Then Return
-    If My.Computer.FileSystem.GetFileInfo(FilePath).Length >= 1024L * 1024L * 1024L * 2L Then Return
-    Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(FilePath)
+    If Not IO.File.Exists(FilePath) Then Return
+    If (New IO.FileInfo(FilePath)).Length >= 1024L * 1024L * 1024L * 2L Then Return
+    Dim bFile As Byte() = IO.File.ReadAllBytes(FilePath)
     Dim lPos As Long = 0
     ReadHeader(bFile, lPos)
     ReDim mChunks(mHeader.TrackCount - 1)

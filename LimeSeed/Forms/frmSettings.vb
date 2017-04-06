@@ -125,8 +125,8 @@
 
     lstVis.Items.Clear()
     lstVis.Items.Add("None")
-    If My.Computer.FileSystem.DirectoryExists(Application.StartupPath & "\Visualizations") Then
-      For Each file In My.Computer.FileSystem.GetFiles(Application.StartupPath & "\Visualizations")
+    If IO.Directory.Exists(IO.Path.Combine(Application.StartupPath, "Visualizations")) Then
+      For Each file In IO.Directory.GetFiles(IO.Path.Combine(Application.StartupPath, "Visualizations"))
         If file.EndsWith(".dll") Then lstVis.Items.Add(IO.Path.GetFileNameWithoutExtension(file))
       Next
     End If
@@ -494,9 +494,9 @@
     ChildTags(tvAssoc.Nodes(0), assocList)
     'TODO: Enable if you ever get a thumbnail and property generator working better than K-Lite
     'If chkThumbnails.Checked Then assocList &= " THUMB "
-    If My.Computer.FileSystem.FileExists(Application.StartupPath & "\LSFA.exe") Then
+    If IO.File.Exists(IO.Path.Combine(Application.StartupPath, "LSFA.exe")) Then
       Dim X As New Process
-      X.StartInfo = New ProcessStartInfo(Application.StartupPath & "\LSFA.exe", "Associate:" & assocList & " ")
+      X.StartInfo = New ProcessStartInfo(IO.Path.Combine(Application.StartupPath, "LSFA.exe"), "Associate:" & assocList & " ")
       X.Start()
       X.WaitForExit()
       MsgBox("The selected file types have been associated with Lime Seed.", MsgBoxStyle.Information, My.Application.Info.Title)
@@ -1063,8 +1063,8 @@
     tmrVis.Enabled = False
     Dim selName As String = lstVis.GetItemText(lstVis.SelectedItem)
     If selName <> "None" Then
-      Dim selPath As String = Application.StartupPath & "\Visualizations\" & selName & ".dll"
-      Dim assem As System.Reflection.Assembly = System.Reflection.Assembly.Load(My.Computer.FileSystem.ReadAllBytes(selPath))
+      Dim selPath As String = IO.Path.Combine(Application.StartupPath, "Visualizations", selName & ".dll")
+      Dim assem As System.Reflection.Assembly = System.Reflection.Assembly.Load(IO.File.ReadAllBytes(selPath))
       For Each typeT As Type In assem.GetTypes
         methodDraw = typeT.GetMethod("Draw")
         If methodDraw Is Nothing Then Continue For
@@ -1092,7 +1092,11 @@
       For I As Integer = 0 To Channels - 1
         ChanVals(I) = volDevice.AudioMeterInformation.PeakValues(I) * 100
       Next
-      pctVisPre.Image = CType(methodDraw.Invoke(objDraw, New Object() {Channels, ChanVals, pctVisPre.DisplayRectangle.Size}), Drawing.Image)
+      Try
+        pctVisPre.Image = CType(methodDraw.Invoke(objDraw, New Object() {Channels, ChanVals, pctVisPre.DisplayRectangle.Size}), Drawing.Image)
+      Catch ex As Exception
+      End Try
+      Application.DoEvents()
     End If
   End Sub
 

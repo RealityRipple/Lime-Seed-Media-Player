@@ -36,19 +36,27 @@ Partial Class frmProps
     Me.tabID3v1 = New System.Windows.Forms.TabPage()
     Me.pnlID3v1 = New System.Windows.Forms.TableLayoutPanel()
     Me.dgvID3v1 = New System.Windows.Forms.DataGridView()
+    Me.colID3v1Tag = New System.Windows.Forms.DataGridViewTextBoxColumn()
+    Me.colID3v1Value = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.cmdID3v1Reset = New System.Windows.Forms.Button()
     Me.cmdID3v1Save = New System.Windows.Forms.Button()
     Me.tabID3v2 = New System.Windows.Forms.TabPage()
     Me.pnlID3v2 = New System.Windows.Forms.TableLayoutPanel()
     Me.dgvID3v2 = New System.Windows.Forms.DataGridView()
+    Me.colID3v2Tag = New System.Windows.Forms.DataGridViewTextBoxColumn()
+    Me.colID3v2Value = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.cmdID3v2Add = New System.Windows.Forms.Button()
     Me.cmdID3v2Remove = New System.Windows.Forms.Button()
     Me.cmdID3v2Save = New System.Windows.Forms.Button()
     Me.cmdID3v2Reset = New System.Windows.Forms.Button()
     Me.tabVorbis = New System.Windows.Forms.TabPage()
     Me.dgvVorbis = New System.Windows.Forms.DataGridView()
+    Me.colVorbisTag = New System.Windows.Forms.DataGridViewTextBoxColumn()
+    Me.colVorbisValue = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.tabMPEG = New System.Windows.Forms.TabPage()
     Me.dgvMPEG = New System.Windows.Forms.DataGridView()
+    Me.colMPEGTag = New System.Windows.Forms.DataGridViewTextBoxColumn()
+    Me.colMPEGValue = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.tabMKV = New System.Windows.Forms.TabPage()
     Me.tvMKV = New System.Windows.Forms.TreeView()
     Me.tabMIDI = New System.Windows.Forms.TabPage()
@@ -83,14 +91,6 @@ Partial Class frmProps
     Me.cmdFilterProps = New System.Windows.Forms.Button()
     Me.cmdOK = New System.Windows.Forms.Button()
     Me.tmrGenPreview = New System.Windows.Forms.Timer(Me.components)
-    Me.colID3v2Tag = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colID3v2Value = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colID3v1Tag = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colID3v1Value = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colVorbisTag = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colVorbisValue = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colMPEGTag = New System.Windows.Forms.DataGridViewTextBoxColumn()
-    Me.colMPEGValue = New System.Windows.Forms.DataGridViewTextBoxColumn()
     Me.tabProps.SuspendLayout()
     Me.tabClip.SuspendLayout()
     Me.pnlClip.SuspendLayout()
@@ -257,6 +257,24 @@ Partial Class frmProps
     Me.dgvID3v1.Size = New System.Drawing.Size(286, 181)
     Me.dgvID3v1.TabIndex = 0
     '
+    'colID3v1Tag
+    '
+    Me.colID3v1Tag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
+    Me.colID3v1Tag.FillWeight = 33.0!
+    Me.colID3v1Tag.HeaderText = "Tag"
+    Me.colID3v1Tag.Name = "colID3v1Tag"
+    Me.colID3v1Tag.ReadOnly = True
+    Me.colID3v1Tag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    Me.colID3v1Tag.Width = 34
+    '
+    'colID3v1Value
+    '
+    Me.colID3v1Value.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
+    Me.colID3v1Value.FillWeight = 66.0!
+    Me.colID3v1Value.HeaderText = "Value"
+    Me.colID3v1Value.Name = "colID3v1Value"
+    Me.colID3v1Value.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    '
     'cmdID3v1Reset
     '
     Me.cmdID3v1Reset.Anchor = System.Windows.Forms.AnchorStyles.None
@@ -335,6 +353,23 @@ Partial Class frmProps
     Me.dgvID3v2.Size = New System.Drawing.Size(286, 150)
     Me.dgvID3v2.TabIndex = 0
     '
+    'colID3v2Tag
+    '
+    Me.colID3v2Tag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
+    Me.colID3v2Tag.FillWeight = 33.0!
+    Me.colID3v2Tag.HeaderText = "Tag"
+    Me.colID3v2Tag.Name = "colID3v2Tag"
+    Me.colID3v2Tag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    Me.colID3v2Tag.Width = 34
+    '
+    'colID3v2Value
+    '
+    Me.colID3v2Value.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
+    Me.colID3v2Value.FillWeight = 66.0!
+    Me.colID3v2Value.HeaderText = "Value"
+    Me.colID3v2Value.Name = "colID3v2Value"
+    Me.colID3v2Value.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    '
     'cmdID3v2Add
     '
     Me.cmdID3v2Add.Anchor = System.Windows.Forms.AnchorStyles.None
@@ -411,6 +446,24 @@ Partial Class frmProps
     Me.dgvVorbis.Size = New System.Drawing.Size(292, 218)
     Me.dgvVorbis.TabIndex = 1
     '
+    'colVorbisTag
+    '
+    Me.colVorbisTag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
+    Me.colVorbisTag.FillWeight = 33.0!
+    Me.colVorbisTag.HeaderText = "Tag"
+    Me.colVorbisTag.Name = "colVorbisTag"
+    Me.colVorbisTag.ReadOnly = True
+    Me.colVorbisTag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    Me.colVorbisTag.Width = 34
+    '
+    'colVorbisValue
+    '
+    Me.colVorbisValue.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
+    Me.colVorbisValue.FillWeight = 66.0!
+    Me.colVorbisValue.HeaderText = "Value"
+    Me.colVorbisValue.Name = "colVorbisValue"
+    Me.colVorbisValue.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    '
     'tabMPEG
     '
     Me.tabMPEG.Controls.Add(Me.dgvMPEG)
@@ -443,6 +496,25 @@ Partial Class frmProps
     Me.dgvMPEG.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
     Me.dgvMPEG.Size = New System.Drawing.Size(292, 218)
     Me.dgvMPEG.TabIndex = 1
+    '
+    'colMPEGTag
+    '
+    Me.colMPEGTag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
+    Me.colMPEGTag.FillWeight = 33.0!
+    Me.colMPEGTag.HeaderText = "Tag"
+    Me.colMPEGTag.Name = "colMPEGTag"
+    Me.colMPEGTag.ReadOnly = True
+    Me.colMPEGTag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+    Me.colMPEGTag.Width = 34
+    '
+    'colMPEGValue
+    '
+    Me.colMPEGValue.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
+    Me.colMPEGValue.FillWeight = 66.0!
+    Me.colMPEGValue.HeaderText = "Value"
+    Me.colMPEGValue.Name = "colMPEGValue"
+    Me.colMPEGValue.ReadOnly = True
+    Me.colMPEGValue.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
     '
     'tabMKV
     '
@@ -854,78 +926,6 @@ Partial Class frmProps
     'tmrGenPreview
     '
     Me.tmrGenPreview.Interval = 400
-    '
-    'colID3v2Tag
-    '
-    Me.colID3v2Tag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
-    Me.colID3v2Tag.FillWeight = 33.0!
-    Me.colID3v2Tag.HeaderText = "Tag"
-    Me.colID3v2Tag.Name = "colID3v2Tag"
-    Me.colID3v2Tag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    Me.colID3v2Tag.Width = 34
-    '
-    'colID3v2Value
-    '
-    Me.colID3v2Value.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
-    Me.colID3v2Value.FillWeight = 66.0!
-    Me.colID3v2Value.HeaderText = "Value"
-    Me.colID3v2Value.Name = "colID3v2Value"
-    Me.colID3v2Value.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    '
-    'colID3v1Tag
-    '
-    Me.colID3v1Tag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
-    Me.colID3v1Tag.FillWeight = 33.0!
-    Me.colID3v1Tag.HeaderText = "Tag"
-    Me.colID3v1Tag.Name = "colID3v1Tag"
-    Me.colID3v1Tag.ReadOnly = True
-    Me.colID3v1Tag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    Me.colID3v1Tag.Width = 34
-    '
-    'colID3v1Value
-    '
-    Me.colID3v1Value.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
-    Me.colID3v1Value.FillWeight = 66.0!
-    Me.colID3v1Value.HeaderText = "Value"
-    Me.colID3v1Value.Name = "colID3v1Value"
-    Me.colID3v1Value.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    '
-    'colVorbisTag
-    '
-    Me.colVorbisTag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
-    Me.colVorbisTag.FillWeight = 33.0!
-    Me.colVorbisTag.HeaderText = "Tag"
-    Me.colVorbisTag.Name = "colVorbisTag"
-    Me.colVorbisTag.ReadOnly = True
-    Me.colVorbisTag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    Me.colVorbisTag.Width = 34
-    '
-    'colVorbisValue
-    '
-    Me.colVorbisValue.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
-    Me.colVorbisValue.FillWeight = 66.0!
-    Me.colVorbisValue.HeaderText = "Value"
-    Me.colVorbisValue.Name = "colVorbisValue"
-    Me.colVorbisValue.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    '
-    'colMPEGTag
-    '
-    Me.colMPEGTag.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells
-    Me.colMPEGTag.FillWeight = 33.0!
-    Me.colMPEGTag.HeaderText = "Tag"
-    Me.colMPEGTag.Name = "colMPEGTag"
-    Me.colMPEGTag.ReadOnly = True
-    Me.colMPEGTag.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
-    Me.colMPEGTag.Width = 34
-    '
-    'colMPEGValue
-    '
-    Me.colMPEGValue.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill
-    Me.colMPEGValue.FillWeight = 66.0!
-    Me.colMPEGValue.HeaderText = "Value"
-    Me.colMPEGValue.Name = "colMPEGValue"
-    Me.colMPEGValue.ReadOnly = True
-    Me.colMPEGValue.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
     '
     'frmProps
     '

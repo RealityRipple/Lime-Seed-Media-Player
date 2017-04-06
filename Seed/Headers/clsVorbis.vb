@@ -674,14 +674,14 @@
                   Dim bPic As Byte() = bRead.ReadBytes(PicLen)
                   Dim imgPic As Drawing.Image = Nothing
                   Dim sTmpPath As String = IO.Path.GetTempFileName
-                  My.Computer.FileSystem.WriteAllBytes(sTmpPath, bPic, False)
+                  IO.File.WriteAllBytes(sTmpPath, bPic)
                   Try
                     imgPic = PathToImg(sTmpPath)
                   Catch ex As Exception
                     Debug.Print("Image Error: " & ex.Message)
                     imgPic = Nothing
                   Finally
-                    My.Computer.FileSystem.DeleteFile(sTmpPath)
+                    IO.File.Delete(sTmpPath)
                   End Try
                   If imgPic.Width <> Width Or imgPic.Height <> Height Then
                     Debug.Print("Size Mismatch!")
@@ -840,7 +840,7 @@
       If bChunk.Contains(bFind) Then
         Dim iTryLoc As Integer = 0
         Do Until iTryLoc > ChunkSize
-          Dim newLoc As Integer = Array.IndexOf(bChunk, bFind, iTryLoc)
+          Dim newLoc As Integer = Array.IndexOf(Of Byte)(bChunk, bFind, iTryLoc)
           If newLoc = -1 Then Exit Do
           ioFile.Seek(I + newLoc, IO.SeekOrigin.Begin)
           Dim bData(FindSize - 1) As Byte
@@ -871,7 +871,7 @@
       If bChunk.Contains(bFind) Then
         Dim iTryLoc As Integer = 0
         Do Until iTryLoc > ChunkSize
-          Dim newLoc As Integer = Array.IndexOf(bChunk, bFind, iTryLoc)
+          Dim newLoc As Integer = Array.IndexOf(Of Byte)(bChunk, bFind, iTryLoc)
           If newLoc = -1 Then Exit Do
           ioFile.Seek(I + newLoc, IO.SeekOrigin.Begin)
           Dim bData(FindSize - 1) As Byte
@@ -944,7 +944,7 @@
   End Function
 
   Private Function PathToImg(Path As String) As Drawing.Image
-    If My.Computer.FileSystem.FileExists(Path) Then
+    If io.file.exists(Path) Then
       Using iStream As New IO.FileStream(Path, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.Read)
         Return Drawing.Image.FromStream(iStream, True, True)
       End Using

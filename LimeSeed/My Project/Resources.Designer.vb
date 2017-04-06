@@ -323,22 +323,22 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized resource of type System.Byte[].
         '''</summary>
-    Friend ReadOnly Property lame_enc_x64 As Byte()
-      Get
-        Dim obj As Object = ResourceManager.GetObject("lame_enc_x64", resourceCulture)
-        Return CType(obj, Byte())
-      End Get
-    End Property
-
-    '''<summary>
-    '''  Looks up a localized resource of type System.Byte[].
-    '''</summary>
-    Friend ReadOnly Property lame_enc_x86 As Byte()
-      Get
-        Dim obj As Object = ResourceManager.GetObject("lame_enc_x86", resourceCulture)
-        Return CType(obj, Byte())
-      End Get
-    End Property
+        Friend ReadOnly Property lame_enc_x64() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("lame_enc_x64", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Byte[].
+        '''</summary>
+        Friend ReadOnly Property lame_enc_x86() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("lame_enc_x86", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
         
         '''<summary>
         '''  Looks up a localized resource of type System.Drawing.Bitmap.
@@ -747,6 +747,296 @@ Namespace My.Resources
             Get
                 Dim obj As Object = ResourceManager.GetObject("throbber", resourceCulture)
                 Return CType(obj,System.Drawing.Bitmap)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_pause0() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_pause0", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_pause1() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_pause1", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play0() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play0", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play1() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play1", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play2() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play2", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play3() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play3", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play4() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play4", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play5() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play5", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play6() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play6", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_play7() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_play7", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property tray_stop() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("tray_stop", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_ff() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_ff", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_ff_disabled() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_ff_disabled", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_ff_hover() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_ff_hover", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_pause() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_pause", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_pause_disabled() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_pause_disabled", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_pause_hover() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_pause_hover", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_play() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_play", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_play_disabled() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_play_disabled", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_play_hover() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_play_hover", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_restore() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_restore", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_restore_hover() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_restore_hover", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_rw() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_rw", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_rw_disabled() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_rw_disabled", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_rw_hover() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_rw_hover", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_stop() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_stop", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_stop_disabled() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_stop_disabled", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        '''</summary>
+        Friend ReadOnly Property traybutton_stop_hover() As System.Drawing.Icon
+            Get
+                Dim obj As Object = ResourceManager.GetObject("traybutton_stop_hover", resourceCulture)
+                Return CType(obj,System.Drawing.Icon)
             End Get
         End Property
         

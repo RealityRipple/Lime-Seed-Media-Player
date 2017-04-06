@@ -49,13 +49,13 @@
     If bIn.Length < lStart + lLength Then Return String.Empty
     Return System.Text.Encoding.GetEncoding(LATIN_1).GetString(bIn, lStart, lLength)
   End Function
-  Public Function GetBytePos(bIn As Byte(), ByVal bFind As Byte, Optional ByVal lStart As Integer = 0) As Integer
-    If lStart = -1 Then lStart = 0
-    For I As Integer = lStart To bIn.Length - 1
-      If bIn(I) = bFind Then Return I
-    Next
-    Return -1
-  End Function
+  'Public Function GetBytePos(bIn As Byte(), ByVal bFind As Byte, Optional ByVal lStart As Integer = 0) As Integer
+  '  If lStart = -1 Then lStart = 0
+  '  For I As Integer = lStart To bIn.Length - 1
+  '    If bIn(I) = bFind Then Return I
+  '  Next
+  '  Return -1
+  'End Function
 
   Public Function SwapEndian16(uIn As UInt16) As UInt16
     Return (uIn >> 8) Or (uIn << 8)

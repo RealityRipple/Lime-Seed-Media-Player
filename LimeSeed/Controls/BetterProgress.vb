@@ -9,14 +9,19 @@ Public Class BetterProgress
     CustomColors
     CustomColorsNoBorder
     CustomColorsSlanted
+    CustomColorsSlantedWithValue
+    CustomColorsSlantedWithPercent
   End Enum
   Private mBarStyle As BetterProgressStyle
+  Private mBarValueStyle As String
+  Private mBarValueInvert As Boolean
   Private mBarBG As Color
   Private mBarFG As Color
   Private mBarBorder As Color
   Private mBarProg As ProgressBarStyle
   'Private TransparentBG As Boolean
   Private marqueeLoc As Long
+  Private Declare Function SetWindowTheme Lib "uxtheme" (hWnd As IntPtr, appName As String, idList As String) As Integer
 
   Public Event ValueChanged(sender As Object, e As EventArgs)
 
@@ -39,7 +44,7 @@ Public Class BetterProgress
     Set(value As BetterProgressStyle)
       If Not mBarStyle = value Then
         mBarStyle = value
-        'TransparentBG = (mBarStyle = BetterProgressStyle.CustomColorsSlanted And MyBase.BackColor = Color.Transparent)
+        'TransparentBG = ((mBarStyle = BetterProgressStyle.CustomColorsSlanted Or mBarStyle = BetterProgressStyle.CustomColorsSlantedWithValue Or mBarStyle = BetterProgressStyle.CustomColorsSlantedWithPercent) And MyBase.BackColor = Color.Transparent)
         Me.Invalidate()
       End If
     End Set
@@ -54,6 +59,36 @@ Public Class BetterProgress
         mBarProg = value
         Me.Invalidate()
       End If
+    End Set
+  End Property
+
+  Public Overrides Property Font As System.Drawing.Font
+    Get
+      Return MyBase.Font
+    End Get
+    Set(value As System.Drawing.Font)
+      MyBase.Font = value
+      Me.Invalidate()
+    End Set
+  End Property
+
+  Property ValueStyle As String
+    Get
+      Return mBarValueStyle
+    End Get
+    Set(value As String)
+      mBarValueStyle = value
+      Me.Invalidate()
+    End Set
+  End Property
+
+  Property ValueInvert As Boolean
+    Get
+      Return mBarValueInvert
+    End Get
+    Set(value As Boolean)
+      mBarValueInvert = value
+      Me.Invalidate()
     End Set
   End Property
 
@@ -81,23 +116,34 @@ Public Class BetterProgress
     End Set
   End Property
 
+  Public Overrides Property ForeColor As System.Drawing.Color
+    Get
+      Return MyBase.ForeColor
+    End Get
+    Set(value As System.Drawing.Color)
+      MyBase.ForeColor = value
+      Me.Invalidate()
+    End Set
+  End Property
+
   Public Overrides Property BackColor As System.Drawing.Color
     Get
       Return MyBase.BackColor
     End Get
     Set(value As System.Drawing.Color)
       MyBase.BackColor = value
-      'TransparentBG = (mBarStyle = BetterProgressStyle.CustomColorsSlanted And MyBase.BackColor = Color.Transparent)
+      'TransparentBG = ((mBarStyle = BetterProgressStyle.CustomColorsSlanted Or mBarStyle = BetterProgressStyle.CustomColorsSlantedWithValue Or mBarStyle = BetterProgressStyle.CustomColorsSlantedWithPercent) And MyBase.BackColor = Color.Transparent)
       Me.Invalidate()
     End Set
   End Property
-
 
   Public Sub New()
     ' This call is required by the designer.
     InitializeComponent()
     ' Add any initialization after the InitializeComponent() call.
     mBarStyle = BetterProgressStyle.VisualStyleDrawn
+    mBarValueStyle = ""
+    mBarValueInvert = False
     'TransparentBG = False
     mBarBG = SystemColors.Control
     mBarFG = SystemColors.Highlight
@@ -108,6 +154,11 @@ Public Class BetterProgress
   Protected Overrides Sub OnResize(e As EventArgs)
     ' Invalidate the control to get a repaint.
     Me.Invalidate()
+  End Sub
+
+  Protected Overrides Sub OnHandleCreated(e As System.EventArgs)
+    SetWindowTheme(Me.Handle, "", "")
+    MyBase.OnHandleCreated(e)
   End Sub
 
   Protected Overrides Sub OnPaint(e As PaintEventArgs)
@@ -136,20 +187,17 @@ Public Class BetterProgress
                   g.DrawLines(SystemPens.ButtonShadow, {New Point(0, Me.ClientRectangle.Height), New Point(0, 0), New Point(Me.ClientRectangle.Width, 0)})
                 End If
                 marqueeLoc += 1
-                If marqueeLoc >= rect.Right + rect.Height Then marqueeLoc = rect.Left - rect.Height
+                If marqueeLoc >= rect.Right Then marqueeLoc = rect.Left - (rect.Height * 3)
                 rect.Y += 1
-                rect.X = marqueeLoc + rect.Height
-                rect.Width = rect.Height * 2
+                rect.X = marqueeLoc
+                rect.Width = rect.Height * 3
                 rect.Height -= 2
                 If ProgressBarRenderer.IsSupported Then
-
                   ProgressBarRenderer.DrawHorizontalChunks(g, rect)
-
                   g.FillRectangles(backBrush, {New Rectangle(0, 0, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, 0, 1, 1), New Rectangle(0, Me.ClientRectangle.Height - 1, 1, 1), New Rectangle(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1, 1, 1)})
                 Else
                   g.FillRectangle(SystemBrushes.MenuHighlight, rect)
                 End If
-
               Else
                 Dim percent As Decimal = (val - min) / (max - min)
                 Dim rect As Rectangle = Me.ClientRectangle
@@ -188,6 +236,55 @@ Public Class BetterProgress
               Dim iTopRight As Integer = ((Me.ClientRectangle.Height) / (Me.ClientRectangle.Width)) * (rect.Width + 1)
               g.FillPolygon(fgBrush, {New Point(rect.X - 1, rect.Height + 1), New Point(rect.Width + 1, Me.ClientRectangle.Height - iTopRight), New Point(rect.Width + 1, rect.Height + 1)})
               g.DrawPolygon(borderPen, {New Point(0, Me.ClientRectangle.Height - 1), New Point(Me.ClientRectangle.Width - 1, 0), New Point(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1)})
+            End If
+          Case BetterProgressStyle.CustomColorsSlantedWithValue
+            If val = 0 And min = 0 And max = 0 Then
+              g.FillPolygon(bgBrush, {New Point(0, Me.ClientRectangle.Height - 1), New Point(Me.ClientRectangle.Width - 1, 0), New Point(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1)})
+            Else
+              Dim percent As Decimal = (val - min) / (max - min)
+              Dim rect As Rectangle = Me.ClientRectangle
+              g.FillPolygon(bgBrush, {New Point(0, rect.Height - 1), New Point(rect.Width - 1, 0), New Point(rect.Width - 1, rect.Height - 1)})
+              rect.Y += 1
+              rect.X += 1
+              rect.Width -= 2
+              rect.Width *= percent
+              rect.Height -= 2
+              Dim iTopRight As Integer = ((Me.ClientRectangle.Height) / (Me.ClientRectangle.Width)) * (rect.Width + 1)
+              g.FillPolygon(fgBrush, {New Point(rect.X - 1, rect.Height + 1), New Point(rect.Width + 1, Me.ClientRectangle.Height - iTopRight), New Point(rect.Width + 1, rect.Height + 1)})
+              g.DrawPolygon(borderPen, {New Point(0, Me.ClientRectangle.Height - 1), New Point(Me.ClientRectangle.Width - 1, 0), New Point(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1)})
+              Dim sValue As String = (val - min)
+              If mBarValueInvert Then
+                If String.IsNullOrEmpty(mBarValueStyle) Then
+                  sValue = (val - min) - (max - min)
+                Else
+                  sValue = Format((val - min) - (max - min), mBarValueStyle)
+                End If
+              Else
+                If String.IsNullOrEmpty(mBarValueStyle) Then
+                  sValue = (val - min)
+                Else
+                  sValue = Format((val - min), mBarValueStyle)
+                End If
+              End If
+              g.DrawString(sValue, Me.Font, New SolidBrush(Me.ForeColor), New Point(0, 0))
+            End If
+          Case BetterProgressStyle.CustomColorsSlantedWithPercent
+            If val = 0 And min = 0 And max = 0 Then
+              g.FillPolygon(bgBrush, {New Point(0, Me.ClientRectangle.Height - 1), New Point(Me.ClientRectangle.Width - 1, 0), New Point(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1)})
+            Else
+              Dim percent As Decimal = (val - min) / (max - min)
+              Dim rect As Rectangle = Me.ClientRectangle
+              g.FillPolygon(bgBrush, {New Point(0, rect.Height - 1), New Point(rect.Width - 1, 0), New Point(rect.Width - 1, rect.Height - 1)})
+              rect.Y += 1
+              rect.X += 1
+              rect.Width -= 2
+              rect.Width *= percent
+              rect.Height -= 2
+              Dim iTopRight As Integer = ((Me.ClientRectangle.Height) / (Me.ClientRectangle.Width)) * (rect.Width + 1)
+              g.FillPolygon(fgBrush, {New Point(rect.X - 1, rect.Height + 1), New Point(rect.Width + 1, Me.ClientRectangle.Height - iTopRight), New Point(rect.Width + 1, rect.Height + 1)})
+              g.DrawPolygon(borderPen, {New Point(0, Me.ClientRectangle.Height - 1), New Point(Me.ClientRectangle.Width - 1, 0), New Point(Me.ClientRectangle.Width - 1, Me.ClientRectangle.Height - 1)})
+              Dim sPercent As String = FormatPercent(percent, 0, TriState.True, TriState.False, TriState.False)
+              g.DrawString(sPercent, Me.Font, New SolidBrush(Me.ForeColor), New Point(0, 0))
             End If
           Case BetterProgressStyle.CustomColors
             If val = 0 And min = 0 And max = 0 Then
@@ -305,17 +402,18 @@ Public Class BetterProgress
       lastPercent = Math.Floor(Me.ClientRectangle.Width * percent)
       lastOldPercent = Math.Floor(Me.ClientRectangle.Width * oldPercent)
       Dim updateRect As New Rectangle(0, 0, Me.ClientRectangle.Width, Me.ClientRectangle.Height)
-      If lastVal > val Then
-        updateRect.X = Math.Floor(Me.ClientRectangle.Width * percent) - 1
-        updateRect.Width = Math.Ceiling(Me.ClientRectangle.Width * oldPercent) - updateRect.X + 2 ' Me.ClientRectangle.Width - updateRect.X
-      ElseIf val > lastVal Then
-        updateRect.X = Math.Floor(Me.ClientRectangle.Width * oldPercent) - 1
-        updateRect.Width = Math.Ceiling(Me.ClientRectangle.Width * percent) - updateRect.X + 2
-      Else
-        Exit Property
-      End If
-      If updateRect.X < 0 Then updateRect.X = 0
-      If updateRect.Width > Me.ClientRectangle.Width Then updateRect.Width = Me.ClientRectangle.Width
+      'If lastVal > val Then
+      '  updateRect.X = Math.Floor(Me.ClientRectangle.Width * percent) - 1
+      '  updateRect.Width = Math.Ceiling(Me.ClientRectangle.Width * oldPercent) - updateRect.X + 2 ' Me.ClientRectangle.Width - updateRect.X
+      'ElseIf val > lastVal Then
+      '  updateRect.X = Math.Floor(Me.ClientRectangle.Width * oldPercent) - 1
+      '  updateRect.Width = Math.Ceiling(Me.ClientRectangle.Width * percent) - updateRect.X + 2
+      'Else
+      '  Exit Property
+      'End If
+      'If updateRect.X < 0 Then updateRect.X = 0
+      'If updateRect.Width > Me.ClientRectangle.Width Then updateRect.Width = Me.ClientRectangle.Width
+      'Debug.Print("invalidating " & updateRect.ToString)
       Me.Invalidate(updateRect)
       RaiseEvent ValueChanged(Me, New EventArgs)
     End Set

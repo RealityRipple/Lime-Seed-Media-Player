@@ -55,11 +55,15 @@
   End Sub
 
   Private Sub EnableHide()
+    If Me.IsDisposed Or Me.Disposing Then Return
     If Me.InvokeRequired Then
-      Me.Invoke(New MethodInvoker(AddressOf EnableHide))
-    Else
-      tmrHide.Enabled = True
+      Try
+        Me.Invoke(New MethodInvoker(AddressOf EnableHide))
+      Catch ex As Exception
+      End Try
+      Return
     End If
+    tmrHide.Enabled = True
   End Sub
 
   Public Sub SetVisuals(Hide As Boolean)
@@ -152,32 +156,36 @@
   End Sub
 
   Private Sub bpgVolume_MouseDown(sender As Object, e As System.Windows.Forms.MouseEventArgs) Handles bpgVolume.MouseDown
-    If e.Button = Windows.Forms.MouseButtons.Left And Not VolS Then
-      bpgVolume.Value = ((e.X + 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
-      ParentPlayer.bpgVolume.Value = bpgVolume.Value
+    Dim dVol As Double = ((e.X - 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
+    If (e.Button And Windows.Forms.MouseButtons.Left) = Windows.Forms.MouseButtons.Left And Not VolS Then
+      bpgVolume.Value = dVol
+      ParentPlayer.bpgVolume.Value = dVol
       VolS = True
     End If
   End Sub
 
   Private Sub bpgVolume_MouseMove(sender As Object, e As System.Windows.Forms.MouseEventArgs) Handles bpgVolume.MouseMove
-    If VolS And e.Button = Windows.Forms.MouseButtons.Left Then
+    Dim dVol As Double = ((e.X - 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
+    If VolS And (e.Button And Windows.Forms.MouseButtons.Left) = Windows.Forms.MouseButtons.Left Then
       If e.X > 0 And e.X < bpgVolume.Width Then
-        bpgVolume.Value = ((e.X + 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
-        ParentPlayer.bpgVolume.Value = bpgVolume.Value
+        bpgVolume.Value = dVol
+        ParentPlayer.bpgVolume.Value = dVol
       End If
     End If
     If e.X > 0 And e.X < bpgVolume.Width Then
-      Dim dVol As Double = ((e.X - 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
-      Dim sPercent As String = "Volume: " & Math.Floor(dVol) - bpgVolume.Maximum & " dB"
+      Dim volClick As Integer = Math.Round(dVol) - bpgVolume.Maximum
+      Dim sPercent As String = Nothing
+      If Not VolS Then sPercent = "Set Volume: " & volClick & " dB"
       If ttDisp.GetToolTip(bpgVolume) <> sPercent Then ttDisp.SetToolTip(bpgVolume, sPercent)
     End If
   End Sub
 
   Private Sub bpgVolume_MouseUp(sender As Object, e As System.Windows.Forms.MouseEventArgs) Handles bpgVolume.MouseUp
-    If VolS And e.Button = Windows.Forms.MouseButtons.Left Then
+    Dim dVol As Double = ((e.X - 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
+    If VolS And (e.Button And Windows.Forms.MouseButtons.Left) = Windows.Forms.MouseButtons.Left Then
       If e.X > 0 And e.X < bpgVolume.Width Then
-        bpgVolume.Value = ((e.X + 1) / (bpgVolume.Width - 2)) * bpgVolume.Maximum
-        ParentPlayer.bpgVolume.Value = bpgVolume.Value
+        bpgVolume.Value = dVol
+        ParentPlayer.bpgVolume.Value = dVol
       End If
     End If
     VolS = False

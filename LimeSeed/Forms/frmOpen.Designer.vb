@@ -88,7 +88,7 @@ Partial Class frmOpen
     Me.lblOpen.Margin = New System.Windows.Forms.Padding(3, 8, 3, 8)
     Me.lblOpen.Name = "lblOpen"
     Me.lblOpen.Size = New System.Drawing.Size(321, 13)
-    Me.lblOpen.TabIndex = 2
+    Me.lblOpen.TabIndex = 0
     Me.lblOpen.Text = "Choose a File or Disc below to Open with Lime Seed Media Player."
     '
     'tbsOpen
@@ -101,7 +101,7 @@ Partial Class frmOpen
     Me.tbsOpen.Name = "tbsOpen"
     Me.tbsOpen.SelectedIndex = 0
     Me.tbsOpen.Size = New System.Drawing.Size(323, 60)
-    Me.tbsOpen.TabIndex = 3
+    Me.tbsOpen.TabIndex = 1
     '
     'tabFile
     '
@@ -126,9 +126,9 @@ Partial Class frmOpen
     Me.pnlFile.Name = "pnlFile"
     Me.pnlFile.RowCount = 1
     Me.pnlFile.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
-    Me.pnlFile.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 35.0!))
+    Me.pnlFile.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 34.0!))
     Me.pnlFile.Size = New System.Drawing.Size(315, 34)
-    Me.pnlFile.TabIndex = 1
+    Me.pnlFile.TabIndex = 0
     '
     'cmdBrowse
     '
@@ -137,7 +137,7 @@ Partial Class frmOpen
     Me.cmdBrowse.Location = New System.Drawing.Point(237, 5)
     Me.cmdBrowse.Name = "cmdBrowse"
     Me.cmdBrowse.Size = New System.Drawing.Size(75, 23)
-    Me.cmdBrowse.TabIndex = 0
+    Me.cmdBrowse.TabIndex = 1
     Me.cmdBrowse.Text = "Browse..."
     Me.cmdBrowse.UseVisualStyleBackColor = True
     '
@@ -175,7 +175,7 @@ Partial Class frmOpen
     Me.pnlDisc.RowCount = 1
     Me.pnlDisc.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
     Me.pnlDisc.Size = New System.Drawing.Size(315, 34)
-    Me.pnlDisc.TabIndex = 1
+    Me.pnlDisc.TabIndex = 0
     '
     'cmbDisc
     '
@@ -205,7 +205,7 @@ Partial Class frmOpen
     Me.cmdOpen.Location = New System.Drawing.Point(220, 98)
     Me.cmdOpen.Name = "cmdOpen"
     Me.cmdOpen.Size = New System.Drawing.Size(75, 23)
-    Me.cmdOpen.TabIndex = 4
+    Me.cmdOpen.TabIndex = 2
     Me.cmdOpen.Text = "Open"
     Me.cmdOpen.UseVisualStyleBackColor = True
     '
@@ -216,7 +216,7 @@ Partial Class frmOpen
     Me.cmdCancel.Location = New System.Drawing.Point(301, 98)
     Me.cmdCancel.Name = "cmdCancel"
     Me.cmdCancel.Size = New System.Drawing.Size(75, 23)
-    Me.cmdCancel.TabIndex = 5
+    Me.cmdCancel.TabIndex = 3
     Me.cmdCancel.Text = "Cancel"
     Me.cmdCancel.UseVisualStyleBackColor = True
     '

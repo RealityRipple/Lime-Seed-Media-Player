@@ -79,35 +79,39 @@ Module modFuncts
         rI += 1
         If rI > &HFFFFFF Then rI = 1
         sTmp = IO.Path.GetTempPath & "lsmpTEMP" & BufferHex(rI, 6) & "." & Extension
-      Loop While My.Computer.FileSystem.FileExists(sTmp)
+      Loop While IO.File.Exists(sTmp)
       Return sTmp
     End SyncLock
   End Function
 
   Public Sub WipeRndFiles()
-    For Each Item In My.Computer.FileSystem.GetFiles(IO.Path.GetTempPath, FileIO.SearchOption.SearchTopLevelOnly, "lsmpTEMP*.*")
+    For Each Item In IO.Directory.GetFiles(IO.Path.GetTempPath, "lsmpTEMP*.*")
       Try
-        My.Computer.FileSystem.DeleteFile(Item)
+        IO.File.Delete(Item)
       Catch
-        Debug.Print(Item & " is busy...")
+        'Debug.Print(Item & " is busy...")
       End Try
     Next
-    For Each Item In My.Computer.FileSystem.GetFiles(IO.Path.GetTempPath, FileIO.SearchOption.SearchTopLevelOnly, "seedTEMP*.*")
+    For Each Item In IO.Directory.GetFiles(IO.Path.GetTempPath, "seedTEMP*.*")
       Try
-        My.Computer.FileSystem.DeleteFile(Item)
+        IO.File.Delete(Item)
       Catch
-        Debug.Print(Item & " is busy...")
+        'Debug.Print(Item & " is busy...")
       End Try
     Next
   End Sub
 
   Public Function ConvertTimeVal(Seconds As Double) As String
     If Seconds < 0 Then Return "--:--"
+    Dim lDays As Long = Seconds \ 60 \ 60 \ 24
+    Seconds = Seconds - (lDays * 60 * 60 * 24)
     Dim lHours As Long = Seconds \ 60 \ 60
     Seconds = Seconds - (lHours * 60 * 60)
     Dim lMinutes As Long = Seconds \ 60
     Dim lSeconds As Long = Seconds - (lMinutes * 60)
-    If lHours > 0 Then
+    If lDays > 0 Then
+      ConvertTimeVal = lDays & ":" & Format(lHours, "00") & ":" & Format(lMinutes, "00") & ":" & Format(lSeconds, "00")
+    ElseIf lHours > 0 Then
       ConvertTimeVal = lHours & ":" & Format(lMinutes, "00") & ":" & Format(lSeconds, "00")
     Else
       ConvertTimeVal = lMinutes & ":" & Format(lSeconds, "00")
@@ -116,10 +120,15 @@ Module modFuncts
 
   Public Function RevertTimeVal(Time As String) As Double
     Dim dRet As Double = 0
-    If Time = ("--:--") Then Return -1
+    If Time = "--:--" Then Return -1
     If Time.Contains(":") Then
       Dim parts() As String = Split(Time, ":")
-      If parts.Count = 3 Then
+      If parts.Count = 4 Then
+        dRet = parts(0) * 60 * 60 * 24
+        dRet += parts(1) * 60 * 60
+        dRet += parts(2) * 60
+        dRet += parts(3)
+      ElseIf parts.Count = 3 Then
         dRet = parts(0) * 60 * 60
         dRet += parts(1) * 60
         dRet += parts(2)
@@ -134,7 +143,7 @@ Module modFuncts
     Else
       dRet = CDbl(Time)
     End If
-    Return dRet
+      Return dRet
   End Function
 
   Public Function TrackToNo(sPath As String) As Integer
@@ -313,7 +322,7 @@ Module modFuncts
     Next
   End Sub
 
-  Public Sub FindAdditionalMKVChapters(Path As String, Direction As Byte, ByRef ChapterCollection As Collection, ByRef RunningTime As ULong)
+  Public Sub FindAdditionalMKVChapters(Path As String, Direction As Byte, ByRef ChapterCollection As List(Of frmMain.ChapterListing), ByRef RunningTime As ULong)
     If IO.File.Exists(Path) Then
       Dim SearchDir As String = IO.Path.GetDirectoryName(Path)
       If Not SearchDir.EndsWith(IO.Path.DirectorySeparatorChar) Then SearchDir &= IO.Path.DirectorySeparatorChar
@@ -366,10 +375,13 @@ Module modFuncts
                   Debug.Print("Adding Chapters from " & SearchPath)
                   For Each Edition In searchMKVHeader.ChapterInfo.Editions
                     If Not Edition.FlagHidden Then
+                      Dim LastAtomEnd As Double = 0.0
                       For Each Atom In Edition.Atoms
                         If Not Atom.FlagHidden Then
-                          Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000)
-                          Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000.0)
+                          If dChapterStart = 0.0 Then dChapterStart = LastAtomEnd
+                          LastAtomEnd = CDbl(RunningTime + Atom.TimeEnd / 1000000000.0)
+                          Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(dChapterStart)
                           Dim sChapterLang As String
                           If Atom.Display(0).Language Is Nothing OrElse Atom.Display(0).Language.Count = 0 Then
                             sChapterLang = "und"
@@ -378,7 +390,7 @@ Module modFuncts
                           Else
                             sChapterLang = Join(Atom.Display(0).Language, ", ")
                           End If
-                          ChapterCollection.Add({dChapterStart, sChapterText, sChapterLang})
+                          ChapterCollection.Add(New frmMain.ChapterListing(dChapterStart, sChapterText, sChapterLang))
                         End If
                       Next
                     End If
@@ -420,10 +432,13 @@ Module modFuncts
                   Debug.Print("Adding Chapters from " & SearchPath)
                   For Each Edition In searchMKVHeader.ChapterInfo.Editions
                     If Not Edition.FlagHidden Then
+                      Dim LastAtomEnd As Double = 0.0
                       For Each Atom In Edition.Atoms
                         If Not Atom.FlagHidden Then
-                          Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000)
-                          Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(RunningTime + Atom.TimeStart / 1000000000)
+                          Dim dChapterStart As Double = CDbl(RunningTime + Atom.TimeStart / 1000000000.0)
+                          If dChapterStart = 0.0 Then dChapterStart = LastAtomEnd
+                          LastAtomEnd = CDbl(RunningTime + Atom.TimeEnd / 1000000000.0)
+                          Dim sChapterText As String = Atom.Display(0).Title & ": " & ConvertTimeVal(dChapterStart)
                           Dim sChapterLang As String
                           If Atom.Display(0).Language Is Nothing OrElse Atom.Display(0).Language.Count = 0 Then
                             sChapterLang = "und"
@@ -432,7 +447,7 @@ Module modFuncts
                           Else
                             sChapterLang = Join(Atom.Display(0).Language, ", ")
                           End If
-                          ChapterCollection.Add({dChapterStart, sChapterText, sChapterLang})
+                          ChapterCollection.Add(New frmMain.ChapterListing(dChapterStart, sChapterText, sChapterLang))
                         End If
                       Next
                     End If
@@ -641,10 +656,10 @@ Module modFuncts
   End Sub
 
   Public Function PathToImg(Path As String) As Drawing.Image
-    If My.Computer.FileSystem.FileExists(Path) Then
-      If My.Computer.FileSystem.GetFileInfo(Path).Length >= 1024L * 1024L * 1024L * 4L Then Return Nothing
+    If IO.File.Exists(Path) Then
+      If (New IO.FileInfo(Path)).Length >= 1024L * 1024L * 1024L * 4L Then Return Nothing
       Try
-        Dim bData As Byte() = My.Computer.FileSystem.ReadAllBytes(Path)
+        Dim bData As Byte() = IO.File.ReadAllBytes(Path)
         Dim pStream As New IO.MemoryStream(bData)
         Return Drawing.Image.FromStream(pStream, True, True)
       Catch ex As Exception
@@ -656,11 +671,29 @@ Module modFuncts
   End Function
 
   Public Function CompareImages(image1 As Drawing.Image, image2 As Drawing.Image) As Boolean
+    Try
+      If image1 Is Nothing OrElse image2 Is Nothing Then Return False
+      If Not image1.Size = image2.Size Then Return False
+      Using ms1 As New IO.MemoryStream, ms2 As New IO.MemoryStream
+        image1.Save(ms1, image1.RawFormat)
+        image2.Save(ms2, image2.RawFormat)
+        Dim ba1 As Byte()
+        Dim ba2 As Byte()
+        ba1 = ms1.ToArray
+        ba2 = ms2.ToArray
+        Return ba1.SequenceEqual(ba2)
+      End Using
+    Catch ex As Exception
+      Return False
+    End Try
+  End Function
+
+  Public Function CompareImages(image1 As Drawing.Icon, image2 As Drawing.Icon) As Boolean
     If image1 Is Nothing OrElse image2 Is Nothing Then Return False
     If Not image1.Size = image2.Size Then Return False
     Using ms1 As New IO.MemoryStream, ms2 As New IO.MemoryStream
-      image1.Save(ms1, image1.RawFormat)
-      image2.Save(ms2, image2.RawFormat)
+      image1.Save(ms1)
+      image2.Save(ms2)
       Dim ba1 As Byte()
       Dim ba2 As Byte()
       ba1 = ms1.ToArray
@@ -1395,7 +1428,7 @@ Module modFuncts
   ''' <returns>True on available, false on in use.</returns>
   ''' <remarks></remarks>
   Public Function InUseChecker(Filename As String, access As IO.FileAccess) As Boolean
-    If Not My.Computer.FileSystem.FileExists(Filename) Then Return True
+    If Not IO.File.Exists(Filename) Then Return True
     Dim iStart As Integer = Environment.TickCount
     Do
       Try

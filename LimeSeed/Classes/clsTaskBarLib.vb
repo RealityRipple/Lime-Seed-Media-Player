@@ -127,310 +127,551 @@ Namespace TaskbarLib
   End Enum
 End Namespace
 
+Public Structure ThumbnailToolBarButtons
+  Public Structure ButtonAndToolTip
+    Public Icon As Drawing.Icon
+    Public ToolTipText As String
+    Public Sub New(image As Drawing.Icon, tt As String)
+      Icon = image.Clone
+      ToolTipText = tt.Clone
+    End Sub
+  End Structure
+  Public Back As ButtonAndToolTip
+  Public Play As ButtonAndToolTip
+  Public Pause As ButtonAndToolTip
+  Public [Stop] As ButtonAndToolTip
+  Public [Next] As ButtonAndToolTip
+  Public Sub New(btBack As ButtonAndToolTip, btPlay As ButtonAndToolTip, btPause As ButtonAndToolTip, btStop As ButtonAndToolTip, btNext As ButtonAndToolTip)
+    Back = btBack
+    Play = btPlay
+    Pause = btPause
+    [Stop] = btStop
+    [Next] = btNext
+  End Sub
+End Structure
+Public Class TabbedThumbnailAppEventArgs
+  Inherits TabbedThumbnailEventArgs
+  Public Enum Events
+    Activated
+    Closed
+    Maximized
+    Minimized
+  End Enum
+  Public EventType As Events
+  Public Sub New(Handle As IntPtr, Type As Events)
+    MyBase.New(Handle)
+    EventType = Type
+  End Sub
+End Class
 
-Public Class TaskbarController
-  Private WithEvents ttbClipBack, ttbClipPlayPause, ttbClipStop, ttbClipNext As ThumbnailToolBarButton
-  Private WithEvents ttbBmpBack, ttbBmpPlayPause, ttbBmpStop, ttbBmpNext As ThumbnailToolBarButton
+Public Class TaskbarController_Image
+  Implements IDisposable
+  Private WithEvents ttbBack, ttbPlayPause, ttbStop, ttbNext As ThumbnailToolBarButton
+  Private c_MainHandle As IntPtr
   Private tmpObj As Control
   Private WithEvents taskThumb As TabbedThumbnail
-  Private c_MainHandle As IntPtr
-  Private c_Title, c_Tooltip As String
+  Private c_Buttons As ThumbnailToolBarButtons
   Private c_Icon As Drawing.Icon
-  Public Event AppEvent(sender As Object, e As TabbedThumbnailEventArgs)
+  Private c_Title, c_Tooltip As String
+
+  Public Event AppEvent(sender As Object, e As TabbedThumbnailAppEventArgs)
   Public Event Button_Click(sender As Object, e As ThumbnailButtonClickedEventArgs)
   Private WithEvents tmrEvent As Timer
-  Private icoBack, icoPlay, icoPause, icoStop, icoNext As Drawing.Icon
-  Private sBack, sPlay, sPause, sStop, sNext As String
+
   Private bIsPause As Boolean
+  'Private syncTask As New Object
+  'Private syncThumb As New Object
+
+  Public Sub New(hWnd As IntPtr, Preview As Drawing.Image, Buttons As ThumbnailToolBarButtons, Icon As Drawing.Icon, Title As String, Tooltip As String)
+    If hWnd = IntPtr.Zero Then Return
+    If Preview Is Nothing Then Return
+    If Not clsGlass.IsCompositionEnabled Then Return
+    If Not TaskbarManager.IsPlatformSupported Then Return
+    'SyncLock syncThumb
+    'SyncLock syncTask
+    c_MainHandle = hWnd
+    c_Buttons = Buttons
+    c_Icon = Icon.Clone
+    c_Title = Title.Clone
+    c_Tooltip = Tooltip.Clone
+    tmpObj = New Control
+    ttbBack = New ThumbnailToolBarButton(c_Buttons.Back.Icon.Clone, c_Buttons.Back.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbBack"}
+    ttbPlayPause = New ThumbnailToolBarButton(c_Buttons.Play.Icon.Clone, c_Buttons.Play.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbPlayPause"}
+    ttbStop = New ThumbnailToolBarButton(c_Buttons.Stop.Icon.Clone, c_Buttons.Stop.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbStop"}
+    ttbNext = New ThumbnailToolBarButton(c_Buttons.Next.Icon.Clone, c_Buttons.Next.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbNext"}
+    TaskbarManager.Instance.ThumbnailToolBars.AddButtons(tmpObj.Handle, ttbBack, ttbPlayPause, ttbStop, ttbNext)
+    taskThumb = New TabbedThumbnail(c_MainHandle, tmpObj)
+    TaskbarManager.Instance.TabbedThumbnail.AddThumbnailPreview(taskThumb)
+    Dim tThumb As TabbedThumbnail = TaskbarManager.Instance.TabbedThumbnail.GetThumbnailPreview(tmpObj)
+    Using bmpPreview As New Drawing.Bitmap(Preview)
+      If tThumb IsNot Nothing Then tThumb.SetImage(bmpPreview)
+    End Using
+    taskThumb.Title = c_Title.Clone
+    taskThumb.Tooltip = c_Tooltip.Clone
+    If c_Icon IsNot Nothing Then taskThumb.SetWindowIcon(c_Icon.Clone)
+    'End SyncLock
+    'End SyncLock
+  End Sub
 
   Public Property Title As String
     Get
-      Return c_Title
+      'SyncLock syncTask
+      Return c_Title.Clone
+      'End SyncLock
     End Get
     Set(value As String)
+      'SyncLock syncTask
       c_Title = value.Clone
-      If taskThumb IsNot Nothing Then taskThumb.Title = c_Title
+      taskThumb.Title = c_Title.Clone
+      'End SyncLock
     End Set
   End Property
 
   Public Property Tooltip As String
     Get
-      Return c_Tooltip
+      'SyncLock syncTask
+      Return c_Tooltip.Clone
+      'End SyncLock
     End Get
     Set(value As String)
+      'SyncLock syncTask
       c_Tooltip = value.Clone
-      If taskThumb IsNot Nothing Then taskThumb.Tooltip = c_Tooltip
+      taskThumb.Tooltip = c_Tooltip.Clone
+      'End SyncLock
     End Set
   End Property
-
 
   Public Property Icon As Drawing.Icon
     Get
+      'SyncLock syncTask
       Return c_Icon.Clone
+      'End SyncLock
     End Get
     Set(value As Drawing.Icon)
+      'SyncLock syncTask
       c_Icon = value.Clone
-      If taskThumb IsNot Nothing Then taskThumb.SetWindowIcon(c_Icon.Clone)
+      taskThumb.SetWindowIcon(c_Icon.Clone)
+      'End SyncLock
     End Set
   End Property
 
-  Public Property BackIcon As Drawing.Icon
-    Get
-      Return icoBack
-    End Get
-    Set(value As Drawing.Icon)
-      icoBack = value
-      ttbClipBack.Icon = icoBack
-      If ttbBmpBack IsNot Nothing Then ttbBmpBack.Icon = icoBack
-    End Set
-  End Property
-  Public Property BackText As String
-    Get
-      Return sBack
-    End Get
-    Set(value As String)
-      sBack = value
-      ttbClipBack.Tooltip = sBack
-      If ttbBmpBack IsNot Nothing Then ttbBmpBack.Tooltip = sBack
-    End Set
-  End Property
   Public Property BackEnabled As Boolean
     Get
-      Return ttbClipBack.Enabled
+      'SyncLock syncTask
+      Return ttbBack.Enabled
+      'End SyncLock
     End Get
     Set(value As Boolean)
-      ttbClipBack.Enabled = value
-      If ttbBmpBack IsNot Nothing Then ttbBmpBack.Enabled = value
+      'SyncLock syncTask
+      ttbBack.Enabled = value
+      'End SyncLock
     End Set
   End Property
 
-  Public Property PlayIcon As Drawing.Icon
-    Get
-      Return icoPlay
-    End Get
-    Set(value As Drawing.Icon)
-      icoPlay = value
-      If Not bIsPause Then
-        ttbClipPlayPause.Icon = icoPlay
-        If ttbBmpPlayPause IsNot Nothing Then ttbBmpPlayPause.Icon = icoPlay
-      End If
-    End Set
-  End Property
-  Public Property PlayText As String
-    Get
-      Return sPlay
-    End Get
-    Set(value As String)
-      sPlay = value
-      If Not bIsPause Then
-        ttbClipPlayPause.Tooltip = sPlay
-        If ttbBmpPlayPause IsNot Nothing Then ttbBmpPlayPause.Tooltip = sPlay
-      End If
-    End Set
-  End Property
-  Public Property PauseIcon As Drawing.Icon
-    Get
-      Return icoPause
-    End Get
-    Set(value As Drawing.Icon)
-      icoPause = value
-      If bIsPause Then
-        ttbClipPlayPause.Icon = icoPause
-        If ttbBmpPlayPause IsNot Nothing Then ttbBmpPlayPause.Icon = icoPause
-      End If
-    End Set
-  End Property
-  Public Property PauseText As String
-    Get
-      Return sPause
-    End Get
-    Set(value As String)
-      sPause = value
-      If bIsPause Then
-        ttbClipPlayPause.Tooltip = sPause
-        If ttbBmpPlayPause IsNot Nothing Then ttbBmpPlayPause.Tooltip = sPause
-      End If
-    End Set
-  End Property
   Public Property PlayPauseEnabled As Boolean
     Get
-      Return ttbClipPlayPause.Enabled
+      'SyncLock syncTask
+      Return ttbPlayPause.Enabled
+      'End SyncLock
     End Get
     Set(value As Boolean)
-      ttbClipPlayPause.Enabled = value
-      If ttbBmpPlayPause IsNot Nothing Then ttbBmpPlayPause.Enabled = value
+      'SyncLock syncTask
+      ttbPlayPause.Enabled = value
+      'End SyncLock
     End Set
   End Property
 
-  Public Property StopIcon As Drawing.Icon
-    Get
-      Return icoStop
-    End Get
-    Set(value As Drawing.Icon)
-      icoStop = value
-      ttbClipStop.Icon = icoStop
-      If ttbBmpStop IsNot Nothing Then ttbBmpStop.Icon = icoStop
-    End Set
-  End Property
-  Public Property StopText As String
-    Get
-      Return sStop
-    End Get
-    Set(value As String)
-      sStop = value
-      ttbClipStop.Tooltip = sStop
-      If ttbBmpStop IsNot Nothing Then ttbBmpStop.Tooltip = sStop
-    End Set
-  End Property
   Public Property StopEnabled As Boolean
     Get
-      Return ttbClipStop.Enabled
+      'SyncLock syncTask
+      Return ttbStop.Enabled
+      'End SyncLock
     End Get
     Set(value As Boolean)
-      ttbClipStop.Enabled = value
-      If ttbBmpStop IsNot Nothing Then ttbBmpStop.Enabled = value
+      'SyncLock syncTask
+      ttbStop.Enabled = value
+      'End SyncLock
     End Set
   End Property
 
-  Public Property NextIcon As Drawing.Icon
-    Get
-      Return icoNext
-    End Get
-    Set(value As Drawing.Icon)
-      icoNext = value
-      ttbClipNext.Icon = icoNext
-      If ttbBmpNext IsNot Nothing Then ttbBmpNext.Icon = icoNext
-    End Set
-  End Property
-  Public Property NextText As String
-    Get
-      Return sNext
-    End Get
-    Set(value As String)
-      sNext = value
-      ttbClipNext.Tooltip = sNext
-      If ttbBmpNext IsNot Nothing Then ttbBmpNext.Tooltip = sNext
-    End Set
-  End Property
   Public Property NextEnabled As Boolean
     Get
-      Return ttbClipNext.Enabled
+      'SyncLock syncTask
+      Return ttbStop.Enabled
+      'End SyncLock
     End Get
     Set(value As Boolean)
-      ttbClipNext.Enabled = value
-      If ttbBmpNext IsNot Nothing Then ttbBmpNext.Enabled = value
+      'SyncLock syncTask
+      ttbStop.Enabled = value
+      'End SyncLock
     End Set
   End Property
 
   Public Property IsPause As Boolean
     Get
+      'SyncLock syncTask
       Return bIsPause
+      'End SyncLock
     End Get
     Set(value As Boolean)
+      'SyncLock syncTask
       bIsPause = value
       If bIsPause Then
-        ttbClipPlayPause.Icon = icoPause
-        ttbClipPlayPause.Tooltip = sPause
-        If ttbBmpPlayPause IsNot Nothing Then
-          ttbBmpPlayPause.Icon = icoPause
-          ttbBmpPlayPause.Tooltip = sPause
-          ttbBmpPlayPause.Enabled = ttbClipPlayPause.Enabled
-        End If
+        ttbPlayPause.Icon = c_Buttons.Pause.Icon.Clone
+        ttbPlayPause.Tooltip = c_Buttons.Pause.ToolTipText.Clone
       Else
-        ttbClipPlayPause.Icon = icoPlay
-        ttbClipPlayPause.Tooltip = sPlay
-        If ttbBmpPlayPause IsNot Nothing Then
-          ttbBmpPlayPause.Icon = icoPlay
-          ttbBmpPlayPause.Tooltip = sPlay
-          ttbBmpPlayPause.Enabled = ttbClipPlayPause.Enabled
-        End If
+        ttbPlayPause.Icon = c_Buttons.Play.Icon.Clone
+        ttbPlayPause.Tooltip = c_Buttons.Play.ToolTipText.Clone
       End If
+      'End SyncLock
     End Set
   End Property
 
-  Public Sub RemovePreview()
-    If tmpObj IsNot Nothing Then
-      If tmpObj.InvokeRequired Then
-        tmpObj.BeginInvoke(New MethodInvoker(AddressOf RemovePreview))
-      Else
-        If TaskbarManager.Instance.TabbedThumbnail.IsThumbnailPreviewAdded(tmpObj) Then TaskbarManager.Instance.TabbedThumbnail.RemoveThumbnailPreview(tmpObj)
-        TabbedThumbnailManager.ClearThumbnailClip(c_MainHandle)
-        ttbBmpBack = Nothing
-        ttbBmpPlayPause = Nothing
-        ttbBmpStop = Nothing
-        ttbBmpNext = Nothing
-        tmpObj = Nothing
+  Private Sub ttbBack_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbBack.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub ttbNext_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbNext.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub ttbPlayPause_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbPlayPause.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub ttbStop_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbStop.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub RunEvent(sender As Object, e As EventArgs)
+    tmrEvent = Nothing
+    tmrEvent = New Timer
+    tmrEvent.Tag = {sender, e}
+    tmrEvent.Interval = 1
+    tmrEvent.Start()
+  End Sub
+
+  Private Sub tmrEvent_Tick(sender As Object, e As System.EventArgs) Handles tmrEvent.Tick
+    tmrEvent.Stop()
+    Dim eSender As Object = tmrEvent.Tag(0)
+    Dim eE As EventArgs = tmrEvent.Tag(1)
+    If eSender.GetType Is GetType(TabbedThumbnail) Then
+      RaiseEvent AppEvent(eSender, eE)
+    Else
+      RaiseEvent Button_Click(eSender, eE)
+    End If
+    tmrEvent = Nothing
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailActivated(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailActivated
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Activated))
+    'Stop
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailClosed(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailClosed
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Closed))
+    'Stop
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailMaximized(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailMaximized
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Maximized))
+    'Stop
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailMinimized(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailMinimized
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Minimized))
+    'Stop
+  End Sub
+
+#Region "IDisposable Support"
+  Private disposedValue As Boolean 
+  Protected Overridable Sub Dispose(disposing As Boolean)
+    If Not Me.disposedValue Then
+      If disposing Then
+        'SyncLock syncThumb
+        'SyncLock syncTask
+        If tmpObj IsNot Nothing Then
+          If TaskbarManager.Instance.TabbedThumbnail.IsThumbnailPreviewAdded(tmpObj) Then
+            Try
+              TaskbarManager.Instance.TabbedThumbnail.RemoveThumbnailPreview(tmpObj)
+            Catch ex As Exception
+
+            End Try
+          End If
+          tmpObj.Dispose()
+          tmpObj = Nothing
+        End If
         If taskThumb IsNot Nothing Then
+          If TaskbarManager.Instance.TabbedThumbnail.IsThumbnailPreviewAdded(taskThumb) Then
+            Try
+              TaskbarManager.Instance.TabbedThumbnail.RemoveThumbnailPreview(taskThumb)
+            Catch ex As Exception
+
+            End Try
+          End If
+          taskThumb.Dispose()
           taskThumb = Nothing
         End If
+        TabbedThumbnailManager.ClearThumbnailClip(c_MainHandle)
+        If ttbBack IsNot Nothing Then
+          ttbBack.Dispose()
+          ttbBack = Nothing
+        End If
+        If ttbPlayPause IsNot Nothing Then
+          ttbPlayPause.Dispose()
+          ttbPlayPause = Nothing
+        End If
+        If ttbStop IsNot Nothing Then
+          ttbStop.Dispose()
+          ttbStop = Nothing
+        End If
+        If ttbNext IsNot Nothing Then
+          ttbNext.Dispose()
+          ttbNext = Nothing
+        End If
+        'End SyncLock
+        'End SyncLock
       End If
     End If
+    Me.disposedValue = True
   End Sub
+  Public Sub Dispose() Implements IDisposable.Dispose
+    Dispose(True)
+    GC.SuppressFinalize(Me)
+  End Sub
+#End Region
+End Class
 
-  Public Sub CreatePreview(Obj As Drawing.Image)
-    If Obj Is Nothing Then Return
+Public Class TaskbarController_Clip
+  Implements IDisposable
+  Private WithEvents ttbBack, ttbPlayPause, ttbStop, ttbNext As ThumbnailToolBarButton
+  Private c_MainHandle As IntPtr
+  Private WithEvents taskThumb As TabbedThumbnail
+  Private c_Buttons As ThumbnailToolBarButtons
+  Private c_Icon As Drawing.Icon
+  Private c_Title, c_Tooltip As String
+
+  Public Event AppEvent(sender As Object, e As TabbedThumbnailAppEventArgs)
+  Public Event Button_Click(sender As Object, e As ThumbnailButtonClickedEventArgs)
+  Private WithEvents tmrEvent As Timer
+
+  Private bIsPause As Boolean
+  Private syncTask As New Object
+  Private syncThumb As New Object
+
+  Public Sub New(hWnd As IntPtr, Preview As Object, Buttons As ThumbnailToolBarButtons, Icon As Drawing.Icon, Title As String, Tooltip As String)
+    If hWnd = IntPtr.Zero Then Return
+    If Preview Is Nothing Then Return
     If Not clsGlass.IsCompositionEnabled Then Return
-    If tmpObj Is Nothing Then
-      RemovePreview()
-      CreateTmpObj()
-    End If
-    If taskThumb Is Nothing Then
-      taskThumb = New TabbedThumbnail(c_MainHandle, tmpObj)
-      TaskbarManager.Instance.TabbedThumbnail.AddThumbnailPreview(taskThumb)
-    End If
-    Dim preview As TabbedThumbnail = TaskbarManager.Instance.TabbedThumbnail.GetThumbnailPreview(tmpObj)
-    Using bmpPreview As New Drawing.Bitmap(Obj)
-      If preview IsNot Nothing Then preview.SetImage(bmpPreview)
-    End Using
-    taskThumb.Title = c_Title
+    If Not TaskbarManager.IsPlatformSupported Then Return
+    'SyncLock syncThumb
+    'SyncLock syncTask
+    c_MainHandle = hWnd
+    c_Buttons = Buttons
+    c_Icon = Icon.Clone
+    c_Title = Title.Clone
+    c_Tooltip = Tooltip.Clone
+    ttbBack = New ThumbnailToolBarButton(c_Buttons.Back.Icon.Clone, c_Buttons.Back.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbBack"}
+    ttbPlayPause = New ThumbnailToolBarButton(c_Buttons.Play.Icon.Clone, c_Buttons.Play.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbPlayPause"}
+    ttbStop = New ThumbnailToolBarButton(c_Buttons.Stop.Icon.Clone, c_Buttons.Stop.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbStop"}
+    ttbNext = New ThumbnailToolBarButton(c_Buttons.Next.Icon.Clone, c_Buttons.Next.ToolTipText.Clone) With {.Enabled = True, .Name = "ttbNext"}
+    TaskbarManager.Instance.ThumbnailToolBars.AddButtons(c_MainHandle, ttbBack, ttbPlayPause, ttbStop, ttbNext)
+    taskThumb = New TabbedThumbnail(c_MainHandle, c_MainHandle)
+    Dim loc As Drawing.Point = GetExactLoc(Preview)
+    TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, Preview.Size))
+    taskThumb.Title = c_Title.Clone
+    taskThumb.Tooltip = c_Tooltip.Clone
     If c_Icon IsNot Nothing Then taskThumb.SetWindowIcon(c_Icon.Clone)
-  End Sub
-
-  Public Sub CreatePreview(obj As Control)
-    If Not clsGlass.IsCompositionEnabled Then Return
-    If TaskbarManager.IsPlatformSupported AndAlso obj IsNot Nothing Then
-      If tmpObj IsNot Nothing Then RemovePreview()
-      Dim loc As Drawing.Point = GetExactLoc(obj)
-      If taskThumb Is Nothing Then
-        taskThumb = New TabbedThumbnail(c_MainHandle, c_MainHandle)
-        'Try
-        '  TaskbarManager.Instance.ThumbnailToolbars.AddButtons(c_MainHandle, ttbClipBack, ttbClipPlayPause, ttbClipStop, ttbClipNext)
-        'Catch ex As Exception
-
-        'End Try
-      End If
-      Try
-        TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, obj.Size))
-      Catch ex As Exception
-
-      End Try
-      Try
-        taskThumb.Title = c_Title
-      Catch ex As Exception
-        Try
-          If taskThumb Is Nothing Then
-            taskThumb = New TabbedThumbnail(c_MainHandle, c_MainHandle)
-          End If
-          taskThumb.Title = c_Title
-        Catch ex2 As Exception
-          Return
-        End Try
-      End Try
-      If c_Icon IsNot Nothing Then taskThumb.SetWindowIcon(c_Icon.Clone)
-    End If
+    'End SyncLock
+    'End SyncLock
   End Sub
 
   Public Sub UpdatePreview(obj As Control)
+    'SyncLock syncThumb
+    'SyncLock syncTask
+    If obj Is Nothing Then Return
     If Not clsGlass.IsCompositionEnabled Then Return
-    If TaskbarManager.IsPlatformSupported AndAlso obj IsNot Nothing Then
-      Dim loc As Drawing.Point = GetExactLoc(obj)
-      TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, obj.Size))
+    If Not TaskbarManager.IsPlatformSupported Then Return
+    Dim loc As Drawing.Point = GetExactLoc(obj)
+    TaskbarManager.Instance.TabbedThumbnail.SetThumbnailClip(c_MainHandle, New Drawing.Rectangle(loc, obj.Size))
+    'End SyncLock
+    'End SyncLock
+  End Sub
+
+  Public Property Title As String
+    Get
+      'SyncLock syncTask
+      Return c_Title.Clone
+      'End SyncLock
+    End Get
+    Set(value As String)
+      'SyncLock syncTask
+      c_Title = value.Clone
+      taskThumb.Title = c_Title.Clone
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property Tooltip As String
+    Get
+      'SyncLock syncTask
+      Return c_Tooltip.Clone
+      'End SyncLock
+    End Get
+    Set(value As String)
+      'SyncLock syncTask
+      c_Tooltip = value.Clone
+      taskThumb.Tooltip = c_Tooltip.Clone
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property Icon As Drawing.Icon
+    Get
+      'SyncLock syncTask
+      Return c_Icon.Clone
+      'End SyncLock
+    End Get
+    Set(value As Drawing.Icon)
+      'SyncLock syncTask
+      c_Icon = value.Clone
+      taskThumb.SetWindowIcon(c_Icon.Clone)
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property BackEnabled As Boolean
+    Get
+      'SyncLock syncTask
+      Return ttbBack.Enabled
+      'End SyncLock
+    End Get
+    Set(value As Boolean)
+      'SyncLock syncTask
+      ttbBack.Enabled = value
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property PlayPauseEnabled As Boolean
+    Get
+      'SyncLock syncTask
+      Return ttbPlayPause.Enabled
+      'End SyncLock
+    End Get
+    Set(value As Boolean)
+      'SyncLock syncTask
+      ttbPlayPause.Enabled = value
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property StopEnabled As Boolean
+    Get
+      'SyncLock syncTask
+      Return ttbStop.Enabled
+      'End SyncLock
+    End Get
+    Set(value As Boolean)
+      'SyncLock syncTask
+      ttbStop.Enabled = value
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property NextEnabled As Boolean
+    Get
+      'SyncLock syncTask
+      Return ttbStop.Enabled
+      'End SyncLock
+    End Get
+    Set(value As Boolean)
+      'SyncLock syncTask
+      ttbStop.Enabled = value
+      'End SyncLock
+    End Set
+  End Property
+
+  Public Property IsPause As Boolean
+    Get
+      'SyncLock syncTask
+      Return bIsPause
+      'End SyncLock
+    End Get
+    Set(value As Boolean)
+      'SyncLock syncTask
+      bIsPause = value
+      If bIsPause Then
+        ttbPlayPause.Icon = c_Buttons.Pause.Icon.Clone
+        ttbPlayPause.Tooltip = c_Buttons.Pause.ToolTipText.Clone
+      Else
+        ttbPlayPause.Icon = c_Buttons.Play.Icon.Clone
+        ttbPlayPause.Tooltip = c_Buttons.Play.ToolTipText.Clone
+      End If
+      'End SyncLock
+    End Set
+  End Property
+
+  Private Sub ttbBack_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbBack.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub ttbNext_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbNext.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub ttbPlayPause_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbPlayPause.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub ttbStop_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbStop.Click
+    RunEvent(sender, e)
+  End Sub
+
+  Private Sub RunEvent(sender As Object, e As EventArgs)
+    tmrEvent = Nothing
+    tmrEvent = New Timer
+    tmrEvent.Tag = {sender, e}
+    tmrEvent.Interval = 1
+    tmrEvent.Start()
+  End Sub
+
+  Private Sub tmrEvent_Tick(sender As Object, e As System.EventArgs) Handles tmrEvent.Tick
+    tmrEvent.Stop()
+    Dim eSender As Object = tmrEvent.Tag(0)
+    Dim eE As EventArgs = tmrEvent.Tag(1)
+    If eSender.GetType Is GetType(TabbedThumbnail) Then
+      RaiseEvent AppEvent(eSender, eE)
+    Else
+      RaiseEvent Button_Click(eSender, eE)
     End If
+    tmrEvent = Nothing
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailActivated(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailActivated
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Activated))
+    'Stop
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailClosed(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailClosed
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Closed))
+    'Stop
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailMaximized(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailMaximized
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Maximized))
+    'Stop
+  End Sub
+
+  Private Sub taskThumb_TabbedThumbnailMinimized(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailMinimized
+    RunEvent(sender, New TabbedThumbnailAppEventArgs(e.WindowHandle, TabbedThumbnailAppEventArgs.Events.Minimized))
+    'Stop
   End Sub
 
   Private Function GetExactLoc(obj As Control) As Drawing.Point
+    If obj Is Nothing Then Return Drawing.Point.Empty
     Dim loc As Drawing.Point
-    Dim parobj = obj
+    Dim parobj As Object = obj
     Do
       loc.X += parobj.Location.X
       loc.Y += parobj.Location.Y
@@ -439,105 +680,210 @@ Public Class TaskbarController
     Return loc
   End Function
 
-  Private Sub CreateTmpObj()
-    tmpObj = New Control
-    ttbBmpBack = New ThumbnailToolBarButton(icoBack, sBack) With {.Enabled = True}
-    ttbBmpPlayPause = New ThumbnailToolBarButton(icoPause, sPause) With {.Enabled = True}
-    ttbBmpStop = New ThumbnailToolBarButton(icoStop, sStop) With {.Enabled = True}
-    ttbBmpNext = New ThumbnailToolBarButton(icoNext, sNext) With {.Enabled = True}
-    TaskbarManager.Instance.ThumbnailToolBars.AddButtons(tmpObj.Handle, ttbBmpBack, ttbBmpPlayPause, ttbBmpStop, ttbBmpNext)
-  End Sub
+#Region "IDisposable Support"
+  Private disposedValue As Boolean
+  Protected Overridable Sub Dispose(disposing As Boolean)
+    If Not Me.disposedValue Then
+      If disposing Then
+        'SyncLock syncThumb
+        'SyncLock syncTask
+        If taskThumb IsNot Nothing Then
+          If TaskbarManager.Instance.TabbedThumbnail.IsThumbnailPreviewAdded(taskThumb) Then
+            Try
+              TaskbarManager.Instance.TabbedThumbnail.RemoveThumbnailPreview(taskThumb)
+            Catch ex As Exception
 
-  Public Sub New(hWnd As IntPtr, BackIcon As Drawing.Icon, BackText As String, PlayIcon As Drawing.Icon, PlayText As String, PauseIcon As Drawing.Icon, PauseText As String, StopIcon As Drawing.Icon, StopText As String, NextIcon As Drawing.Icon, NextText As String)
-    c_MainHandle = hWnd
-    icoBack = BackIcon
-    sBack = BackText
-    icoPlay = PlayIcon
-    sPlay = PlayText
-    icoPause = PauseIcon
-    sPause = PauseText
-    icoStop = StopIcon
-    sStop = StopText
-    icoNext = NextIcon
-    sNext = NextText
-    ttbClipBack = New ThumbnailToolBarButton(BackIcon, BackText)
-    ttbClipPlayPause = New ThumbnailToolBarButton(PlayIcon, PlayText)
-    ttbClipStop = New ThumbnailToolBarButton(StopIcon, StopText)
-    ttbClipNext = New ThumbnailToolBarButton(NextIcon, NextText)
-    TaskbarManager.Instance.ThumbnailToolBars.AddButtons(c_MainHandle, ttbClipBack, ttbClipPlayPause, ttbClipStop, ttbClipNext)
-  End Sub
-
-  Private Sub ttbBack_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbClipBack.Click, ttbBmpBack.Click
-    RunEvent("Back", e)
-  End Sub
-
-  Private Sub ttbNext_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbClipNext.Click, ttbBmpNext.Click
-    RunEvent("Next", e)
-  End Sub
-
-  Private Sub ttbPlayPause_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbClipPlayPause.Click, ttbBmpPlayPause.Click
-    RunEvent("PlayPause", e)
-  End Sub
-
-  Private Sub ttbStop_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles ttbClipStop.Click, ttbBmpStop.Click
-    RunEvent("Stop", e)
-  End Sub
-
-  Private Sub RunEvent(Name As String, e As EventArgs)
-    tmrEvent = Nothing
-    tmrEvent = New Timer
-    tmrEvent.Tag = {Name, e}
-    tmrEvent.Interval = 1
-    tmrEvent.Start()
-  End Sub
-
-  Private Sub tmrEvent_Tick(sender As Object, e As System.EventArgs) Handles tmrEvent.Tick
-    tmrEvent.Stop()
-    Dim sSender As String = tmrEvent.Tag(0)
-    Debug.Print(sSender)
-    If sSender.StartsWith("APP_") Then
-      Dim aE As TabbedThumbnailEventArgs = tmrEvent.Tag(1)
-      RaiseEvent AppEvent(sSender, aE)
-    Else
-      Dim aE As ThumbnailButtonClickedEventArgs = tmrEvent.Tag(1)
-      RaiseEvent Button_Click(sSender, aE)
+            End Try
+          End If
+          taskThumb.Dispose()
+          taskThumb = Nothing
+        End If
+        TabbedThumbnailManager.ClearThumbnailClip(c_MainHandle)
+        If ttbBack IsNot Nothing Then
+          ttbBack.Dispose()
+          ttbBack = Nothing
+        End If
+        If ttbPlayPause IsNot Nothing Then
+          ttbPlayPause.Dispose()
+          ttbPlayPause = Nothing
+        End If
+        If ttbStop IsNot Nothing Then
+          ttbStop.Dispose()
+          ttbStop = Nothing
+        End If
+        If ttbNext IsNot Nothing Then
+          ttbNext.Dispose()
+          ttbNext = Nothing
+        End If
+        'End SyncLock
+        'End SyncLock
+      End If
     End If
+    Me.disposedValue = True
+  End Sub
+  Public Sub Dispose() Implements IDisposable.Dispose
+    Dispose(True)
+    GC.SuppressFinalize(Me)
+  End Sub
+#End Region
+End Class
 
-    tmrEvent = Nothing
+Public Class TaskbarController
+  Private WithEvents tcImage As TaskbarController_Image
+  Private WithEvents tcClip As TaskbarController_Clip
+
+  Private c_MainHandle As IntPtr
+  Private c_Buttons As ThumbnailToolBarButtons
+  Private c_Icon As Drawing.Icon
+  Private c_Title, c_Tooltip As String
+
+  Public Event AppEvent(sender As Object, e As TabbedThumbnailAppEventArgs)
+  Public Event Button_Click(sender As Object, e As ThumbnailButtonClickedEventArgs)
+
+  Public ReadOnly Property ImageEnabled As Boolean
+    Get
+      Return tcImage IsNot Nothing
+    End Get
+  End Property
+
+  Public Sub New(hWnd As IntPtr, Buttons As ThumbnailToolBarButtons, Icon As Drawing.Icon, Title As String, Tooltip As String)
+    c_MainHandle = hWnd
+    c_Buttons = Buttons
+    c_Icon = Icon.Clone
+    c_Title = Title.Clone
+    c_Tooltip = Tooltip.Clone
   End Sub
 
-  Private Sub taskThumb_TabbedThumbnailActivated(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailActivated
-    RunEvent("APP_Activated", e)
-    'Stop
+  Public Property Title As String
+    Get
+      Return c_Title.Clone
+    End Get
+    Set(value As String)
+      c_Title = value.Clone
+      If tcClip IsNot Nothing Then tcClip.Title = c_Title.Clone
+      If tcImage IsNot Nothing Then tcImage.Title = c_Title.Clone
+    End Set
+  End Property
+
+  Public Property Tooltip As String
+    Get
+      Return c_Tooltip.Clone
+    End Get
+    Set(value As String)
+      c_Tooltip = value.Clone
+      If tcClip IsNot Nothing Then tcClip.Tooltip = c_Tooltip.Clone
+      If tcImage IsNot Nothing Then tcImage.Tooltip = c_Tooltip.Clone
+    End Set
+  End Property
+
+  Public Property Icon As Drawing.Icon
+    Get
+      Return c_Icon.Clone
+    End Get
+    Set(value As Drawing.Icon)
+      c_Icon = value.Clone
+      If tcClip IsNot Nothing Then tcClip.Icon = c_Icon.Clone
+      If tcImage IsNot Nothing Then tcImage.Icon = c_Icon.Clone
+    End Set
+  End Property
+
+  Public Property BackEnabled As Boolean
+    Get
+      If tcClip IsNot Nothing Then Return tcClip.BackEnabled
+      If tcImage IsNot Nothing Then Return tcImage.BackEnabled
+      Return False
+    End Get
+    Set(value As Boolean)
+      If tcClip IsNot Nothing Then tcClip.BackEnabled = value
+      If tcImage IsNot Nothing Then tcImage.BackEnabled = value
+    End Set
+  End Property
+
+  Public Property PlayPauseEnabled As Boolean
+    Get
+      If tcClip IsNot Nothing Then Return tcClip.PlayPauseEnabled
+      If tcImage IsNot Nothing Then Return tcImage.PlayPauseEnabled
+      Return False
+    End Get
+    Set(value As Boolean)
+      If tcClip IsNot Nothing Then tcClip.PlayPauseEnabled = value
+      If tcImage IsNot Nothing Then tcImage.PlayPauseEnabled = value
+    End Set
+  End Property
+
+  Public Property StopEnabled As Boolean
+    Get
+      If tcClip IsNot Nothing Then Return tcClip.StopEnabled
+      If tcImage IsNot Nothing Then Return tcImage.StopEnabled
+      Return False
+    End Get
+    Set(value As Boolean)
+      If tcClip IsNot Nothing Then tcClip.StopEnabled = value
+      If tcImage IsNot Nothing Then tcImage.StopEnabled = value
+    End Set
+  End Property
+
+  Public Property NextEnabled As Boolean
+    Get
+      If tcClip IsNot Nothing Then Return tcClip.NextEnabled
+      If tcImage IsNot Nothing Then Return tcImage.NextEnabled
+      Return False
+    End Get
+    Set(value As Boolean)
+      If tcClip IsNot Nothing Then tcClip.NextEnabled = value
+      If tcImage IsNot Nothing Then tcImage.NextEnabled = value
+    End Set
+  End Property
+
+  Public Property IsPause As Boolean
+    Get
+      If tcClip IsNot Nothing Then Return tcClip.IsPause
+      If tcImage IsNot Nothing Then Return tcImage.IsPause
+      Return False
+    End Get
+    Set(value As Boolean)
+      If tcClip IsNot Nothing Then tcClip.IsPause = value
+      If tcImage IsNot Nothing Then tcImage.IsPause = value
+    End Set
+  End Property
+
+  Public Sub ShowClip(Preview As Object)
+    If tcImage IsNot Nothing Then
+      tcImage.Dispose()
+      tcImage = Nothing
+    End If
+    If tcClip IsNot Nothing Then
+      UpdateClip(Preview)
+      Return
+    End If
+    tcClip = New TaskbarController_Clip(c_MainHandle, Preview, c_Buttons, c_Icon, c_Title, c_Tooltip)
   End Sub
 
-  Private Sub taskThumb_TabbedThumbnailBitmapRequested(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailBitmapRequestedEventArgs) Handles taskThumb.TabbedThumbnailBitmapRequested
-    'Stop
+  Public Sub ShowImage(Preview As Drawing.Image)
+    If tcImage IsNot Nothing Then
+      tcImage.Dispose()
+      tcImage = Nothing
+    End If
+    tcImage = New TaskbarController_Image(c_MainHandle, Preview, c_Buttons, c_Icon, c_Title, c_Tooltip)
   End Sub
 
-  Private Sub taskThumb_TabbedThumbnailClosed(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailClosed
-    RunEvent("APP_Close", e)
-    'Stop
+  Public Sub UpdateClip(Preview As Object)
+    If tcClip IsNot Nothing Then tcClip.UpdatePreview(Preview)
   End Sub
 
-  Private Sub taskThumb_TabbedThumbnailMaximized(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailMaximized
-    RunEvent("APP_Maximize", e)
-    'Stop
+  Private Sub tcClip_AppEvent(sender As Object, e As TabbedThumbnailAppEventArgs) Handles tcClip.AppEvent
+    RaiseEvent AppEvent(sender, e)
   End Sub
 
-  Private Sub taskThumb_TabbedThumbnailMinimized(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.TabbedThumbnailEventArgs) Handles taskThumb.TabbedThumbnailMinimized
-    RunEvent("APP_Minimize", e)
-    'Stop
+  Private Sub tcClip_Button_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles tcClip.Button_Click
+    RaiseEvent Button_Click(sender, e)
   End Sub
 
-  Private Sub taskThumb_TitleChanged(sender As Object, e As System.EventArgs) Handles taskThumb.TitleChanged
-    'Debug.Print("Title Change")
-    'Stop
+  Private Sub tcImage_AppEvent(sender As Object, e As TabbedThumbnailAppEventArgs) Handles tcImage.AppEvent
+    RaiseEvent AppEvent(sender, e)
   End Sub
 
-  Private Sub taskThumb_TooltipChanged(sender As Object, e As System.EventArgs) Handles taskThumb.TooltipChanged
-    'Debug.Print("Tooltip Change")
-    'Stop
+  Private Sub tcImage_Button_Click(sender As Object, e As Microsoft.WindowsAPICodePack.Taskbar.ThumbnailButtonClickedEventArgs) Handles tcImage.Button_Click
+    RaiseEvent Button_Click(sender, e)
   End Sub
-
 End Class

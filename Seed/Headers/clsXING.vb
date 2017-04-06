@@ -31,7 +31,7 @@
   Private xHeader As XINGHeader
   Private xExtend As XINGExtend
 
-  Public Sub New(bFrame As Byte(), ByRef cMPEG As clsMPEG)
+  Public Sub New(bFrame As Byte(), cMPEG As clsMPEG, Optional ByVal Start As Integer = 0)
     Dim I As Integer
     Dim lStrt As Long
     Dim lPos As Long
@@ -48,7 +48,7 @@
         lStrt = 17 + 4
       End If
     End If
-    lPos = lStrt
+    lPos = Start + lStrt
     xHeader.headerID = GetString(bFrame, lPos, 4)
     If xHeader.headerID <> "Xing" And xHeader.headerID <> "Info" Then
       xHeader.headerID = vbNullString

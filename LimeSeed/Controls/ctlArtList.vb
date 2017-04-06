@@ -245,7 +245,7 @@
   Private Delegate Sub DownloadProgressChangedCallBack(sender As Object, e As System.Net.DownloadProgressChangedEventArgs)
   Private Sub sckReader_DownloadProgressChanged(sender As Object, e As System.Net.DownloadProgressChangedEventArgs) Handles sckReader.DownloadProgressChanged
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New DownloadProgressChangedCallBack(AddressOf sckReader_DownloadProgressChanged), sender, e)
+      Me.Invoke(New DownloadProgressChangedCallBack(AddressOf sckReader_DownloadProgressChanged), sender, e)
     Else
       pbProgress.Maximum = e.TotalBytesToReceive
       pbProgress.Value = e.BytesReceived

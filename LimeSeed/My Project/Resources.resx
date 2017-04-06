@@ -340,4 +340,91 @@
   <data name="tt_move" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\tt_move.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="tray" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\tray.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_pause0" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\pause0.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_pause1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\pause1.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play0" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play0.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play1.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play2.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play3.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play4" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play4.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play5" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play5.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play6" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play6.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_play7" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\play7.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="tray_stop" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\tray\stop.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_ff" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\ff.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_ff_hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\ff_hover.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_pause" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\pause.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_pause_hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\pause_hover.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_play" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\play.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_play_hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\play_hover.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_restore" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\restore.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_restore_hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\restore_hover.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_rw" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\rw.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_rw_hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\rw_hover.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_stop" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\stop.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_stop_hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\stop_hover.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_ff_disabled" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\ff_disabled.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_pause_disabled" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\pause_disabled.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_play_disabled" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\play_disabled.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_rw_disabled" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\rw_disabled.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="traybutton_stop_disabled" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\traybuttons\stop_disabled.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>

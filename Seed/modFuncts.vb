@@ -11,7 +11,7 @@
         rI += 1
         If rI > &HFFFFFF Then rI = 1
         sTmp = IO.Path.GetTempPath & "seedTEMP" & BufferHex(rI, 6) & "." & Extension
-      Loop While My.Computer.FileSystem.FileExists(sTmp)
+      Loop While IO.File.Exists(sTmp)
       Return sTmp
     End SyncLock
   End Function

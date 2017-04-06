@@ -823,7 +823,7 @@
   Public Sub New(FilePath As String)
     bValid = False
     If String.IsNullOrEmpty(FilePath) Then Return
-    If Not My.Computer.FileSystem.FileExists(FilePath) Then Return
+    If Not io.file.exists(FilePath) Then Return
     Using ioFile As New IO.BinaryReader(New IO.FileStream(FilePath, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.Read))
       Dim mChunk As New Chunk
       mChunk.Header.ChunkID = ioFile.ReadChars(4)

@@ -1,6 +1,7 @@
 ﻿Public Class frmProps
   Private mpPreview As Seed.ctlSeed
   Public sFile As String
+  Private iGenPreviewStep As Integer
 
   Private Sub lstFilters_DoubleClick(sender As Object, e As System.EventArgs) Handles lstFilters.DoubleClick
     cmdFilterProps.PerformClick()
@@ -67,14 +68,26 @@
     Return newRow
   End Function
 
+  Private Function GeneratePlayCountRow(Label As String, Value As String, rawData As Seed.clsID3v2.ParseResponse) As DataGridViewRow
+    Dim newRow As New DataGridViewRow
+    newRow.MinimumHeight = 22
+    newRow.Cells.Add(New DataGridViewTextBoxCell With {.Value = Label & ":"})
+    Dim newCell As New DataGridViewButtonCell With {.Value = Value & " Plays (Reset)", .Tag = Value, .ToolTipText = "Click to Reset Play Counter"}
+    newRow.Cells.Add(newCell)
+    newRow.Cells(0).ReadOnly = True
+    newRow.Cells(1).ReadOnly = True
+    newRow.Tag = rawData
+    Return newRow
+  End Function
+
+  Private sGenreListing(&HBF) As String
   Private Function GenerateGenres() As String()
-    Static sGenres(&H93) As String
-    If String.IsNullOrEmpty(sGenres(0)) Then
-      For I As Byte = 0 To &H93
-        sGenres(I) = Seed.clsID3v1.GenreName(I)
+    If String.IsNullOrEmpty(sGenreListing(0)) Then
+      For I As Byte = 0 To &HBF
+        sGenreListing(I) = Seed.clsID3v1.GenreName(I)
       Next
     End If
-    Return sGenres
+    Return sGenreListing
   End Function
 
   Private Function LoadID3v1() As Boolean
@@ -184,6 +197,27 @@
         sValue = mData.DataString
         oTag = Nothing
         Return True
+      Case GetType(Seed.clsID3v2.Parsed_PCNT)
+        Dim mData As Seed.clsID3v2.Parsed_PCNT = fData
+        sValue = mData.Counter
+        oTag = Nothing
+        Return True
+      Case GetType(Seed.clsID3v2.Parsed_POPM)
+        Dim mData As Seed.clsID3v2.Parsed_POPM = fData
+        If mData.Rating = 0 Then
+          If mData.Counter > 0 Then
+            sValue = mData.Counter & " Plays"
+          End If
+        Else
+          If mData.Counter = 0 Then
+            sValue = FormatNumber((mData.Rating / 255) * 5, 1, TriState.True, TriState.False, TriState.False) & " Stars"
+          Else
+            sValue = FormatNumber((mData.Rating / 255) * 5, 1, TriState.True, TriState.False, TriState.False) & "Stars" & vbNewLine & mData.Counter & " Plays"
+          End If
+        End If
+        If Not String.IsNullOrEmpty(mData.Owner) Then sName &= vbNewLine & mData.Owner
+        oTag = Nothing
+        Return True
       Case GetType(Seed.clsID3v2.Parsed_USLT)
         Dim mData As Seed.clsID3v2.Parsed_USLT = fData
         If Not String.IsNullOrEmpty(mData.Language) Then sName &= " [" & mData.Language & "]"
@@ -247,6 +281,10 @@
             Case GetType(Seed.clsID3v2.Parsed_GEOB), GetType(Seed.clsID3v2.Parsed_MCDI), GetType(Seed.clsID3v2.Parsed_UFID), GetType(Seed.clsID3v2.Parsed_PRIV)
               dgvID3v2.Rows.Add(GenerateRow(sName, sData, fData, True, True))
               Continue For
+            Case GetType(Seed.clsID3v2.Parsed_PCNT)
+              dgvID3v2.Rows.Add(GeneratePlayCountRow(sName, sData, fData))
+            Case GetType(Seed.clsID3v2.Parsed_POPM)
+              dgvID3v2.Rows.Add(GenerateMultilineRow(sName, sData, fData, True, True))
             Case GetType(Seed.clsID3v2.Parsed_APIC)
               Dim mData As Seed.clsID3v2.Parsed_APIC = fData
               Dim picRow As New DataGridViewRow
@@ -298,7 +336,7 @@
         Next
 
         If Not bPic Then
-          If My.Computer.FileSystem.FileExists(IO.Path.Combine(txtFilePath.Text, "Folder.jpg")) Then
+          If io.file.exists(IO.Path.Combine(txtFilePath.Text, "Folder.jpg")) Then
             Using bmpTmp As Drawing.Bitmap = PathToImg(IO.Path.Combine(txtFilePath.Text, "Folder.jpg"))
               pctPreview.Image = bmpTmp.Clone
               pctPreview.SizeMode = PictureBoxSizeMode.Zoom
@@ -308,7 +346,7 @@
         End If
         Return True
       Else
-        If My.Computer.FileSystem.FileExists(IO.Path.Combine(txtFilePath.Text, "Folder.jpg")) Then
+        If io.file.exists(IO.Path.Combine(txtFilePath.Text, "Folder.jpg")) Then
           Using bmpTmp As Drawing.Bitmap = PathToImg(IO.Path.Combine(txtFilePath.Text, "Folder.jpg"))
             pctPreview.Image = bmpTmp.Clone
             pctPreview.SizeMode = PictureBoxSizeMode.Zoom
@@ -328,7 +366,7 @@
         dgvMPEG.Rows.Add({"Bitrate:", KRater(cHeader.cMPEG.GetBitrate, "bps") & " " & cHeader.RateFormat})
         If String.IsNullOrEmpty(cHeader.cXING.HeaderID) And String.IsNullOrEmpty(cHeader.cVBRI.HeaderID) Then
           'default
-          Dim lLen As Long = My.Computer.FileSystem.GetFileInfo(sFile).Length - (IIf(cHeader.cID3v1.HasID3v1Tag, &H80, 0) + IIf(cHeader.cID3v2.HasID3v2Tag, cHeader.cID3v2.ID3v2Len, 0))
+          Dim lLen As Long = (New IO.FileInfo(sFile)).Length - (IIf(cHeader.cID3v1.HasID3v1Tag, &H80, 0) + IIf(cHeader.cID3v2.HasID3v2Tag, cHeader.cID3v2.ID3v2Len, 0))
           dgvMPEG.Rows.Add({" Actual: ", KRater(lLen * 8 / cHeader.Duration, "bps")})
         ElseIf String.IsNullOrEmpty(cHeader.cXING.HeaderID) Then
           'vbri
@@ -445,7 +483,7 @@
         dgvVorbis.Rows.Add({"   Minimum Bitrate:", KRater(cVorbis.File_MinQuality, "bps")})
         dgvVorbis.Rows.Add({"   Nominal Bitrate:", KRater(cVorbis.File_Quality, "bps")})
         dgvVorbis.Rows.Add({"   Maximum Bitrate:", KRater(cVorbis.File_MaxQuality, "bps")})
-        Dim lLen As Long = My.Computer.FileSystem.GetFileInfo(sFile).Length - (IIf(cVorbis.HasVorbis, cVorbis.HeaderLength, 0))
+        Dim lLen As Long = (New IO.FileInfo(sFile)).Length - (IIf(cVorbis.HasVorbis, cVorbis.HeaderLength, 0))
         dgvVorbis.Rows.Add({"   Actual Bitrate: ", KRater(lLen * 8 / mpPreview.GetFileDuration(sFile), "bps")})
 
         dgvVorbis.Rows.Add({"   Sample Rate:", KRater(cVorbis.File_Rate, "Hz")})
@@ -1111,7 +1149,7 @@
     pctDetailsIcon.Image = pctClipIcon.Image
     pctAdvancedIcon.Image = pctClipIcon.Image
     If File.EndsWith("VIDEO_TS", True, Nothing) Then
-      txtClipFileName.Text = My.Computer.FileSystem.GetDriveInfo(File.Substring(0, 3)).VolumeLabel
+      txtClipFileName.Text = (New IO.DriveInfo(File.Substring(0, 3))).VolumeLabel
     Else
       txtClipFileName.Text = IO.Path.GetFileName(File)
     End If
@@ -1146,7 +1184,7 @@
 
     If File.EndsWith("VIDEO_TS", True, Nothing) Then
       txtType.Text = "Digital Video Disc"
-      txtSize.Text = ByteSize(My.Computer.FileSystem.GetDriveInfo(File.Substring(0, 3)).TotalSize) & " (" & FormatNumber(My.Computer.FileSystem.GetDriveInfo(File.Substring(0, 3)).TotalSize, 0) & " bytes)"
+      txtSize.Text = ByteSize((New IO.DriveInfo(File.Substring(0, 3))).TotalSize) & " (" & FormatNumber((New IO.DriveInfo(File.Substring(0, 3))).TotalSize, 0) & " bytes)"
     Else
       'If LoadVorbis() Then tbsTags.TabPages.Add(tabVorbis)
       'If LoadMKV() Then tbsTags.TabPages.Add(tabMKV)
@@ -1248,11 +1286,11 @@
         Case "gif" : txtType.Text = "Graphics Interchange Format Animated Image File"
         Case Else : txtType.Text = "Unknown File"
       End Select
-      txtSize.Text = ByteSize(My.Computer.FileSystem.GetFileInfo(File).Length) & " (" & FormatNumber(My.Computer.FileSystem.GetFileInfo(File).Length, 0) & " bytes)"
+      txtSize.Text = ByteSize((New IO.FileInfo(File)).Length) & " (" & FormatNumber((New IO.FileInfo(File)).Length, 0) & " bytes)"
     End If
     Dim Filters() As String = Nothing
     mpPreview.GetFilters(Filters)
-    txtCreated.Text = My.Computer.FileSystem.GetFileInfo(File).CreationTime.ToString
+    txtCreated.Text = (New IO.FileInfo(File)).CreationTime.ToString
     If Filters IsNot Nothing Then
       lstFilters.Enabled = True
       cmdFilterProps.Enabled = True
@@ -1362,8 +1400,12 @@
         Dim rawData As Seed.clsID3v2.ParseResponse = row.Tag
         Dim rawRet As Byte() = rawData.ToByteArray(id3v2V)
         If rawRet IsNot Nothing Then
-          If rawData.Name = "APIC" And id3v2V(0) = 2 Then
-            ID3v2Tags.AddBareFrame("PIC", rawRet)
+          If rawData.Name = "PIC" Or rawData.Name = "APIC" Then
+            If id3v2V(0) = 2 Then
+              ID3v2Tags.AddBareFrame("PIC", rawRet)
+            Else
+              ID3v2Tags.AddBareFrame("APIC", rawRet)
+            End If
           Else
             ID3v2Tags.AddBareFrame(rawData.Name, rawRet)
           End If
@@ -1594,7 +1636,7 @@
         'pctDisp.Image = iImg.Clone
         frmTmp.AcceptButton = cmdSet
         frmTmp.CancelButton = cmdCancel
-        AddHandler pctDisp.DoubleClick, AddressOf pctDisp_DoubleClick
+        AddHandler pctDisp.MouseDoubleClick, AddressOf pctDisp_MouseDoubleClick
         Dim extraHeight As Integer = SystemInformation.ToolWindowCaptionHeight + pctDisp.Margin.Bottom + txtDescription.Margin.Top + txtDescription.Height + txtDescription.Margin.Bottom + cmbType.Margin.Top + cmbType.Height + cmbType.Margin.Bottom + cmdSet.Margin.Top + cmdSet.Height + cmdSet.Margin.Bottom
         frmTmp.Size = New Drawing.Size(picDimensions.Width, picDimensions.Height + extraHeight)
         frmTmp.MinimumSize = New Drawing.Size(defaultSize, defaultSize + extraHeight)
@@ -1609,7 +1651,7 @@
             sValue = "View " & txtDescription.Text
           End If
           cmdPicture.Value = sValue
-          CType(sender, DataGridView).Rows(e.RowIndex).Tag = New Seed.clsID3v2.Parsed_APIC("APIC", Seed.clsID3v2.TextEncoding.NT_ISO, pctDisp.Tag(0), txtDescription.Text, cmbType.SelectedIndex, pctDisp.Tag(1))
+          CType(sender, DataGridView).Rows(e.RowIndex).Tag = New Seed.clsID3v2.Parsed_APIC("PIC", Seed.clsID3v2.TextEncoding.NT_ISO, pctDisp.Tag(0), txtDescription.Text, cmbType.SelectedIndex, pctDisp.Tag(1))
           cmdPicture.ToolTipText = pctDisp.Image.Width & "x" & pctDisp.Image.Height & " " & Seed.clsID3v2.MIMEtoString(pctDisp.Tag(0), True)
           ignoreChange = False
         End If
@@ -1632,28 +1674,48 @@
           End Try
           cmdPicture.Tag = {mPicture, Nothing, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, bPicture}
           cmdPicture.Value = "View Front Cover"
-          CType(sender, DataGridView).Rows(e.RowIndex).Tag = New Seed.clsID3v2.Parsed_APIC("APIC", Seed.clsID3v2.TextEncoding.NT_ISO, mPicture, Nothing, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, bPicture)
+          CType(sender, DataGridView).Rows(e.RowIndex).Tag = New Seed.clsID3v2.Parsed_APIC("PIC", Seed.clsID3v2.TextEncoding.NT_ISO, mPicture, Nothing, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, bPicture)
           cmdPicture.ToolTipText = iPicture.Width & "x" & iPicture.Height & " " & Seed.clsID3v2.MIMEtoString(mPicture, True)
           ignoreChange = False
         End Using
+      ElseIf cmdPicture.Value.ToString.EndsWith(" (Reset)") Then
+        If MsgBox("Are you sure you want to reset the Play Counter?", MsgBoxStyle.Question Or MsgBoxStyle.YesNo, My.Application.Info.Title) = MsgBoxResult.Yes Then
+          cmdPicture.Value = "0 (Reset)"
+          cmdPicture.Tag = 0
+          CType(sender, DataGridView).Rows(e.RowIndex).Tag = New Seed.clsID3v2.Parsed_PCNT("CNT", 0)
+        End If
       End If
     Else
 
     End If
   End Sub
 
-  Private Sub pctDisp_DoubleClick(sender As Object, e As EventArgs)
-    Dim pctDisp As PictureBox = sender
-    Using cdlOpen As New OpenFileDialog
-      cdlOpen.Filter = "Image Files|*.bmp;*.gif;*.png;*.jpg;*.jpeg;*.jpe"
-      cdlOpen.Title = "Select a Picture"
-      If Not cdlOpen.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then Return
-      Dim sPicture As String = cdlOpen.FileName
-      If Not IO.File.Exists(sPicture) Then MsgBox("The selected file could not be accessed.", MsgBoxStyle.Exclamation, My.Application.Info.Title) : Return
-      If Seed.clsID3v2.ExtToMIME(sPicture) = Seed.clsID3v2.ID3_PIC_MIME.INVALID Then MsgBox("File type must be BMP, GIF, PNG, or JPEG.", MsgBoxStyle.Exclamation, My.Application.Info.Title) : Return
-      pctDisp.Image = Drawing.Image.FromFile(sPicture)
-      pctDisp.Tag = {Seed.clsID3v2.ExtToMIME(sPicture), IO.File.ReadAllBytes(sPicture)}
-    End Using
+  Private Sub pctDisp_MouseDoubleClick(sender As Object, e As MouseEventArgs)
+    If e.Button = Windows.Forms.MouseButtons.Left Then
+      Dim pctDisp As PictureBox = sender
+      Using cdlOpen As New OpenFileDialog
+        cdlOpen.Filter = "Image Files|*.bmp;*.gif;*.png;*.jpg;*.jpeg;*.jpe"
+        cdlOpen.Title = "Select a Picture"
+        If Not cdlOpen.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then Return
+        Dim sPicture As String = cdlOpen.FileName
+        If Not IO.File.Exists(sPicture) Then MsgBox("The selected file could not be accessed.", MsgBoxStyle.Exclamation, My.Application.Info.Title) : Return
+        If Seed.clsID3v2.ExtToMIME(sPicture) = Seed.clsID3v2.ID3_PIC_MIME.INVALID Then MsgBox("File type must be BMP, GIF, PNG, or JPEG.", MsgBoxStyle.Exclamation, My.Application.Info.Title) : Return
+        pctDisp.Image = Drawing.Image.FromFile(sPicture)
+        pctDisp.Tag = {Seed.clsID3v2.ExtToMIME(sPicture), IO.File.ReadAllBytes(sPicture)}
+      End Using
+    ElseIf e.Button = Windows.Forms.MouseButtons.Right Then
+      Dim pctDisp As PictureBox = sender
+      Using cdlSave As New SaveFileDialog
+        Dim myMIME As Seed.clsID3v2.ID3_PIC_MIME = pctDisp.Tag(0)
+        Dim myData As Byte() = pctDisp.Tag(1)
+        cdlSave.Filter = Seed.clsID3v2.MIMEtoString(myMIME, True) & " Image|*." & Seed.clsID3v2.MIMEtoString(myMIME, True).ToLower
+        cdlSave.Title = "Save Picture"
+        If Not cdlSave.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then Return
+        Dim sPicture As String = cdlSave.FileName
+        IO.File.WriteAllBytes(sPicture, myData)
+        MsgBox("Saved Picture to """ & sPicture & """!", MsgBoxStyle.Information, My.Application.Info.Title)
+      End Using
+    End If
   End Sub
 
   Private Function TruncateText(inText As String) As String
@@ -1758,8 +1820,6 @@
               CType(rawData, Seed.clsID3v2.Parsed_USLT).Description = Split(sTagName, vbNewLine, 2)(1)
               ignoreChange = True
               selRow.Cells(0).Value = Seed.clsID3v2.GetFrameName(rawData.Name) & " [" & sTagLang & "]" & vbNewLine & Split(sTagName, vbNewLine, 2)(1) & ":"
-              'dgvID3v2.AutoResizeRow(e.RowIndex, DataGridViewAutoSizeRowMode.AllCells)
-              'dgvID3v2.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCellsExceptHeaders
               ignoreChange = False
             Else
               If sTagName.Length > 5 Then
@@ -1774,8 +1834,6 @@
               CType(rawData, Seed.clsID3v2.Parsed_USLT).Description = Nothing
               ignoreChange = True
               selRow.Cells(0).Value = Seed.clsID3v2.GetFrameName(rawData.Name) & " [" & sTagLang & "]:"
-              'dgvID3v2.AutoResizeRow(e.RowIndex, DataGridViewAutoSizeRowMode.AllCells)
-              'dgvID3v2.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCellsExceptHeaders
               ignoreChange = False
             End If
             didChange = True
@@ -1792,7 +1850,6 @@
         End If
       Else
         'Tag Value Change
-        Debug.Print("New value for " & sTagName & " (" & selRow.Cells(1).GetType.ToString & ")!")
         Select Case rawData.GetType
           Case GetType(Seed.clsID3v2.Parsed_TXXX)
             CType(rawData, Seed.clsID3v2.Parsed_TXXX).Value = sTagVal
@@ -1924,44 +1981,164 @@
     Select Case cmb.SelectedItem
       Case "New Tag"
         dgvID3v2.SelectedRows(0).Cells(1).Value = "Select a Tag Type"
-      Case "Title", "Subtitle", "Artist", "Album", "Set Title", "Set Subtitle", "Lyricist", "Composer",
-           "Conductor", "Band", "Original Artist", "Original Lyricist", "Original Album", "Mix By",
-           "Song Webpage", "Artist Webpage", "Publisher Webpage"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+      Case "Title"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TT2", Seed.clsID3v2.TextEncoding.NT_ISO, "Untitled")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Untitled"
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Subtitle"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TT3", Seed.clsID3v2.TextEncoding.NT_ISO, "Untitled")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Untitled"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Artist"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TP1", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Artist")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Artist"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Album"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TAL", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Album")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Album"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Set Title"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TT1", Seed.clsID3v2.TextEncoding.NT_ISO, "Untitled Set")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Untitled Set"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Set Subtitle"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TSST", Seed.clsID3v2.TextEncoding.NT_ISO, "Untitled Set")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Untitled Set"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Lyricist"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TXT", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Lyricist")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Lyricist"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Composer"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TCM", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Composer")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Composer"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Conductor"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TP3", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Conductor")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Conductor"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Band"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TP2", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Band")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Band"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Original Artist"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TOA", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Artist")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Artist"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Original Lyricist"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TOL", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Lyricist")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Lyricist"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Original Album"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TOT", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Album")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Album"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Original Release Year"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TOR", Seed.clsID3v2.TextEncoding.NT_ISO, "2000")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "2000"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Mix By"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TP4", Seed.clsID3v2.TextEncoding.NT_ISO, "Unknown Mixer")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Unknown Mixer"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Song Webpage"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_WZZZ("WAF", Seed.clsID3v2.TextEncoding.NT_ISO, "http://www.something.com")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "http://www.something.com"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Artist Webpage"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_WZZZ("WAS", Seed.clsID3v2.TextEncoding.NT_ISO, "http://www.something.com")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "http://www.something.com"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
+      Case "Publisher Webpage"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_WZZZ("WPB", Seed.clsID3v2.TextEncoding.NT_ISO, "http://www.something.com")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "http://www.something.com"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Disc Number"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TPA", Seed.clsID3v2.TextEncoding.NT_ISO, "1")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "1"
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Track"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TRK", Seed.clsID3v2.TextEncoding.NT_ISO, "0")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "0"
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Genre"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TCON("TCO", Seed.clsID3v2.TextEncoding.NT_ISO, "Other")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "Other"
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Year"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_TZZZ("TYE", Seed.clsID3v2.TextEncoding.NT_ISO, "2000")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "2000"
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Comments"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
-        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_COMM("COM", Seed.clsID3v2.TextEncoding.NT_ISO, "eng", "[Enter Comments]")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter Comments]"
+        dgvID3v2.SelectedRows(0).Cells(1).Tag = "[Enter Comments]"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & " [eng]:"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Picture"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_APIC("PIC", Seed.clsID3v2.TextEncoding.NT_ISO, Seed.clsID3v2.ID3_PIC_MIME.BMP, "", Seed.clsID3v2.ID3_PIC_TYPE.OTHER, Nothing)
         dgvID3v2.SelectedRows(0).Cells(1) = New DataGridViewButtonCell With {.Value = "Select Picture"}
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Play Counter"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_PCNT("CNT", 0)
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "0 Plays (Reset)"
         dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case "Lyrics"
-        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter " & cmb.SelectedItem & "]"
-        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & ":"}
+        dgvID3v2.SelectedRows(0).Tag = New Seed.clsID3v2.Parsed_USLT("ULT", Seed.clsID3v2.TextEncoding.NT_ISO, "eng", "[Enter Lyrics]")
+        dgvID3v2.SelectedRows(0).Cells(1).Value = "[Enter Lyrics]"
+        dgvID3v2.SelectedRows(0).Cells(1).Tag = "[Enter Lyrics]"
+        dgvID3v2.SelectedRows(0).Cells(0) = New DataGridViewTextBoxCell With {.Value = cmb.SelectedItem & " [eng]:"}
         dgvID3v2.SelectedRows(0).Cells(0).ReadOnly = True
+        dgvID3v2.SelectedRows(0).Cells(1).ReadOnly = False
       Case Else
         MsgBox("I can't do " & cmb.SelectedItem & " tags yet. Sorry!", MsgBoxStyle.Information, My.Application.Info.Title)
         'Debug.Print("Unknown: " & cmb.SelectedItem)
@@ -1981,9 +2158,8 @@
   End Sub
 
   Private Sub tmrGenPreview_Tick(sender As System.Object, e As System.EventArgs) Handles tmrGenPreview.Tick
-    Static GenNum As Integer
     tmrGenPreview.Enabled = False
-    Select Case GenNum
+    Select Case iGenPreviewStep
       Case 0
         mpPreview.FullScreenObj = pctPreview
         mpPreview.FullScreen = True
@@ -2013,7 +2189,6 @@
         tabProps.SelectedIndex = 0
         Me.Opacity = 1
     End Select
-    GenNum += 1
+    iGenPreviewStep += 1
   End Sub
-
 End Class

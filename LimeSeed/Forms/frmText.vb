@@ -40,49 +40,88 @@ Public Class frmText
     Me.BackgroundImage = imgBG
   End Sub
   Private Sub DrawText(ByRef g As Graphics, X As Integer, Y As Integer)
-    'Dim defStringFormat As New StringFormat(StringFormatFlags.FitBlackBox)
+    Dim colorNORM As Color = Color.FromArgb(53, 51, 218)
+    Dim colorFOCUS As Color = Color.FromArgb(0, 0, 102)
+    Dim dispText As String = mText
+    Dim inQuote As Boolean = False
+    Dim onNextLine As Boolean = False
+    Dim cI As Integer = 0
+    For P As Integer = 0 To dispText.Length - 1 Step 32
+      Dim partText As String = dispText.Substring(P, IIf(P + 32 > dispText.Length - 1, dispText.Length - P, 32))
+      Dim partText2 As String = partText.Replace("""", "")
+      Dim partColors(partText2.Length - 1) As Color
+      Dim C As Integer = 0
+      For I As Integer = 0 To partText.Length - 1
+        If partText(I) = """" Then
+          If Not inQuote Then
+            inQuote = True
+          Else
+            inQuote = False
+          End If
+        ElseIf partText(I) = vbCr Then
 
-    'If lblText.Text.Contains("""") Then
-    '  lblText.Visible = False
-    '  Dim sTextA As String = lblText.Text
-    '  Dim sTextB As String = Nothing
+          If I + 8 < partText.Length - 1 AndAlso partText.Substring(I, 8) = vbNewLine & "  And " Then
+            onNextLine = False
+            partColors(C) = colorNORM
+            C += 1
+          Else
+            onNextLine = True
+            partColors(C) = colorFOCUS
+            C += 1
+          End If
+        ElseIf inQuote Or onNextLine Then
+          partColors(C) = colorFOCUS
+          C += 1
+        Else
+          partColors(C) = colorNORM
+          C += 1
+        End If
+      Next
 
-    '  sTextB = sTextA.Substring(sTextA.IndexOf("""") + 1)
-    '  sTextB = sTextB.Substring(0, sTextB.IndexOf(""""))
+      Dim partFormat As New StringFormat(StringFormatFlags.FitBlackBox)
+      Dim partChars(partText2.Length - 1) As CharacterRange
+      For I As Integer = 0 To partText2.Length - 1
+        partChars(I) = New CharacterRange(cI, 1)
+        cI += 1
+      Next
+      partFormat.SetMeasurableCharacterRanges(partChars)
+      Dim partRegs As Region() = g.MeasureCharacterRanges(dispText.Replace("""", ""), SystemFonts.CaptionFont, New Rectangle(0, 0, 300, 250), partFormat)
 
-    '  Dim xB As Integer = g.MeasureString(sTextA.Substring(0, sTextA.IndexOf("""")), lblText.Font, lblText.Size, New StringFormat(StringFormatFlags.MeasureTrailingSpaces)).Width - 5
-
-    '  sTextA = Replace(sTextA, """", "")
-
-    '  g.DrawString(sTextA, lblText.Font, New SolidBrush(Color.FromArgb(53, 51, 218)), New RectangleF(X, Y, lblText.Width, lblText.Height), defStringFormat)
-    '  g.DrawString(sTextB, lblText.Font, New SolidBrush(Color.FromArgb(0, 0, 102)), New RectangleF(X + xB, Y, lblText.Width, lblText.Height), defStringFormat)
-    'Else
-    lblText.ForeColor = Color.FromArgb(53, 51, 218)
-    lblText.BackColor = Color.Transparent
-    lblText.Visible = True
-    lblText.Location = New Point(X, Y)
-    'g.DrawString(lblText.Text, lblText.Font, New SolidBrush(Color.FromArgb(53, 51, 218)), New Point(X, Y), defStringFormat)
-    'End If
+      For I As Integer = 0 To partChars.Length - 1
+        If partText2(I) = " " Or partText2(I) = vbCr Or partText2(I) = vbLf Then Continue For
+        g.DrawString(partText2(I), SystemFonts.CaptionFont, New SolidBrush(partColors(I)), X + partRegs(I).GetBounds(g).X, Y + partRegs(I).GetBounds(g).Y, partFormat)
+      Next
+    Next
   End Sub
 
   Public Sub SetText(Message As String, Icon As DragDropEffects)
+    If Not Me.FormBorderStyle = Windows.Forms.FormBorderStyle.None Then Me.FormBorderStyle = Windows.Forms.FormBorderStyle.None
     tmrHide.Stop()
-    If Not lblText.Text = Message Then
-      lblText.Text = Message
-      Do While lblText.Height > 350
-        lblText.Text = lblText.Text.Substring(0, lblText.Text.LastIndexOf(vbNewLine)) & "..."
+    Dim lines As Integer = ((Message.Length - Message.Replace(vbNewLine, "").Length) / 2) + 1
+    If lines > 6 Then
+      Dim origLines As Integer = lines
+      Do Until lines <= 5
+        Message = Message.Substring(0, Message.LastIndexOf(vbNewLine))
+        lines = ((Message.Length - Message.Replace(vbNewLine, "").Length) / 2) + 1
       Loop
+      Message &= vbNewLine & "  And " & (origLines - lines) & " other files..."
     End If
-    mText = lblText.Text
-    ' lblText.Text = Replace(lblText.Text, """", "")
+
+    mText = Message
     mIcon = Icon
-    Dim addIcon As Integer = 16
+    Dim addIcon As Integer = 20
     If Icon = DragDropEffects.None Then addIcon = 0
-    Dim TextPadSize As New Size(lblText.Size.Width + addIcon + 4, lblText.Size.Height + 3)
-    If (Not Me.Size = TextPadSize) Or (Not Me.FormBorderStyle = Windows.Forms.FormBorderStyle.None) Then
+    Dim imgBG As New Bitmap(300, 250)
+    Dim textPadSize As SizeF = Nothing
+    Using g As Graphics = Graphics.FromImage(imgBG)
+      textPadSize = g.MeasureString(mText.Replace("""", ""), SystemFonts.CaptionFont, 300)
+      textPadSize.Height += 4
+      If textPadSize.Height < 20 Then textPadSize.Height = 20
+      textPadSize.Width += addIcon
+    End Using
+    If (Not Me.Size = textPadSize) Or (Not Me.FormBorderStyle = Windows.Forms.FormBorderStyle.None) Then
       Me.FormBorderStyle = Windows.Forms.FormBorderStyle.None
-      Me.Size = TextPadSize
-      lblText.Text = mText
+      Me.Size = New Size(textPadSize.Width, textPadSize.Height)
       RedrawWindow()
     End If
     Dim meBounds As New Rectangle(Cursor.Position.X + 24, Cursor.Position.Y + 16, Me.Width, Me.Height)

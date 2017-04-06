@@ -31,9 +31,18 @@
     End Get
   End Property
 
+  Private Function ToUTF8(inANSI As String) As String
+    If String.IsNullOrEmpty(inANSI) Then Return Nothing
+    Return System.Text.Encoding.UTF8.GetString(fileEncoding.GetBytes(inANSI))
+  End Function
+  Private Function FromUTF8(inUTF As String) As String
+    If String.IsNullOrEmpty(inUTF) Then Return Nothing
+    Return fileEncoding.GetString(System.Text.Encoding.UTF8.GetBytes(inUTF))
+  End Function
+
   Private Sub LoadID3v1()
     Try
-      If Not My.Computer.FileSystem.FileExists(m_sMp3File) Then Return
+      If Not io.file.exists(m_sMp3File) Then Return
       m_HasTag = False
       m_bTrack = 0
       m_sTitle = vbNullString
@@ -47,9 +56,9 @@
           bR.BaseStream.Position = bR.BaseStream.Length - &H80
           If bR.ReadChars(3) = "TAG" Then
             m_HasTag = True
-            m_sTitle = TrimNull(bR.ReadChars(30))
-            m_sArtist = TrimNull(bR.ReadChars(30))
-            m_sAlbum = TrimNull(bR.ReadChars(30))
+            m_sTitle = TrimNull(ToUTF8(bR.ReadChars(30)))
+            m_sArtist = TrimNull(ToUTF8(bR.ReadChars(30)))
+            m_sAlbum = TrimNull(ToUTF8(bR.ReadChars(30)))
             m_sYear = TrimNull(bR.ReadChars(4))
             m_sComment = bR.ReadChars(28)
             If bR.PeekChar = 0 Then
@@ -58,7 +67,7 @@
             Else
               m_sComment &= bR.ReadChars(2)
             End If
-            m_sComment = TrimNull(m_sComment)
+            m_sComment = TrimNull(ToUTF8(m_sComment))
             m_bGenre = bR.ReadByte
           End If
         End If
@@ -73,6 +82,7 @@
   Public Function Save(Optional ByVal SaveAs As String = Nothing) As Boolean
     If String.IsNullOrEmpty(SaveAs) Then SaveAs = m_sMp3File
     Dim newSave As String = SaveAs & ".new_id" & (New Random).Next(0, 255).ToString("x2")
+    Dim oldSave As String = SaveAs & ".old_id" & (New Random).Next(0, 255).ToString("x2")
     If IO.File.Exists(newSave) Then
       Try
         IO.File.Delete(newSave)
@@ -104,14 +114,14 @@
           Using bW As New IO.BinaryWriter(New IO.FileStream(newSave, IO.FileMode.Open, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite), fileEncoding)
             bW.BaseStream.Position = bW.BaseStream.Length - &H80
             bW.Write(fileEncoding.GetBytes("TAG"))
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sTitle)))
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sArtist)))
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sAlbum)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sTitle))))
+            bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sArtist))))
+            bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sAlbum))))
             bW.Write(fileEncoding.GetBytes(MakeNull(m_sYear, 4)))
-            If (Not String.IsNullOrEmpty(m_sComment) AndAlso m_sComment.Length > 28) And m_bTrack = 0 Then
-              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 30)))
+            If (Not String.IsNullOrEmpty(m_sComment) AndAlso FromUTF8(m_sComment).Length > 28) And m_bTrack = 0 Then
+              bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sComment), 30)))
             Else
-              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 28)))
+              bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sComment), 28)))
               bW.Write(CByte(0))
               bW.Write(m_bTrack)
             End If
@@ -121,14 +131,14 @@
         Else
           Using bW As New IO.BinaryWriter(New IO.FileStream(newSave, IO.FileMode.Append, IO.FileAccess.Write, IO.FileShare.ReadWrite), fileEncoding)
             bW.Write(fileEncoding.GetBytes("TAG"))
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sTitle)))
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sArtist)))
-            bW.Write(fileEncoding.GetBytes(MakeNull(m_sAlbum)))
+            bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sTitle))))
+            bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sArtist))))
+            bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sAlbum))))
             bW.Write(fileEncoding.GetBytes(MakeNull(m_sYear, 4)))
-            If (Not String.IsNullOrEmpty(m_sComment) AndAlso m_sComment.Length > 28) And m_bTrack = 0 Then
-              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 30)))
+            If (Not String.IsNullOrEmpty(m_sComment) AndAlso FromUTF8(m_sComment).Length > 28) And m_bTrack = 0 Then
+              bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sComment), 30)))
             Else
-              bW.Write(fileEncoding.GetBytes(MakeNull(m_sComment, 28)))
+              bW.Write(fileEncoding.GetBytes(MakeNull(FromUTF8(m_sComment), 28)))
               bW.Write(CByte(0))
               bW.Write(m_bTrack)
             End If
@@ -138,13 +148,34 @@
         End If
       End If
       If CompareFiles(SaveAs, newSave) Then Return True
-      If IO.File.Exists(SaveAs) Then IO.File.Delete(SaveAs)
-      IO.File.Move(newSave, SaveAs)
+      If IO.File.Exists(SaveAs) Then
+        Try
+          IO.File.Move(SaveAs, oldSave)
+        Catch ex As Exception
+          Return False
+        End Try
+      End If
+      Try
+        IO.File.Move(newSave, SaveAs)
+      Catch ex As Exception
+        Return False
+      End Try
+      Try
+        IO.File.Delete(oldSave)
+      Catch ex As Exception
+      End Try
       Return True
     Catch ex As Exception
       Return False
     Finally
       If IO.File.Exists(newSave) Then IO.File.Delete(newSave)
+      If IO.File.Exists(oldSave) Then
+        If IO.File.Exists(SaveAs) Then
+          IO.File.Delete(oldSave)
+        Else
+          IO.File.Move(oldSave, SaveAs)
+        End If
+      End If
     End Try
   End Function
 

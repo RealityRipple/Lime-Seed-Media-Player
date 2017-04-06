@@ -86,8 +86,6 @@
       End If
     End Sub
 
-    'Private notifyIco As NotifyIcon
-    'Private notifyTimer As Threading.Timer
     Private Sub MyApplication_UnhandledException(sender As Object, e As Microsoft.VisualBasic.ApplicationServices.UnhandledExceptionEventArgs) Handles Me.UnhandledException
       Try
         If e.Exception.Message.Contains("Could not load file or assembly") Then
@@ -281,31 +279,7 @@
       Catch ex As Exception
         MsgBox("There was an error while handling another error." & vbNewLine & ex.ToString & vbNewLine & vbNewLine & "Original Error:" & vbNewLine & e.Exception.Message, MsgBoxStyle.Critical, My.Application.Info.Title)
       End Try
-      'Dim msg As String = "Time: " & Now.ToLongTimeString & ", Date: " & Now.ToLongDateString
-      'If notifyIco Is Nothing Then
-      '  notifyIco = New NotifyIcon With
-      '    {
-      '      .Icon = My.Resources.norm,
-      '      .Text = "This message will disappear in 15 seconds...",
-      '      .BalloonTipIcon = ToolTipIcon.Error,
-      '      .BalloonTipTitle = "Error in Lime Seed"
-      '    }
-      'End If
-      'notifyIco.Visible = True
-      'Log.WriteException(e.Exception, TraceEventType.Error, msg)
-      'e.ExitApplication = False
-      'notifyIco.BalloonTipText = e.Exception.Message & vbNewLine & vbNewLine & "An entry has been added to the log."
-      'notifyIco.ShowBalloonTip(15000)
-      'notifyTimer = New Threading.Timer(New Threading.TimerCallback(AddressOf TimerTick), Nothing, 15000, 5000)
     End Sub
-
-    'Private Sub TimerTick(state As Object)
-    '  If notifyTimer IsNot Nothing Then
-    '    notifyTimer = Nothing
-    '    notifyIco.Visible = False
-    '    notifyIco = Nothing
-    '  End If
-    'End Sub
 
 #Region "Transfer System"
     Private WithEvents udpListener As UDPWrapper
@@ -388,7 +362,7 @@
     Private Sub tcpListener_SocketDisconnected(sender As Object, e As SocketErrorEventArgs) Handles tcpListener.SocketDisconnected
       If Threading.Thread.CurrentThread.GetApartmentState = Threading.ApartmentState.MTA Then
         For Each frm In OpenForms
-          frm.BeginInvoke(New EventHandler(Of SocketErrorEventArgs)(AddressOf tcpListener_SocketDisconnected), sender, e)
+          frm.Invoke(New EventHandler(Of SocketErrorEventArgs)(AddressOf tcpListener_SocketDisconnected), sender, e)
           Exit For
         Next
       Else
@@ -407,7 +381,7 @@
     Private Sub tcpListener_SocketReceived(sender As Object, e As SocketReceivedEventArgs) Handles tcpListener.SocketReceived
       If Threading.Thread.CurrentThread.GetApartmentState = Threading.ApartmentState.MTA Then
         For Each frm In OpenForms
-          frm.BeginInvoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf tcpListener_SocketReceived), sender, e)
+          frm.Invoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf tcpListener_SocketReceived), sender, e)
           Exit For
         Next
       Else
@@ -424,13 +398,13 @@
             Dim sRow As String = sRows(I)
             sRow = Replace(sRow, "%MUSIC%", Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))
             sRow = Replace(sRow, "%VIDEO%", Environment.GetFolderPath(Environment.SpecialFolder.MyVideos))
-            If My.Computer.FileSystem.FileExists(sRow) Then
+            If IO.File.Exists(sRow) Then
               sFiles.Add("""" & sRow & """")
             Else
               sRow = sRows(I)
               sRow = Replace(sRow, "%MUSIC%", Environment.GetFolderPath(Environment.SpecialFolder.CommonMusic))
               sRow = Replace(sRow, "%VIDEO%", Environment.GetFolderPath(Environment.SpecialFolder.CommonVideos))
-              If My.Computer.FileSystem.FileExists(sRow) Then sFiles.Add("""" & sRow & """")
+              If IO.File.Exists(sRow) Then sFiles.Add("""" & sRow & """")
             End If
           Next
           Dim iTrack As Integer = sRows(iRowCount + 1)
@@ -443,8 +417,7 @@
                 Dim commands As New ObjectModel.ReadOnlyCollection(Of String)(sFiles)
                 My.Forms.frmMain.StartupRun(commands)
                 If iTrack > -1 Then
-                  My.Forms.frmMain.dgvPlayList.Rows(0).Cells(0).Style.ForeColor = Drawing.SystemColors.WindowText
-                  My.Forms.frmMain.dgvPlayList.Rows(iTrack).Cells(0).Style.ForeColor = Drawing.SystemColors.GrayText
+                  My.Forms.frmMain.SelectedPlayListItem = iTrack
                   Dim bMute As Boolean = My.Forms.frmMain.mpPlayer.Mute
                   My.Forms.frmMain.mpPlayer.Mute = True
                   My.Forms.frmMain.OpenFile(My.Forms.frmMain.dgvPlayList.Rows(iTrack).Tag(0), True)
@@ -475,8 +448,7 @@
                   Dim commands As New ObjectModel.ReadOnlyCollection(Of String)(sFiles)
                   My.Forms.frmMain.StartupRun(commands)
                   If iTrack > -1 Then
-                    My.Forms.frmMain.dgvPlayList.Rows(0).Cells(0).Style.ForeColor = Drawing.SystemColors.WindowText
-                    My.Forms.frmMain.dgvPlayList.Rows(iTrack).Cells(0).Style.ForeColor = Drawing.SystemColors.GrayText
+                    My.Forms.frmMain.SelectedPlayListItem = iTrack
                     Dim bMute As Boolean = My.Forms.frmMain.mpPlayer.Mute
                     My.Forms.frmMain.mpPlayer.Mute = True
                     My.Forms.frmMain.OpenFile(My.Forms.frmMain.dgvPlayList.Rows(iTrack).Tag(0), True)
@@ -515,8 +487,7 @@
                 Dim commands As New ObjectModel.ReadOnlyCollection(Of String)(sFiles)
                 frmTmp.StartupRun(commands)
                 If iTrack > -1 Then
-                  frmTmp.dgvPlayList.Rows(0).Cells(0).Style.ForeColor = Drawing.SystemColors.WindowText
-                  frmTmp.dgvPlayList.Rows(iTrack).Cells(0).Style.ForeColor = Drawing.SystemColors.GrayText
+                  frmTmp.SelectedPlayListItem = iTrack
                   Dim bMute As Boolean = frmTmp.mpPlayer.Mute
                   frmTmp.mpPlayer.Mute = True
                   frmTmp.OpenFile(frmTmp.dgvPlayList.Rows(iTrack).Tag(0), True)

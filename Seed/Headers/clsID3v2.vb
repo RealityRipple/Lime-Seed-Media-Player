@@ -294,18 +294,6 @@
     Return bData.ToArray 
   End Function
 
-  Public Function AddUserLinkFrame(ByVal Description As EncodedText, ByVal URL As String, Optional ByVal iFlags As FFLG = 0) As ID3Returns
-    If Description.Text = URL Then Description.Text = Nothing
-    Dim bData As New List(Of Byte)
-    bData.AddRange(MakeFrameStringData(Description.Encoding, Description.Text, ID3Header.Version))
-    bData.AddRange(MakeFrameStringData(URL, False))
-    If ID3v2Ver = "2.2.0" Then
-      Return AddBareFrame("WXX", bData.ToArray, iFlags)
-    Else
-      Return AddBareFrame("WXXX", bData.ToArray, iFlags)
-    End If
-  End Function
-
   Public Shared Function MIMEtoString(Format As ID3_PIC_MIME, id3v2 As Boolean) As String
     If id3v2 Then
       Select Case Format
@@ -365,89 +353,25 @@
     End If
   End Function
 
-  Public Function AddImageFrame(ByVal pData As Byte(), ByVal [Type] As ID3_PIC_TYPE, ByVal Format As ID3_PIC_MIME, ByVal Description As EncodedText, Optional ByVal iFlags As FFLG = 0) As ID3Returns
+  Public Function AddAPICFrame(ByVal pData As Byte(), ByVal [Type] As ID3_PIC_TYPE, ByVal Format As ID3_PIC_MIME, ByVal Description As EncodedText, Optional ByVal iFlags As FFLG = 0) As ID3Returns
     Dim sName As String = Nothing
-    Dim bData As New List(Of Byte)
-    If Format = ID3_PIC_MIME.INVALID Then Return ID3Returns.GeneralFailure
-    If ID3v2Ver = "2.2.0" Then
+    If ID3Header.Version(0) = 2 Then
       sName = "PIC"
-      If Type = ID3_PIC_TYPE.INVALID Then Type = ID3_PIC_TYPE.OTHER
-      If Description.Encoding = TextEncoding.NT_ISO Then
-        bData.Add(TextEncoding.NT_ISO)
-      Else
-        bData.Add(TextEncoding.UNICODE)
-      End If
-      If Format = ID3_PIC_MIME.INVALID Then
-        'TODO: detect format
-      End If
-      bData.AddRange(MakeFrameStringData(MIMEtoString(Format, True), False))
-      bData.Add(Type)
-      Select Case Description.Encoding
-        Case TextEncoding.UTF_16_LE, TextEncoding.UTF_8
-          bData.Add(&HFF)
-          bData.Add(&HFE)
-          If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.Unicode.GetBytes(Description.Text))
-          bData.AddRange(GetNullCharArr(TextEncoding.UNICODE))
-        Case TextEncoding.UTF_16_BE
-          bData.Add(&HFE)
-          bData.Add(&HFF)
-          If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.BigEndianUnicode.GetBytes(Description.Text))
-          bData.AddRange(GetNullCharArr(Description.Encoding))
-        Case Else
-          If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(fileEncoding.GetBytes(Description.Text))
-          bData.AddRange(GetNullCharArr(Description.Encoding))
-      End Select
-      bData.AddRange(pData)
     Else
       sName = "APIC"
-      If Type = ID3_PIC_TYPE.INVALID Then Type = ID3_PIC_TYPE.FRONT_COVER
-      bData.Add(Description.Encoding)
-      If Format = ID3_PIC_MIME.INVALID Then
-        'TODO: detect format
-      End If
-      bData.AddRange(MakeFrameStringData(MIMEtoString(Format, False), True))
-      bData.Add(Type)
-      If ID3v2Ver = "2.3.0" Then
-        Select Case Description.Encoding
-          Case TextEncoding.UTF_16_LE, TextEncoding.UTF_8
-            bData.Add(&HFF)
-            bData.Add(&HFE)
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.Unicode.GetBytes(Description.Text))
-            bData.AddRange(GetNullCharArr(TextEncoding.UNICODE))
-          Case TextEncoding.UTF_16_BE
-            bData.Add(&HFE)
-            bData.Add(&HFF)
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.BigEndianUnicode.GetBytes(Description.Text))
-            bData.AddRange(GetNullCharArr(Description.Encoding))
-          Case Else
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(fileEncoding.GetBytes(Description.Text))
-            bData.AddRange(GetNullCharArr(Description.Encoding))
-        End Select
-      Else
-        Select Case Description.Encoding
-          Case TextEncoding.UTF_16_LE
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.Unicode.GetBytes(Description.Text))
-          Case TextEncoding.UTF_16_BE
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.BigEndianUnicode.GetBytes(Description.Text))
-          Case TextEncoding.UTF_8
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(System.Text.Encoding.UTF8.GetBytes(Description.Text))
-          Case Else
-            If Not String.IsNullOrEmpty(Description.Text) Then bData.AddRange(fileEncoding.GetBytes(Description.Text))
-        End Select
-        bData.AddRange(GetNullCharArr(Description.Encoding))
-      End If
-      bData.AddRange(pData)
     End If
-    Return AddBareFrame(sName, bData.ToArray, iFlags)
+    Return AddBareFrame(sName, (New Parsed_APIC(sName, Description.Encoding, Format, Description.Text, Type, pData)).ToByteArray(ID3Header.Version), iFlags)
   End Function
 
   Private Function CheckID3v2(ByRef ioReader As IO.BinaryReader) As Integer
     Try
       ioReader.BaseStream.Position = 0
       Do Until ioReader.BaseStream.Position >= ioReader.BaseStream.Length - 1
-        Dim sFile As String = ioReader.ReadChars(4096)
+        Dim readNum As Integer = 4096
+        If ioReader.BaseStream.Length - 4096 < ioReader.BaseStream.Position Then readNum = ioReader.BaseStream.Length - ioReader.BaseStream.Position
+        Dim sFile As String = ioReader.ReadChars(readNum)
         If sFile.Contains("ID3") Then
-          Return ioReader.BaseStream.Position - 4096 + sFile.IndexOf("ID3")
+          Return ioReader.BaseStream.Position - readNum + sFile.IndexOf("ID3")
         End If
       Loop
       Return -1
@@ -763,6 +687,7 @@
       Case "TBP" : Return "TBPM"
       Case "TCM" : Return "TCOM"
       Case "TCO" : Return "TCON"
+      Case "TCP" : Return "TCMP"
       Case "TCR" : Return "TCOP"
       Case "TDA" : Return sOldName
       Case "TDY" : Return "TDLY"
@@ -776,7 +701,7 @@
       Case "TOA" : Return "TOPE"
       Case "TOF" : Return "TOFN"
       Case "TOL" : Return "TOLY"
-      Case "TOR" : Return "TDOR"
+      Case "TOR" : Return If(rev = 3, "TORY", "TDOR")
       Case "TOT" : Return "TOAL"
       Case "TP1" : Return "TPE1"
       Case "TP2" : Return "TPE2"
@@ -835,6 +760,7 @@
       Case "SYTC" : Return "STC"
       Case "TALB" : Return "TAL"
       Case "TBPM" : Return "TBP"
+      Case "TCMP" : Return "TCP"
       Case "TCOM" : Return "TCM"
       Case "TCON" : Return "TCO"
       Case "TCOP" : Return "TCR"
@@ -850,7 +776,7 @@
       Case "TOPE" : Return "TOA"
       Case "TOFN" : Return "TOF"
       Case "TOLY" : Return "TOL"
-      Case "TDOR" : Return "TOR"
+      Case "TDOR", "TORY" : Return "TOR"
       Case "TOAL" : Return "TOT"
       Case "TPE1" : Return "TP1"
       Case "TPE2" : Return "TP2"
@@ -920,6 +846,7 @@
       Case "TBB", "TBPM" : Return "Beats per Minute"
       Case "TCM", "TCOM" : Return "Composer"
       Case "TCO", "TCON" : Return "Genre"
+      Case "TCP", "TCMP" : Return "Compilation"
       Case "TCR", "TCOP" : Return "Copyright Message"
       Case "TDA", "TDAT" : Return "Date"
       Case "TDTG" : Return "Tagging Time"
@@ -937,7 +864,7 @@
       Case "TOA", "TOPE" : Return "Original Artist"
       Case "TOF", "TOFN" : Return "Original Filename"
       Case "TOL", "TOLY" : Return "Original Lyricist"
-      Case "TOR", "TDOR" : Return "Original Release Year"
+      Case "TOR", "TORY", "TDOR" : Return "Original Release Year"
       Case "TOT", "TOAL" : Return "Original Album"
       Case "TOWN" : Return "File Owner"
       Case "TP1", "TPE1" : Return "Artist"
@@ -1037,7 +964,7 @@
   End Property
 
   Private Sub LoadFile(sFile As String)
-    If Not My.Computer.FileSystem.FileExists(sFile) Then Return
+    If Not io.file.exists(sFile) Then Return
     Dim lStart As Integer
     Dim bTest As Byte
     Dim lLast As Integer
@@ -1186,12 +1113,15 @@
         Case "PIC", "APIC" : Return Parsed_APIC.FromByteArray(sName, bData)
         Case "ULT", "USLT" : Return Parsed_USLT.FromByteArray(sName, bData)
         Case "GEO", "GEOB" : Return Parsed_GEOB.FromByteArray(sName, bData)
+        Case "CNT", "PCNT" : Return Parsed_PCNT.FromByteArray(sName, bData)
+        Case "POP", "POPM" : Return Parsed_POPM.FromByteArray(sName, bData)
       End Select
       If sName.StartsWith("T") Then Return Parsed_TZZZ.FromByteArray(sName, bData)
       If sName.StartsWith("W") Then Return Parsed_WZZZ.FromByteArray(sName, bData)
       Return New Parse_Failure(sName, "Unable to handle the " & sName & " Frame type!")
     End Function
   End Class
+
   Public Class Parsed_UFID
     Inherits ParseResponse
     Private m_Owner As String
@@ -1640,7 +1570,7 @@
       Dim sGenres As String = Nothing
       For Each gEntity As String In m_GenreList
         Dim gID As String = gEntity
-        For g As Integer = &H0 To &HBF
+        For g As Integer = &H0 To &H93
           If StrComp(gEntity, clsID3v1.GenreName(g), CompareMethod.Text) = 0 Then
             gID = g
             Exit For
@@ -1851,10 +1781,11 @@
     End Property
     Public Sub New(sName As String, bEncoding As TextEncoding, sLanguage As String, sLyrics As String)
       MyBase.New(sName)
+      If String.IsNullOrEmpty(sLyrics) Then Stop
       m_Encoding = bEncoding
       m_Language = sLanguage
       m_Description = Nothing
-      If sLyrics.Contains("[LF]") Then sLyrics = sLyrics.Replace("[LF]", "")
+      If Not String.IsNullOrEmpty(sLyrics) AndAlso sLyrics.Contains("[LF]") Then sLyrics = sLyrics.Replace("[LF]", "")
       m_Lyrics = sLyrics
     End Sub
     Public Sub New(sName As String, bEncoding As TextEncoding, sLanguage As String, sDescription As String, sLyrics As String)
@@ -1862,7 +1793,7 @@
       m_Encoding = bEncoding
       m_Language = sLanguage
       m_Description = sDescription
-      If sLyrics.Contains("[LF]") Then sLyrics = sLyrics.Replace("[LF]", "")
+      If Not String.IsNullOrEmpty(sLyrics) AndAlso sLyrics.Contains("[LF]") Then sLyrics = sLyrics.Replace("[LF]", "")
       m_Lyrics = sLyrics
     End Sub
     Public Overrides Function ToByteArray(Version() As Byte) As Byte()
@@ -1962,6 +1893,7 @@
       m_Image = CleanImage(bImage)
     End Sub
     Private Function CleanImage(bIn As Byte()) As Byte()
+      If bIn Is Nothing OrElse bIn.Length = 0 Then Return Nothing
       Dim startFrom As Integer = 0
       If bIn.Length > 0 Then
         For I As Integer = 0 To bIn.Length - 1
@@ -2137,6 +2069,234 @@
       If Not bBlob3.Length = 2 Then Return New Parsed_GEOB(sName, bEncoding, sMIME, sFile, Nothing, bBlob2(1))
       Dim sDesc As String = ParseString(bEncoding, bBlob3(0), 0, True)
       Return New Parsed_GEOB(sName, bEncoding, sMIME, sFile, sDesc, bBlob3(1))
+    End Function
+  End Class
+  Public Class Parsed_PCNT
+    Inherits ParseResponse
+    Private m_Counter As UInt64
+    Public Property Counter As UInt64
+      Get
+        Return m_Counter
+      End Get
+      Set(value As UInt64)
+        m_Counter = value
+      End Set
+    End Property
+    Public Overrides ReadOnly Property StringData As String()
+      Get
+        Return {Counter.ToString}
+      End Get
+    End Property
+    Public Sub New(sName As String, iCount As UInt64)
+      MyBase.New(sName)
+      m_Counter = iCount
+    End Sub
+    Public Overrides Function ToByteArray(Version As Byte()) As Byte()
+      Dim bData As New List(Of Byte)
+      If m_Counter <= &HFFUL Then
+        bData.Add(0)
+        bData.Add(0)
+        bData.Add(0)
+        bData.Add(m_Counter)
+      ElseIf m_Counter <= &HFFFFUL Then
+        bData.Add(0)
+        bData.Add(0)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      ElseIf m_Counter <= &HFFFFFFUL Then
+        bData.Add(0)
+        bData.Add((m_Counter And &HFF0000UL) >> 16)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      ElseIf m_Counter <= &HFFFFFFFFUL Then
+        bData.Add((m_Counter And &HFF000000UL) >> 24)
+        bData.Add((m_Counter And &HFF0000UL) >> 16)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      ElseIf m_Counter <= &HFFFFFFFFFFUL Then
+        bData.Add((m_Counter And &HFF00000000UL) >> 32)
+        bData.Add((m_Counter And &HFF000000UL) >> 24)
+        bData.Add((m_Counter And &HFF0000UL) >> 16)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      ElseIf m_Counter <= &HFFFFFFFFFFFFUL Then
+        bData.Add((m_Counter And &HFF0000000000UL) >> 40)
+        bData.Add((m_Counter And &HFF00000000UL) >> 32)
+        bData.Add((m_Counter And &HFF000000UL) >> 24)
+        bData.Add((m_Counter And &HFF0000UL) >> 16)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      ElseIf m_Counter <= &HFFFFFFFFFFFFFFUL Then
+        bData.Add((m_Counter And &HFF000000000000UL) >> 48)
+        bData.Add((m_Counter And &HFF0000000000UL) >> 40)
+        bData.Add((m_Counter And &HFF00000000UL) >> 32)
+        bData.Add((m_Counter And &HFF000000UL) >> 24)
+        bData.Add((m_Counter And &HFF0000UL) >> 16)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      Else
+        bData.Add((m_Counter And &HFF00000000000000UL) >> 56)
+        bData.Add((m_Counter And &HFF000000000000UL) >> 48)
+        bData.Add((m_Counter And &HFF0000000000UL) >> 40)
+        bData.Add((m_Counter And &HFF00000000UL) >> 32)
+        bData.Add((m_Counter And &HFF000000UL) >> 24)
+        bData.Add((m_Counter And &HFF0000UL) >> 16)
+        bData.Add((m_Counter And &HFF00UL) >> 8)
+        bData.Add((m_Counter And &HFFUL))
+      End If
+      Return bData.ToArray
+    End Function
+    Public Overloads Shared Function FromByteArray(sName As String, bData As Byte()) As Parsed_PCNT
+      Dim uCount As UInt64 = 0
+      Select Case bData.Length
+        Case Is < 4
+          Try
+            Dim bEncoding As TextEncoding = bData(0)
+            Dim sCount As String = ParseString(bEncoding, bData, 1, True)
+            If IsNumeric(sCount) Then uCount = CULng(sCount)
+          Catch ex As Exception
+            MsgBox("Invalid Length reading " & sName & ": " & bData.Length & " is less than a 32-bit integer!")
+          End Try
+        Case 4 : uCount = bData(3) + (bData(2) << 8) + (bData(1) << 16) + (bData(0) << 24)
+        Case 5 : uCount = bData(4) + (bData(3) << 8) + (bData(2) << 16) + (bData(1) << 24) + (bData(0) << 32)
+        Case 6 : uCount = bData(5) + (bData(4) << 8) + (bData(3) << 16) + (bData(2) << 24) + (bData(1) << 32) + (bData(0) << 40)
+        Case 7 : uCount = bData(6) + (bData(5) << 8) + (bData(4) << 16) + (bData(3) << 24) + (bData(2) << 32) + (bData(1) << 40) + (bData(0) << 48)
+        Case 8 : uCount = bData(7) + (bData(6) << 8) + (bData(5) << 16) + (bData(4) << 24) + (bData(3) << 32) + (bData(2) << 40) + (bData(1) << 48) + (bData(0) << 56)
+        Case Is > 8
+          MsgBox("Invalid Length reading " & sName & ": " & bData.Length & " is greater than a 64-bit integer!")
+        Case Else
+          MsgBox("Invalid Length reading " & sName & ": " & bData.Length & " is not a normal number!?!")
+      End Select
+      Return New Parsed_PCNT(sName, uCount)
+    End Function
+  End Class
+  Public Class Parsed_POPM
+    Inherits ParseResponse
+    Private m_Owner As String
+    Private m_Rating As Byte
+    Private m_Counter As UInt64
+    Public Property Owner As String
+      Get
+        Return m_Owner
+      End Get
+      Set(value As String)
+        m_Owner = value
+      End Set
+    End Property
+    Public Property Rating As Byte
+      Get
+        Return m_Rating
+      End Get
+      Set(value As Byte)
+        m_Rating = value
+      End Set
+    End Property
+    Public Property Counter As UInt64
+      Get
+        Return m_Counter
+      End Get
+      Set(value As UInt64)
+        m_Counter = value
+      End Set
+    End Property
+    Public Overrides ReadOnly Property StringData As String()
+      Get
+        Return {Owner, Rating.ToString, Counter.ToString}
+      End Get
+    End Property
+    Public Sub New(sName As String, sOwner As String, bRating As Byte, iCount As UInt64)
+      MyBase.New(sName)
+      m_Owner = sOwner
+      m_Rating = bRating
+      m_Counter = iCount
+    End Sub
+    Public Overrides Function ToByteArray(Version As Byte()) As Byte()
+      Dim bData As New List(Of Byte)
+      bData.AddRange(MakeFrameStringData(m_Owner, True))
+      bData.Add(m_Rating)
+      If m_Counter > 0 Then
+        If m_Counter <= &HFFUL Then
+          bData.Add(0)
+          bData.Add(0)
+          bData.Add(0)
+          bData.Add(m_Counter)
+        ElseIf m_Counter <= &HFFFFUL Then
+          bData.Add(0)
+          bData.Add(0)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        ElseIf m_Counter <= &HFFFFFFUL Then
+          bData.Add(0)
+          bData.Add((m_Counter And &HFF0000UL) >> 16)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        ElseIf m_Counter <= &HFFFFFFFFUL Then
+          bData.Add((m_Counter And &HFF000000UL) >> 24)
+          bData.Add((m_Counter And &HFF0000UL) >> 16)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        ElseIf m_Counter <= &HFFFFFFFFFFUL Then
+          bData.Add((m_Counter And &HFF00000000UL) >> 32)
+          bData.Add((m_Counter And &HFF000000UL) >> 24)
+          bData.Add((m_Counter And &HFF0000UL) >> 16)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        ElseIf m_Counter <= &HFFFFFFFFFFFFUL Then
+          bData.Add((m_Counter And &HFF0000000000UL) >> 40)
+          bData.Add((m_Counter And &HFF00000000UL) >> 32)
+          bData.Add((m_Counter And &HFF000000UL) >> 24)
+          bData.Add((m_Counter And &HFF0000UL) >> 16)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        ElseIf m_Counter <= &HFFFFFFFFFFFFFFUL Then
+          bData.Add((m_Counter And &HFF000000000000UL) >> 48)
+          bData.Add((m_Counter And &HFF0000000000UL) >> 40)
+          bData.Add((m_Counter And &HFF00000000UL) >> 32)
+          bData.Add((m_Counter And &HFF000000UL) >> 24)
+          bData.Add((m_Counter And &HFF0000UL) >> 16)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        Else
+          bData.Add((m_Counter And &HFF00000000000000UL) >> 56)
+          bData.Add((m_Counter And &HFF000000000000UL) >> 48)
+          bData.Add((m_Counter And &HFF0000000000UL) >> 40)
+          bData.Add((m_Counter And &HFF00000000UL) >> 32)
+          bData.Add((m_Counter And &HFF000000UL) >> 24)
+          bData.Add((m_Counter And &HFF0000UL) >> 16)
+          bData.Add((m_Counter And &HFF00UL) >> 8)
+          bData.Add((m_Counter And &HFFUL))
+        End If
+      End If
+      Return bData.ToArray
+    End Function
+    Public Overloads Shared Function FromByteArray(sName As String, bData As Byte()) As Parsed_POPM
+      Dim bBlobs As Byte()() = SplitByteArrays(bData, 0, {0}, False, 2)
+      If Not bBlobs.Length = 2 Then Return Nothing
+      Dim sOwner As String = ParseString(TextEncoding.NT_ISO, bBlobs(0), 0, False)
+      Dim bRating As Byte = bBlobs(1)(0)
+      Dim uCount As UInt64 = 0
+      Select Case bBlobs(1).Length
+        Case 1
+          uCount = 0
+        Case Is < 5
+          Try
+            Dim bEncoding As TextEncoding = bBlobs(1)(1)
+            Dim sCount As String = ParseString(bEncoding, bBlobs(1), 2, True)
+            If IsNumeric(sCount) Then uCount = CULng(sCount)
+          Catch ex As Exception
+            MsgBox("Invalid Length reading " & sName & ": " & (bBlobs(1).Length - 1) & " is less than a 32-bit integer!")
+          End Try
+        Case 5 : uCount = bBlobs(1)(4) + (bBlobs(1)(3) << 8) + (bBlobs(1)(2) << 16) + (bBlobs(1)(1) << 24)
+        Case 6 : uCount = bBlobs(1)(5) + (bBlobs(1)(4) << 8) + (bBlobs(1)(3) << 16) + (bBlobs(1)(2) << 24) + (bBlobs(1)(1) << 32)
+        Case 7 : uCount = bBlobs(1)(6) + (bBlobs(1)(5) << 8) + (bBlobs(1)(4) << 16) + (bBlobs(1)(3) << 24) + (bBlobs(1)(2) << 32) + (bBlobs(1)(1) << 40)
+        Case 8 : uCount = bBlobs(1)(7) + (bBlobs(1)(6) << 8) + (bBlobs(1)(5) << 16) + (bBlobs(1)(4) << 24) + (bBlobs(1)(3) << 32) + (bBlobs(1)(2) << 40) + (bBlobs(1)(1) << 48)
+        Case 9 : uCount = bBlobs(1)(8) + (bBlobs(1)(7) << 8) + (bBlobs(1)(6) << 16) + (bBlobs(1)(5) << 24) + (bBlobs(1)(4) << 32) + (bBlobs(1)(3) << 40) + (bBlobs(1)(2) << 48) + (bBlobs(1)(1) << 56)
+        Case Is > 9
+          MsgBox("Invalid Length reading " & sName & ": " & (bBlobs(1).Length - 1) & " is greater than a 64-bit integer!")
+        Case Else
+          MsgBox("Invalid Length reading " & sName & ": " & (bBlobs(1).Length) & " is not a normal number!?!")
+      End Select
+      Return New Parsed_POPM(sName, sOwner, bRating, uCount)
     End Function
   End Class
   Public Class Parse_Failure
@@ -2606,7 +2766,8 @@
     If String.IsNullOrEmpty(SaveAs) Then SaveAs = m_sMp3File
     Dim FileData As Byte() = TrimID3v2(m_sMp3File)
     ID3Frames.Sort(New frameSort)
-    Dim newSave As String = SaveAs & ".new"
+    Dim newSave As String = SaveAs & ".new_id" & (New Random).Next(0, 255).ToString("x2")
+    Dim oldSave As String = SaveAs & ".old_id" & (New Random).Next(0, 255).ToString("x2")
     Try
       Using ID3Data As New IO.FileStream(newSave, IO.FileMode.Create, IO.FileAccess.Write, IO.FileShare.Read)
         Using ID3Writer As New IO.BinaryWriter(ID3Data, fileEncoding)
@@ -2622,16 +2783,28 @@
                 Dim sName As String = FrameName(I)
                 If ID3Header.Version(0) = 2 Then
                   sName = GetOldName(sName)
+                  If Not sName.Length = 3 Then
+                    Debug.Print("Unhandled Frame: " & FrameName(I) & ": " & BitConverter.ToString(FrameData(I)) & " (" & Replace(fileEncoding.GetString(FrameData(I)), vbNullChar, "[NULL]") & ")")
+                    Return False
+                  End If
                 ElseIf ID3Header.Version(0) = 3 Then
                   sName = GetNewName(sName, 3)
+                  If Not sName.Length = 4 Then
+                    Debug.Print("Unhandled Frame: " & FrameName(I) & ": " & BitConverter.ToString(FrameData(I)) & " (" & Replace(fileEncoding.GetString(FrameData(I)), vbNullChar, "[NULL]") & ")")
+                    Return False
+                  End If
                 ElseIf ID3Header.Version(0) = 4 Then
                   sName = GetNewName(sName, 4)
+                  If Not sName.Length = 4 Then
+                    Debug.Print("Unhandled Frame: " & FrameName(I) & ": " & BitConverter.ToString(FrameData(I)) & " (" & Replace(fileEncoding.GetString(FrameData(I)), vbNullChar, "[NULL]") & ")")
+                    Return False
+                  End If
                 End If
                 If (FrameFlags(I) And FFLG.TAGALTER) = FFLG.TAGALTER Or (FrameFlags(I) And FFLG.FILEALTER) = FFLG.FILEALTER Then Continue For
                 If FrameName(I) = "TCON" Or FrameName(I) = "TCO" Then
                   Dim fDataList As ParseResponse() = Parsed_TCON.FromByteArrayEx(FrameName(I), FrameData(I))
                   If fDataList Is Nothing OrElse fDataList.Length < 1 Then
-                    MsgBox("Unhandled Frame while Saving " & IO.Path.GetFileName(SaveAs) & vbNewLine & "Frame Name: " & sName & vbNewLine & "Frame Data (string): " & fileEncoding.GetString(FrameData(I)) & vbNewLine & "Frame Data (binary): " & BitConverter.ToString(FrameData(I)), MsgBoxStyle.Exclamation, My.Application.Info.Title & " ID3v2")
+                    Debug.Print("Unhandled Frame: " & FrameName(I) & ": " & BitConverter.ToString(FrameData(I)) & " (" & Replace(fileEncoding.GetString(FrameData(I)), vbNullChar, "[NULL]") & ")")
                     Return False
                   End If
                   For Each fData As ParseResponse In fDataList
@@ -2641,7 +2814,7 @@
                         If Not FrameData(I)(J) = 0 Then isNulls = False
                       Next
                       If isNulls Then Continue For
-                      MsgBox("Unhandled Frame while Saving " & IO.Path.GetFileName(SaveAs) & vbNewLine & "Frame Name: " & sName & vbNewLine & "Frame Data (string): " & fileEncoding.GetString(FrameData(I)) & vbNewLine & "Frame Data (binary): " & BitConverter.ToString(FrameData(I)), MsgBoxStyle.Exclamation, My.Application.Info.Title & " ID3v2")
+                      Debug.Print("Unhandled Frame: " & FrameName(I) & ": " & BitConverter.ToString(FrameData(I)) & " (" & Replace(fileEncoding.GetString(FrameData(I)), vbNullChar, "[NULL]") & ")")
                       Return False
                     End If
                     WriteFrame(ID3ContentWriter, sName, FrameFlags(I), fData.ToByteArray(ID3Header.Version))
@@ -2654,7 +2827,7 @@
                       If Not FrameData(I)(J) = 0 Then isNulls = False
                     Next
                     If isNulls Then Continue For
-                    MsgBox("Unhandled Frame while Saving " & IO.Path.GetFileName(SaveAs) & vbNewLine & "Frame Name: " & sName & vbNewLine & "Frame Data (string): " & fileEncoding.GetString(FrameData(I)) & vbNewLine & "Frame Data (binary): " & BitConverter.ToString(FrameData(I)), MsgBoxStyle.Exclamation, My.Application.Info.Title & " ID3v2")
+                    Debug.Print("Unhandled Frame: " & FrameName(I) & ": " & BitConverter.ToString(FrameData(I)) & " (" & Replace(fileEncoding.GetString(FrameData(I)), vbNullChar, "[NULL]") & ")")
                     Return False
                   End If
                   WriteFrame(ID3ContentWriter, sName, FrameFlags(I), fData.ToByteArray(ID3Header.Version))
@@ -2686,14 +2859,35 @@
         End Using
         ID3Data.Close()
       End Using
-      If compareFiles(SaveAs, newSave) Then Return True
-      If IO.File.Exists(SaveAs) Then IO.File.Delete(SaveAs)
-      IO.File.Move(newSave, SaveAs)
+      If CompareFiles(SaveAs, newSave) Then Return True
+      If IO.File.Exists(SaveAs) Then
+        Try
+          IO.File.Move(SaveAs, oldSave)
+        Catch ex As Exception
+          Return False
+        End Try
+      End If
+      Try
+        IO.File.Move(newSave, SaveAs)
+      Catch ex As Exception
+        Return False
+      End Try
+      Try
+        IO.File.Delete(oldSave)
+      Catch ex As Exception
+      End Try
       Return True
     Catch ex As Exception
       Return False
     Finally
       If IO.File.Exists(newSave) Then IO.File.Delete(newSave)
+      If IO.File.Exists(oldSave) Then
+        If IO.File.Exists(SaveAs) Then
+          IO.File.Delete(oldSave)
+        Else
+          IO.File.Move(oldSave, SaveAs)
+        End If
+      End If
     End Try
 
   End Function
@@ -2710,16 +2904,15 @@
 
   Private Function TrimID3v2(Path As String) As Byte()
     If String.IsNullOrEmpty(Path) Then Return Nothing
-    If Not My.Computer.FileSystem.FileExists(Path) Then Return Nothing
-    If My.Computer.FileSystem.GetFileInfo(Path).Length >= 1024L * 1024L * 1024L * 4L Then Return Nothing
-    Dim bFile As Byte() = My.Computer.FileSystem.ReadAllBytes(Path)
-    Dim lFrameStart As Integer = 0
+    If Not io.file.exists(Path) Then Return Nothing
+    If (New IO.FileInfo(Path)).Length >= 1024L * 1024L * 1024L * 4L Then Return Nothing
+    Dim bFile As Byte() = IO.File.ReadAllBytes(Path)
+    Dim lFrameStart As Integer = -1
     Do
-      lFrameStart = GetBytePos(bFile, &HFF, lFrameStart)
-      If lFrameStart >= 0 AndAlso CheckMPEG(bFile, lFrameStart) Then Exit Do
-      lFrameStart += 1
-    Loop
-    If lFrameStart = 0 Then Return bFile
+      lFrameStart = Array.IndexOf(Of Byte)(bFile, &HFF, lFrameStart + 1)
+      If lFrameStart = -1 Then Return bFile
+    Loop Until CheckMPEG(bFile, lFrameStart)
+    If lFrameStart = -1 Then Return bFile
     Dim lFrameLen As Integer = bFile.Length - lFrameStart
     Dim bReturn(lFrameLen - 1) As Byte
     Array.ConstrainedCopy(bFile, lFrameStart, bReturn, 0, lFrameLen)

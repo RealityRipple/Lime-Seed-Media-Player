@@ -39,8 +39,7 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>
-    </DocumentationFile>
+    <DocumentationFile>LSMP.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
@@ -50,8 +49,7 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>
-    </DocumentationFile>
+    <DocumentationFile>LSMP.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -74,8 +72,7 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>
-    </DocumentationFile>
+    <DocumentationFile>LSMP.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -89,8 +86,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>
-    </DocumentationFile>
+    <DocumentationFile>LSMP.xml</DocumentationFile>
     <Optimize>true</Optimize>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <DebugType>pdbonly</DebugType>
@@ -246,6 +242,12 @@
     <Compile Include="Forms\frmTransfer.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\frmTray.Designer.vb">
+      <DependentUpon>frmTray.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmTray.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Modules\modFuncts.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
@@ -310,6 +312,9 @@
     <EmbeddedResource Include="Forms\frmTransfer.resx">
       <DependentUpon>frmTransfer.vb</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmTray.resx">
+      <DependentUpon>frmTray.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
@@ -350,6 +355,35 @@
     <None Include="Resources\fs.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\traybuttons\play_disabled.ico" />
+    <None Include="Resources\traybuttons\pause_disabled.ico" />
+    <None Include="Resources\traybuttons\stop_disabled.ico" />
+    <None Include="Resources\traybuttons\rw_disabled.ico" />
+    <None Include="Resources\traybuttons\ff_disabled.ico" />
+    <None Include="Resources\traybuttons\stop_hover.ico" />
+    <None Include="Resources\traybuttons\stop.ico" />
+    <None Include="Resources\traybuttons\rw_hover.ico" />
+    <None Include="Resources\traybuttons\rw.ico" />
+    <None Include="Resources\traybuttons\restore_hover.ico" />
+    <None Include="Resources\traybuttons\restore.ico" />
+    <None Include="Resources\traybuttons\play_hover.ico" />
+    <None Include="Resources\traybuttons\play.ico" />
+    <None Include="Resources\traybuttons\pause_hover.ico" />
+    <None Include="Resources\traybuttons\pause.ico" />
+    <None Include="Resources\traybuttons\ff_hover.ico" />
+    <None Include="Resources\traybuttons\ff.ico" />
+    <None Include="Resources\tray\play7.ico" />
+    <None Include="Resources\tray\play6.ico" />
+    <None Include="Resources\tray\play5.ico" />
+    <None Include="Resources\tray\play4.ico" />
+    <None Include="Resources\tray\play3.ico" />
+    <None Include="Resources\tray\play2.ico" />
+    <None Include="Resources\tray\play1.ico" />
+    <None Include="Resources\tray\play0.ico" />
+    <None Include="Resources\tray\pause1.ico" />
+    <None Include="Resources\tray\pause0.ico" />
+    <None Include="Resources\tray\stop.ico" />
+    <None Include="tray.ico" />
     <None Include="Resources\tt_move.png" />
     <None Include="Resources\tt_link.png" />
     <None Include="Resources\tt_copy.png" />

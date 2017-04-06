@@ -16,8 +16,8 @@
   Public Sub New(bFrame As Byte(), Optional ByVal Start As Integer = 0)
     Dim I As Integer
     Dim lPos As Long
-    lPos = 4 + 32
-    vHeader.HeaderID = GetString(bFrame, lPos, 4) ' Mid$(sFrame, lPos, 4)
+    lPos = Start + 4 + 32
+    vHeader.HeaderID = GetString(bFrame, lPos, 4)
     If vHeader.HeaderID <> "VBRI" Then
       vHeader.HeaderID = vbNullString
       Return

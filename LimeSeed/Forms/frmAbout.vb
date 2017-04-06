@@ -1,7 +1,7 @@
 ﻿Public NotInheritable Class frmAbout
   Private WithEvents wsVer As New Net.WebClient
-  Private sVerPath As String = Application.UserAppDataPath & "\ver.txt"
-  Private sEXEPath As String = Application.UserAppDataPath & "\Setup.exe"
+  Private sVerPath As String = IO.Path.Combine(Application.UserAppDataPath, "ver.txt")
+  Private sEXEPath As String = IO.Path.Combine(Application.UserAppDataPath, "Setup.exe")
 
   Private Sub frmAbout_FormClosing(sender As Object, e As System.Windows.Forms.FormClosingEventArgs) Handles Me.FormClosing
     If wsVer IsNot Nothing Then
@@ -12,11 +12,11 @@
       Loop
     End If
     If e.CloseReason = CloseReason.FormOwnerClosing Then
-      If My.Computer.FileSystem.FileExists(sVerPath) Then My.Computer.FileSystem.DeleteFile(sVerPath)
-      If My.Computer.FileSystem.FileExists(sEXEPath) Then Shell(sEXEPath & " /silent", AppWinStyle.NormalFocus, False)
+      If IO.File.Exists(sVerPath) Then IO.File.Delete(sVerPath)
+      If io.file.exists(sEXEPath) Then Shell(sEXEPath & " /silent", AppWinStyle.NormalFocus, False)
     Else
-      If My.Computer.FileSystem.FileExists(sVerPath) Then My.Computer.FileSystem.DeleteFile(sVerPath)
-      If My.Computer.FileSystem.FileExists(sEXEPath) Then My.Computer.FileSystem.DeleteFile(sEXEPath)
+      If IO.File.Exists(sVerPath) Then IO.File.Delete(sVerPath)
+      If IO.File.Exists(sEXEPath) Then IO.File.Delete(sEXEPath)
     End If
   End Sub
 
@@ -32,10 +32,10 @@
     lblVersion.Text = String.Format("Version {0}", My.Application.Info.Version.ToString)
     SetUpdateValue("Checking for Updates", True)
     lblCompany.Text = My.Application.Info.CompanyName
-    Dim ffDshowPath As String = My.Computer.FileSystem.SpecialDirectories.ProgramFiles & "\ffdshow\ffdshow.ax"
-    If My.Computer.FileSystem.FileExists(ffDshowPath) Then
+    Dim ffDshowPath As String = IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ffdshow", "ffdshow.ax")
+    If io.file.exists(ffDshowPath) Then
       Dim verInfo As FileVersionInfo = FileVersionInfo.GetVersionInfo(ffDshowPath)
-      Dim fileInfo = My.Computer.FileSystem.GetFileInfo(ffDshowPath)
+      Dim fileInfo As New IO.FileInfo(ffDshowPath)
       lblFFDShow.Text = String.Format("FFDshow rev{0}_{1}", verInfo.ProductBuildPart, fileInfo.LastWriteTime.ToString("yyyyMMdd"))
     Else
       Dim regSoftware As Microsoft.Win32.RegistryKey
@@ -210,7 +210,7 @@
   End Sub
 
   Private Sub tmrDone_Tick(sender As System.Object, e As System.EventArgs) Handles tmrDone.Tick
-    If My.Computer.FileSystem.FileExists(sEXEPath) Then
+    If io.file.exists(sEXEPath) Then
       frmMain.Close()
     Else
       SetUpdateValue("Update Failure", False)

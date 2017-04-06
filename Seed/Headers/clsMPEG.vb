@@ -1,4 +1,5 @@
 ﻿Public Class clsMPEG
+  Implements IEquatable(Of clsMPEG)
   Private MPEGHeader(32) As Boolean
   Public Sub New(lHeader As UInteger)
     MPEGHeader(0) = False
@@ -40,9 +41,17 @@
       If Not GetMPEGVer() = 0 Then
         If Not GetMPEGLayer() = 0 Then
           If Not GetBitrate() = 0 Then
-            If CheckLIIChannel() Then
-              If GetFrameSize() > 20 Then
-                Return True
+            If Not GetSampleRate() = 0 Then
+              If CheckLIIChannel() Then
+                If GetFrameSize() > 20 Then
+                  If Not GetModeExtension() = "Invalid" Then
+                    If Not GetEmphasis() = "Invalid" And Not GetEmphasis() = "Reserved" Then
+                      If Not GetChannels() = "Unknown" Then
+                        Return True
+                      End If
+                    End If
+                  End If
+                End If
               End If
             End If
           End If
@@ -584,8 +593,9 @@
             Return "Intensity & M/S"
           End If
       End Select
+      Return "Invalid"
     End If
-    Return vbNullString
+    Return "None"
   End Function
   Public Function GetCopyright() As Boolean
     Return MPEGHeader(29)
@@ -599,10 +609,48 @@
     ElseIf Not MPEGHeader(31) And MPEGHeader(32) Then
       Return "50/15 ms"
     ElseIf MPEGHeader(31) And Not MPEGHeader(32) Then
-      Return vbNullString
+      Return "Reserved"
     ElseIf MPEGHeader(31) And MPEGHeader(32) Then
       Return "CCIT J.17"
     End If
-    Return vbNullString
+    Return "Invalid"
+  End Function
+  Public Overrides Function ToString() As String
+    If Not CheckValidity() Then Return "Invalid"
+    Dim sMPEG As String = Nothing
+    If GetOriginal() Then sMPEG &= "Original "
+    If GetCopyright() Then sMPEG &= "Copyrighted "
+    If GetProtected() Then sMPEG &= "Protected "
+    If GetPrivateBit() Then sMPEG &= "Private "
+    sMPEG &= GetChannels() & " (" & GetModeExtension() & ")"
+    Select Case GetMPEGVer()
+      Case 1 : sMPEG &= " MPEG 1"
+      Case 2 : sMPEG &= " MPEG 2"
+      Case 3 : sMPEG &= " MPEG 2.5"
+      Case Else : Return "Invalid"
+    End Select
+    Select Case GetMPEGLayer()
+      Case 1 : sMPEG &= " Layer I"
+      Case 2 : sMPEG &= " Layer II"
+      Case 3 : sMPEG &= " Layer III"
+      Case Else : Return "Invalid"
+    End Select
+    sMPEG &= " @ " & GetSampleRate() & "Hz"
+    sMPEG &= " / " & GetEmphasis()
+    sMPEG &= " / " & GetFrameSize()
+    sMPEG &= " / " & GetPadding()
+    Return sMPEG
+  End Function
+  Public Overloads Function Equals(other As clsMPEG) As Boolean Implements System.IEquatable(Of clsMPEG).Equals
+    If Not CheckValidity() = other.CheckValidity Then Return False
+    If Not GetOriginal() = other.GetOriginal Then Return False
+    If Not GetCopyright() = other.GetCopyright Then Return False
+    If Not GetPrivateBit() = other.GetPrivateBit Then Return False
+    If Not GetChannels() = other.GetChannels Then Return False
+    If Not GetMPEGVer() = other.GetMPEGVer Then Return False
+    If Not GetMPEGLayer() = other.GetMPEGLayer Then Return False
+    If Not GetSampleRate() = other.GetSampleRate Then Return False
+    If Not GetEmphasis() = other.GetEmphasis Then Return False
+    Return True
   End Function
 End Class

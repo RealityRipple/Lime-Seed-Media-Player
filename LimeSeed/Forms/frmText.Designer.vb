@@ -23,26 +23,8 @@ Partial Class frmText
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
     Me.components = New System.ComponentModel.Container()
-    Me.lblText = New System.Windows.Forms.Label()
     Me.tmrHide = New System.Windows.Forms.Timer(Me.components)
     Me.SuspendLayout()
-    '
-    'lblText
-    '
-    Me.lblText.AutoSize = True
-    Me.lblText.BackColor = System.Drawing.Color.Transparent
-    Me.lblText.Font = New System.Drawing.Font("Segoe UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-    Me.lblText.ForeColor = System.Drawing.Color.Navy
-    Me.lblText.Location = New System.Drawing.Point(0, 0)
-    Me.lblText.Margin = New System.Windows.Forms.Padding(0)
-    Me.lblText.MaximumSize = New System.Drawing.Size(300, 0)
-    Me.lblText.Name = "lblText"
-    Me.lblText.Padding = New System.Windows.Forms.Padding(1)
-    Me.lblText.Size = New System.Drawing.Size(82, 17)
-    Me.lblText.TabIndex = 0
-    Me.lblText.Text = "[No Message]"
-    Me.lblText.UseMnemonic = False
-    Me.lblText.Visible = False
     '
     'tmrHide
     '
@@ -54,7 +36,6 @@ Partial Class frmText
     Me.BackColor = System.Drawing.SystemColors.Info
     Me.ClientSize = New System.Drawing.Size(154, 47)
     Me.ControlBox = False
-    Me.Controls.Add(Me.lblText)
     Me.DoubleBuffered = True
     Me.ForeColor = System.Drawing.SystemColors.InfoText
     Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
@@ -67,9 +48,7 @@ Partial Class frmText
     Me.TopMost = True
     Me.TransparencyKey = System.Drawing.Color.Fuchsia
     Me.ResumeLayout(False)
-    Me.PerformLayout()
 
   End Sub
-  Friend WithEvents lblText As System.Windows.Forms.Label
   Friend WithEvents tmrHide As System.Windows.Forms.Timer
 End Class

@@ -40,7 +40,7 @@
     Dim items As New Collections.ObjectModel.Collection(Of String)
     items.Clear()
     For Each drive In CDDrive.GetCDDriveLetters
-      Dim dInfo = My.Computer.FileSystem.GetDriveInfo(drive & ":\")
+      Dim dInfo As New IO.DriveInfo(drive & ":\")
       If dInfo.IsReady Then
         If dInfo.DriveFormat = "CDFS" Then
           items.Add(drive & ":\ [" & dInfo.VolumeLabel & "]")
@@ -235,7 +235,7 @@
 
   Private Sub SetGlobalInfo(Obj As Object)
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New CallBack(AddressOf SetGlobalInfo), Obj)
+      Me.Invoke(New CallBack(AddressOf SetGlobalInfo), Obj)
     Else
       For I As Integer = 0 To UBound(Obj)
         Select Case Obj(I, 0)
@@ -259,7 +259,7 @@
 
   Private Sub cInfo_Found(Data As String) Handles cInfo.Found
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New CallBack(AddressOf cInfo_Found), Data)
+      Me.Invoke(New CallBack(AddressOf cInfo_Found), Data)
     Else
       SetStatus("Drive ready with " & cDrive.GetNumTracks & " tracks.")
       Dim sSplits() As String = Split(Data, vbNewLine)
@@ -317,11 +317,28 @@
     End If
     If cmdRip.Text = sRip Then
       cmdRip.Text = sCancel
-      Dim sArtistDir As String = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) & "\" & SafeName(txtAlbumArtist.Text)
+      Dim sArtistDir As String = IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), SafeName(txtAlbumArtist.Text))
       Dim cArtistDir As String = CoolName(SafeName(txtAlbumArtist.Text))
-      Dim sAlbumDir As String = sArtistDir & "\" & SafeName(txtAlbumAlbum.Text)
+      Dim sAlbumName As String
+      Dim sAlbumSubName As String
+      Dim sAlbumDir As String = IO.Path.Combine(sArtistDir, SafeName(txtAlbumAlbum.Text))
       Dim cAlbumDir As String = CoolName(SafeName(txtAlbumAlbum.Text))
-      Dim fDir As String = sAlbumDir & "\"
+      Dim cAlbumSubDir As String = Nothing
+      If txtAlbumAlbum.Text.Contains(" (Disc ") Then
+        sAlbumName = txtAlbumAlbum.Text.Substring(0, txtAlbumAlbum.Text.IndexOf(" (Disc "))
+        sAlbumSubName = txtAlbumAlbum.Text.Substring(txtAlbumAlbum.Text.IndexOf(" (Disc ") + 2)
+        If sAlbumSubName.Contains(")") Then sAlbumSubName = sAlbumSubName.Substring(0, sAlbumSubName.LastIndexOf(")"))
+        If sAlbumSubName.Contains(":") Then
+          Dim sAlbumParts() As String = Split(sAlbumSubName, ":", 2)
+          sAlbumSubName = sAlbumParts(0).Trim & " (" & sAlbumParts(1).Trim & ")"
+        End If
+        sAlbumDir = IO.Path.Combine(sArtistDir, SafeName(sAlbumName), SafeName(sAlbumSubName))
+        cAlbumDir = CoolName(SafeName(sAlbumName))
+        cAlbumSubDir = CoolName(SafeName(sAlbumSubName))
+      Else
+        sAlbumName = txtAlbumAlbum.Text
+        sAlbumSubName = Nothing
+      End If
       For I As Integer = 0 To dgvTracks.Rows.Count - 1
         If dgvTracks.Rows(I).Cells(0).Value = True Then
           Dim iTracks As Integer = (From row As DataGridViewRow In dgvTracks.Rows Where row.Cells(0).Value).Count
@@ -329,8 +346,11 @@
           dgvTracks.Tag = I
           Dim sTitle As String = dgvTracks.Rows(dgvTracks.Tag).Cells(2).Value
           Dim sTrack As String = dgvTracks.Rows(dgvTracks.Tag).Cells(1).Value
-          Dim fPath As String = fDir & sTrack & " " & SafeName(sTitle) & ".mp3"
-          If Not My.Computer.FileSystem.DirectoryExists(fDir) Then My.Computer.FileSystem.CreateDirectory(fDir)
+          Dim fPath As String = IO.Path.Combine(sAlbumDir, sTrack & " " & SafeName(sTitle) & ".mp3")
+          If Not IO.Directory.Exists(sAlbumDir) Then
+            If Not IO.Directory.Exists(IO.Path.GetDirectoryName(sAlbumDir)) Then IO.Directory.CreateDirectory(IO.Path.GetDirectoryName(sAlbumDir))
+            IO.Directory.CreateDirectory(sAlbumDir)
+          End If
           mWriter = New Mp3Writer(New IO.FileStream(fPath, IO.FileMode.Create), New Mp3WriterConfig(New WaveFormat(44100, 16, 2), New BE_CONFIG(New WaveFormat(44100, 16, 2), 320)))
           Dim beVer As New BE_VERSION
           Lame_encDll.beVersion(beVer)
@@ -348,7 +368,24 @@
             ID3er.ID3v2Ver = "2.3.0"
             ID3er.AddTextFrame("TP1", New Seed.clsID3v2.EncodedText(dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value))
             ID3er.AddTextFrame("TP2", New Seed.clsID3v2.EncodedText(dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value))
-            ID3er.AddTextFrame("TAL", New Seed.clsID3v2.EncodedText(dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value))
+            Dim sAlVal As String = dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value
+            If sAlVal.Contains(" (Disc ") Then
+              Dim sAlName As String = txtAlbumAlbum.Text.Substring(0, txtAlbumAlbum.Text.IndexOf(" (Disc "))
+              Dim sAlDiscID As String = txtAlbumAlbum.Text.Substring(txtAlbumAlbum.Text.IndexOf(" (Disc ") + 2)
+              Dim sAlSubName As String = Nothing
+              If sAlDiscID.Contains(")") Then sAlDiscID = sAlDiscID.Substring(0, sAlDiscID.LastIndexOf(")"))
+              If sAlDiscID.Contains(":") Then
+                Dim sAlParts() As String = Split(sAlDiscID, ":", 2)
+                sAlDiscID = sAlParts(0).Trim
+                sAlSubName = sAlParts(1).Trim
+              End If
+              sAlDiscID = sAlDiscID.Substring(5)
+              ID3er.AddTextFrame("TAL", New Seed.clsID3v2.EncodedText(sAlName))
+              ID3er.AddTextFrame("TPA", New Seed.clsID3v2.EncodedText(sAlDiscID))
+              If Not String.IsNullOrEmpty(sAlSubName) Then ID3er.AddTextFrame("TSST", New Seed.clsID3v2.EncodedText(sAlSubName))
+            Else
+              ID3er.AddTextFrame("TAL", New Seed.clsID3v2.EncodedText(sAlVal))
+            End If
             ID3er.AddTextFrame("TT2", New Seed.clsID3v2.EncodedText(sTitle))
             ID3er.AddTextFrame("TRK", New Seed.clsID3v2.EncodedText(sTrack))
             If Not String.IsNullOrEmpty(txtAlbumGenre.Text) AndAlso Not txtAlbumGenre.Text = "Unknown Genre" Then ID3er.Genre = txtAlbumGenre.Text
@@ -358,14 +395,32 @@
             End If
             If pctCover.Tag IsNot Nothing Then
               Dim bCover As Byte() = pctCover.Tag
-              ID3er.AddImageFrame(bCover, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Seed.clsID3v2.ID3_PIC_MIME.JPG, Seed.clsID3v2.EncodedText.Empty)
+              ID3er.AddAPICFrame(bCover, Seed.clsID3v2.ID3_PIC_TYPE.FRONT_COVER, Seed.clsID3v2.ID3_PIC_MIME.JPG, Seed.clsID3v2.EncodedText.Empty)
             End If
             ID3er.AddTextFrame("TEN", New Seed.clsID3v2.EncodedText("LimeSeed [LAME v" & beVer.byMajorVersion & "." & beVer.byMinorVersion & " (" & beVer.byMonth & "/" & beVer.byDay & "/" & beVer.wYear & ")]"))
             ID3er.Save()
           End Using
           Using ID3v1 As New Seed.clsID3v1(fPath)
             ID3v1.Artist = dgvTracks.Rows(dgvTracks.Tag).Cells(3).Value
-            ID3v1.Album = dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value
+            Dim sAlVal As String = dgvTracks.Rows(dgvTracks.Tag).Cells(4).Value
+            If sAlVal.Contains(" (Disc ") Then
+              Dim sAlDiscID As String = txtAlbumAlbum.Text.Substring(txtAlbumAlbum.Text.IndexOf(" (Disc ") + 2)
+              Dim sAlSubName As String = Nothing
+              If sAlDiscID.Contains(")") Then sAlDiscID = sAlDiscID.Substring(0, sAlDiscID.LastIndexOf(")"))
+              If sAlDiscID.Contains(":") Then
+                Dim sAlParts() As String = Split(sAlDiscID, ":", 2)
+                sAlSubName = sAlParts(1).Trim
+              End If
+              If Not String.IsNullOrEmpty(sAlSubName) Then
+                ID3v1.Album = sAlSubName
+              Else
+                ID3v1.Album = sAlVal
+              End If
+            Else
+              ID3v1.Album = sAlVal
+            End If
+
+
             ID3v1.Title = sTitle
             ID3v1.Track = sTrack
             If Not String.IsNullOrEmpty(txtAlbumGenre.Text) AndAlso Not txtAlbumGenre.Text = "Unknown Genre" Then
@@ -383,14 +438,20 @@
             ID3v1.Comment = "Encoded with LAME v" & beVer.byMajorVersion & "." & beVer.byMinorVersion
             ID3v1.Save()
           End Using
-          If IO.Path.GetFileName(fPath).Contains("{") Then My.Computer.FileSystem.RenameFile(fPath, CoolName(IO.Path.GetFileName(fPath)))
+          If IO.Path.GetFileName(fPath).Contains("{") Then IO.File.Move(fPath, CoolName(IO.Path.GetFileName(fPath)))
         End If
         If cmdRip.Text = sRip Then Exit For
       Next
-      If Not My.Computer.FileSystem.FileExists(IO.Path.Combine(fDir, "Folder.jpg")) And pctCover.Tag IsNot Nothing Then My.Computer.FileSystem.WriteAllBytes(IO.Path.Combine(fDir, "Folder.jpg"), pctCover.Tag, False)
-
-      If sArtistDir.Contains("{") Then My.Computer.FileSystem.RenameDirectory(sArtistDir, cArtistDir)
-      If sAlbumDir.Contains("{") Then My.Computer.FileSystem.RenameDirectory(sAlbumDir, cAlbumDir)
+      If Not IO.File.Exists(IO.Path.Combine(sAlbumDir, "Folder.jpg")) And pctCover.Tag IsNot Nothing Then IO.File.WriteAllBytes(IO.Path.Combine(sAlbumDir, "Folder.jpg"), pctCover.Tag)
+      If sArtistDir.Contains("{") Then IO.Directory.Move(sArtistDir, IO.Path.Combine(IO.Path.GetDirectoryName(sArtistDir), cArtistDir))
+      If sAlbumDir.Contains("{") Then
+        If String.IsNullOrEmpty(cAlbumSubDir) Then
+          IO.Directory.Move(sAlbumDir, IO.Path.Combine(IO.Path.GetDirectoryName(sAlbumDir), cAlbumDir))
+        Else
+          IO.Directory.Move(sAlbumDir, IO.Path.Combine(IO.Path.GetDirectoryName(sAlbumDir), cAlbumSubDir))
+          IO.Directory.Move(IO.Path.GetDirectoryName(sAlbumDir), IO.Path.Combine(IO.Path.GetDirectoryName(IO.Path.GetDirectoryName(sAlbumDir)), cAlbumDir))
+        End If
+      End If
 
       SetStatus("Rip Complete!")
       dgvTracks.Tag = Nothing
@@ -561,7 +622,7 @@
 
   Private Sub cInfo_ReadOnlyConnection(IsReadOnly As Boolean) Handles cInfo.ReadOnlyConnection
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New CallBack(AddressOf cInfo_ReadOnlyConnection), IsReadOnly)
+      Me.Invoke(New CallBack(AddressOf cInfo_ReadOnlyConnection), IsReadOnly)
     Else
       cmdSendInfo.Enabled = Not IsReadOnly
     End If
@@ -637,11 +698,11 @@
     Using cdlArt As New OpenFileDialog
       cdlArt.Filter = "Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp|All Files|*.*"
       cdlArt.CheckFileExists = True
-      'cdlArt.InitialDirectory = My.Computer.FileSystem.SpecialDirectories.MyDocuments
+      'cdlArt.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
       cdlArt.Title = "Select Album Cover..."
       If cdlArt.ShowDialog(Me) = DialogResult.OK Then
-        If My.Computer.FileSystem.GetFileInfo(cdlArt.FileName).Length >= 1024L * 1024L * 1024L * 4L Then Return
-        Dim bCover As Byte() = My.Computer.FileSystem.ReadAllBytes(cdlArt.FileName)
+        If (New IO.FileInfo(cdlArt.FileName)).Length >= 1024L * 1024L * 1024L * 4L Then Return
+        Dim bCover As Byte() = IO.File.ReadAllBytes(cdlArt.FileName)
         pctCover.Image = Drawing.Image.FromStream(New IO.MemoryStream(bCover))
         pctCover.Tag = bCover
       End If
@@ -654,8 +715,8 @@
       If UBound(Data) = 0 Then
         Select Case IO.Path.GetExtension(Data(0)).ToLower
           Case ".jpg", ".jpeg", ".gif", ".png", ".bmp"
-            If My.Computer.FileSystem.GetFileInfo(Data(0)).Length >= 1024L * 1024L * 1024L * 4L Then Return
-            Dim bCover As Byte() = My.Computer.FileSystem.ReadAllBytes(Data(0))
+            If (New IO.FileInfo(Data(0))).Length >= 1024L * 1024L * 1024L * 4L Then Return
+            Dim bCover As Byte() = IO.File.ReadAllBytes(Data(0))
             pctCover.Image = Drawing.Image.FromStream(New IO.MemoryStream(bCover))
             pctCover.Tag = bCover
           Case Else
@@ -894,9 +955,11 @@ Friend Class CDDBNet
   Event Written()
   Event Finished()
   Event ReadOnlyConnection(IsReadOnly As Boolean)
+  Private Const sAddr As String = "freedb.freedb.org"
+  Private Const iPort As Integer = 8880
 
   Private Function FreeDBIP() As Net.IPAddress
-    Dim freeDBAddrs() = Net.Dns.GetHostEntry("freedb.freedb.org").AddressList
+    Dim freeDBAddrs() = Net.Dns.GetHostEntry(sAddr).AddressList
     For Each addr In freeDBAddrs
       If addr.AddressFamily = Net.Sockets.AddressFamily.InterNetwork Then
         Return addr
@@ -908,7 +971,7 @@ Friend Class CDDBNet
   Public Sub New()
     wsSocket = New TCPWrapper
     Try
-      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, 8880)
+      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, iPort)
       lState = 0
       wsSocket.Connect()
     Catch ex As Exception
@@ -920,7 +983,7 @@ Friend Class CDDBNet
     mID = DiscID
     If wsSocket Is Nothing OrElse Not wsSocket.IsConnected Then
       wsSocket = New TCPWrapper
-      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, 8880)
+      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, iPort)
       lState = 0
       wsSocket.Connect()
     Else
@@ -940,7 +1003,7 @@ Friend Class CDDBNet
       mEntryID = DiscID
       mID = Nothing
       wsSocket = New TCPWrapper
-      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, 8880)
+      wsSocket.RemoteEndPoint = New System.Net.IPEndPoint(FreeDBIP, iPort )
       lState = 0
       wsSocket.Connect()
       Return True

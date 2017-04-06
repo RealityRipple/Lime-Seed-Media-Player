@@ -139,16 +139,20 @@ Partial Class frmFullScreen
     Me.bpgVolume.BarBackground = System.Drawing.Color.Black
     Me.bpgVolume.BarBorder = System.Drawing.Color.Gray
     Me.bpgVolume.BarForeground = System.Drawing.Color.FromArgb(CType(CType(64, Byte), Integer), CType(CType(64, Byte), Integer), CType(CType(64, Byte), Integer))
-    Me.bpgVolume.BarStyle = LimeSeed.BetterProgress.BetterProgressStyle.CustomColorsSlanted
-    Me.bpgVolume.ForeColor = System.Drawing.Color.Blue
+    Me.bpgVolume.BarStyle = LimeSeed.BetterProgress.BetterProgressStyle.CustomColorsSlantedWithValue
+    Me.bpgVolume.Font = New System.Drawing.Font("Microsoft Sans Serif", 7.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+    Me.bpgVolume.ForeColor = System.Drawing.Color.DarkGray
     Me.bpgVolume.Location = New System.Drawing.Point(475, 332)
     Me.bpgVolume.Margin = New System.Windows.Forms.Padding(0)
     Me.bpgVolume.Maximum = 100.0R
     Me.bpgVolume.Minimum = 0.0R
     Me.bpgVolume.Name = "bpgVolume"
     Me.bpgVolume.Size = New System.Drawing.Size(90, 24)
+    Me.bpgVolume.Style = System.Windows.Forms.ProgressBarStyle.Continuous
     Me.bpgVolume.TabIndex = 17
     Me.bpgVolume.Value = 100.0R
+    Me.bpgVolume.ValueInvert = True
+    Me.bpgVolume.ValueStyle = "+0 dB;-0 dB;±0 dB"
     '
     'pbProgress
     '
@@ -166,8 +170,11 @@ Partial Class frmFullScreen
     Me.pbProgress.Minimum = 0.0R
     Me.pbProgress.Name = "pbProgress"
     Me.pbProgress.Size = New System.Drawing.Size(365, 16)
+    Me.pbProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous
     Me.pbProgress.TabIndex = 16
     Me.pbProgress.Value = 0.0R
+    Me.pbProgress.ValueInvert = False
+    Me.pbProgress.ValueStyle = ""
     '
     'tmrUpdate
     '

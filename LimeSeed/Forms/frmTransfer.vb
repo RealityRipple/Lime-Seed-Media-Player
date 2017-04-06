@@ -146,7 +146,7 @@
   Private Delegate Sub FailureInvoker(message As String)
   Private Sub Failure(message As String)
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New FailureInvoker(AddressOf Failure), message)
+      Me.Invoke(New FailureInvoker(AddressOf Failure), message)
     Else
       If Not String.IsNullOrEmpty(message) Then MsgBox(message, MsgBoxStyle.Exclamation, My.Application.Info.Title)
       cmdTransfer.Enabled = False
@@ -160,7 +160,7 @@
 
   Private Sub tcpRequest_SocketConnected(sender As Object, e As System.EventArgs) Handles tcpRequest.SocketConnected
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New EventHandler(AddressOf tcpRequest_SocketConnected))
+      Me.Invoke(New EventHandler(AddressOf tcpRequest_SocketConnected))
     Else
       Debug.Print("TCP Request Connected")
       Dim bOut As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes("TRANSFER(" & Net.Dns.GetHostName & ")")
@@ -175,7 +175,7 @@
 
   Private Sub tcpRequest_SocketReceived(sender As Object, e As SocketReceivedEventArgs) Handles tcpRequest.SocketReceived
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf tcpRequest_SocketReceived), sender, e)
+      Me.Invoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf tcpRequest_SocketReceived), sender, e)
     Else
       Dim fromIP As Net.IPEndPoint = e.RemoteEndPoint
       Dim sIn As String = System.Text.Encoding.GetEncoding(LATIN_1).GetString(e.Data)
@@ -200,7 +200,7 @@
             sResponse &= thisPath & vbLf
           End If
         Next
-        sResponse &= CType(Me.Owner, frmMain).GetSelectedPlayListItem & vbLf & CType(Me.Owner, frmMain).mpPlayer.Position
+        sResponse &= CType(Me.Owner, frmMain).SelectedPlayListItem & vbLf & CType(Me.Owner, frmMain).mpPlayer.Position
         'current track and location in track should be in sResponse
         Dim bOut As Byte() = System.Text.Encoding.GetEncoding(LATIN_1).GetBytes(sResponse)
         tcpRequest.Send(bOut)
@@ -218,7 +218,7 @@
   Private udpBuffer As Byte()
   Private Sub udpBroadcast_SocketReceived(sender As Object, e As SocketReceivedEventArgs) Handles udpBroadcast.SocketReceived
     If Me.InvokeRequired Then
-      Me.BeginInvoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf udpBroadcast_SocketReceived), sender, e)
+      Me.Invoke(New EventHandler(Of SocketReceivedEventArgs)(AddressOf udpBroadcast_SocketReceived), sender, e)
     Else
       Dim fromIP As Net.IPEndPoint = e.RemoteEndPoint
       Dim bIn As Byte() = e.Data

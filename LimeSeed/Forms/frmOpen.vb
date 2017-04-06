@@ -9,8 +9,16 @@
 
   Private Sub cmdOpen_Click(sender As System.Object, e As System.EventArgs) Handles cmdOpen.Click
     If tbsOpen.SelectedTab Is tabFile Then
+      If String.IsNullOrEmpty(txtOpenFile.Text) Then
+        Beep()
+        Return
+      End If
       sResult = Split(txtOpenFile.Text, "|")
     Else
+      If String.IsNullOrEmpty(cmbDisc.Text) Then
+        Beep()
+        Return
+      End If
       If cmbDisc.Text.Length > 3 Then
         sResult = {cmbDisc.Text.Substring(0, 3)}
       Else
@@ -41,18 +49,25 @@
   End Sub
 
   Private Sub frmOpen_Load(sender As Object, e As System.EventArgs) Handles Me.Load
+    Dim okDisc As Boolean = False
     txtOpenFile.Text = Nothing
     cmbDisc.Items.Clear()
-    For Each drive In My.Computer.FileSystem.Drives
+    For Each drive As IO.DriveInfo In IO.DriveInfo.GetDrives
       If drive.DriveType = IO.DriveType.CDRom Then
         If drive.IsReady Then
           cmbDisc.Items.Add(drive.Name & " [" & drive.VolumeLabel & "]")
+          okDisc = True
           If cmbDisc.SelectedIndex = -1 Then cmbDisc.SelectedIndex = cmbDisc.Items.Count - 1
         Else
           cmbDisc.Items.Add(drive.Name)
         End If
       End If
     Next
+    If okDisc Then
+      tbsOpen.SelectedIndex = 1
+    Else
+      tbsOpen.SelectedIndex = 0
+    End If
   End Sub
 
   Private Sub cmdEject_Click(sender As System.Object, e As System.EventArgs) Handles cmdEject.Click
@@ -72,6 +87,14 @@
       Else
         pctOpenIcon.Image = My.Resources.open_disc
       End If
+    End If
+  End Sub
+
+  Private Sub frmOpen_Shown(sender As Object, e As System.EventArgs) Handles Me.Shown
+    If tbsOpen.SelectedIndex = 0 Then
+      txtOpenFile.Focus()
+    ElseIf tbsOpen.SelectedIndex = 1 Then
+      cmbDisc.Focus()
     End If
   End Sub
 End Class
