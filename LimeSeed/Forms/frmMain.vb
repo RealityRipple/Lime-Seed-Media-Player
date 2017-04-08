@@ -516,7 +516,7 @@ Public Class frmMain
       For I As Integer = 0 To mPL.Count - 1
         If mPL(I).DisplayIndex = DisplayIndex Then
           remOrd = mPL(I).OrderIndex
-          If mPL(I).Path = mSelPath Then SelectTrack(-1)
+          If mPL(I).Path.ToLower = mSelPath.ToLower AndAlso mSelIndex = DisplayIndex Then SelectTrack(-1)
           mPL.RemoveAt(I)
           Exit For
         End If
@@ -537,7 +537,7 @@ Public Class frmMain
           If newIndex < changeLow Then changeLow = newIndex
           If newIndex > changeHigh Then changeHigh = newIndex
           mPL(I).DisplayIndex = newIndex
-          If mPL(I).Path = mSelPath Then newSel = newIndex
+          If mPL(I).Path.ToLower = mSelPath.ToLower Then newSel = newIndex
         End If
       Next
       If changeHigh >= mPL.Count Then changeHigh = mPL.Count - 1
@@ -561,7 +561,7 @@ Public Class frmMain
       Dim remList As New List(Of Integer)
       For I As Integer = 0 To mPL.Count - 2
         For J As Integer = mPL.Count - 1 To I + 1 Step -1
-          If mPL(I).Path = mPL(J).Path Then
+          If mPL(I).Path.ToLower = mPL(J).Path.ToLower Then
             If Not remList.Contains(J) Then remList.Add(J)
           End If
         Next
