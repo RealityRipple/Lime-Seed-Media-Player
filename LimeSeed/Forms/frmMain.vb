@@ -537,7 +537,7 @@ Public Class frmMain
           If newIndex < changeLow Then changeLow = newIndex
           If newIndex > changeHigh Then changeHigh = newIndex
           mPL(I).DisplayIndex = newIndex
-          If mPL(I).Path.ToLower = mSelPath.ToLower Then newSel = newIndex
+          If Not String.IsNullOrEmpty(mSelPath) AndAlso mPL(I).Path.ToLower = mSelPath.ToLower Then newSel = newIndex
         End If
       Next
       If changeHigh >= mPL.Count Then changeHigh = mPL.Count - 1
